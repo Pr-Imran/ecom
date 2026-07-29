@@ -2,7 +2,7 @@ using FashionStore.Application;
 using FashionStore.Application.Configuration;
 using FashionStore.Infrastructure;
 using FashionStore.Web.Middleware;
-using Microsoft.OpenApi;
+using Microsoft.OpenApi.Models;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -78,13 +78,14 @@ app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthorization();
 
-app.MapStaticAssets();
+app.UseStaticFiles();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
-    .WithStaticAssets();
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.MapHealthChecks("/health");
 
 app.Run();
+
+public partial class Program { }
