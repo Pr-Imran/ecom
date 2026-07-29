@@ -1,0 +1,41 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+.vs/
+*.swp
+*.*~
+
+## NuGet
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nupkg
+**/[Pp]ackages/repositories.config
+
+## Rider
+.idea/
+*.sln.iml
+
+## VS Code
+.vscode/
+
+## Benchmark
+BenchmarkDotNet.Artifacts/
+
+## Test results
+TestResults/
+*.trx
+*.coverage
+.coverage/
+
+## Serilog logs
+Logs/
+*.log
+
+## OS
+.DS_Store
+Thumbs.db

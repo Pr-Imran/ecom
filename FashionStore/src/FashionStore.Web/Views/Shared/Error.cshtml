@@ -1,0 +1,25 @@
+﻿@model ErrorViewModel
+@{
+    ViewData["Title"] = "Error";
+}
+
+<div class="error-container">
+    <div class="error-card">
+        <h1 class="error-code">@(Model.ErrorCode ?? "ERROR")</h1>
+        <h2 class="error-message">@(Model.Message ?? "An error occurred while processing your request.")</h2>
+
+        @if (Model.ShowRequestId)
+        {
+            <p class="error-detail">
+                <strong>Request ID:</strong> <code>@Model.RequestId</code>
+            </p>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.CorrelationId))
+        {
+            <p class="error-detail">
+                <strong>Correlation ID:</strong> <code>@Model.CorrelationId</code>
+            </p>
+        }
+    </div>
+</div>
