@@ -1,0 +1,19 @@
+@{
+    var label = ViewData["label"] as string ?? "";
+    var name = ViewData["name"] as string ?? "";
+    var placeholder = ViewData["placeholder"] as string ?? "";
+    var rows = ViewData["rows"] as string ?? "4";
+    var required = ViewData["required"] != null;
+    var disabled = ViewData["disabled"] != null;
+}
+@if (!string.IsNullOrEmpty(label))
+{
+    <label for="@name" class="form-label">@label @(required ? "*" : "")</label>
+}
+<textarea name="@name"
+          id="@name"
+          rows="@rows"
+          placeholder="@placeholder"
+          class="form-textarea @ViewData["class"]"
+          @(required ? "required" : "")
+          @(disabled ? "disabled" : "")>@RenderBody()</textarea>

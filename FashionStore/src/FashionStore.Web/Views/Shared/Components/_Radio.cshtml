@@ -1,0 +1,16 @@
+@{
+    var label = ViewData["label"] as string ?? "";
+    var name = ViewData["name"] as string ?? "";
+    var value = ViewData["value"] as string ?? "";
+    var checkedState = ViewData["checked"] != null;
+    var disabled = ViewData["disabled"] != null;
+}
+<label class="inline-flex items-center gap-2 min-h-[44px] cursor-pointer">
+    <input type="radio"
+           name="@name"
+           value="@value"
+           class="form-radio"
+           @(checkedState ? "checked" : "")
+           @(disabled ? "disabled" : "") />
+    <span class="text-sm text-brand-text-primary">@label</span>
+</label>

@@ -1,0 +1,17 @@
+@{
+    var icon = ViewData["icon"] as string ?? "";
+    var title = ViewData["title"] as string ?? "Nothing here";
+    var description = ViewData["description"] as string ?? "";
+}
+<div class="empty-state @ViewData["class"]">
+    @if (!string.IsNullOrEmpty(icon))
+    {
+        <div class="empty-state-icon">@icon</div>
+    }
+    <h3 class="empty-state-title">@title</h3>
+    @if (!string.IsNullOrEmpty(description))
+    {
+        <p class="empty-state-description">@description</p>
+    }
+    @RenderBody()
+</div>

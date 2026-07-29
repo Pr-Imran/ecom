@@ -1,0 +1,18 @@
+@{
+    var title = ViewData["title"] as string ?? "";
+    var id = "accordion-" + Guid.NewGuid().ToString("N")[..8];
+}
+<div class="accordion-item">
+    <button class="accordion-trigger"
+            onclick="toggleAccordion('@id')"
+            aria-expanded="false"
+            aria-controls="@id">
+        <span>@title</span>
+        <svg class="w-5 h-5 transition-transform duration-brand" id="@(id)-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>
+    </button>
+    <div id="@id" class="accordion-content hidden">
+        @RenderBody()
+    </div>
+</div>

@@ -1,0 +1,26 @@
+@{
+    var id = ViewData["id"] as string ?? "modal-" + Guid.NewGuid().ToString("N")[..8];
+    var title = ViewData["title"] as string ?? "";
+}
+<div id="@id" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="@(id)-title">
+    <div class="modal-backdrop" onclick="closeModal('@id')"></div>
+    <div class="modal-content animate-slide-up">
+        <div class="modal-header">
+            <h2 id="@(id)-title" class="text-lg font-semibold">@title</h2>
+            <button class="btn-icon" onclick="closeModal('@id')" aria-label="Close modal">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            @RenderBody()
+        </div>
+        @if (IsSectionDefined("Footer"))
+        {
+            <div class="modal-footer">
+                @await RenderSectionAsync("Footer")
+            </div>
+        }
+    </div>
+</div>

@@ -1,0 +1,22 @@
+@{
+    var id = ViewData["id"] as string ?? "drawer-" + Guid.NewGuid().ToString("N")[..8];
+    var side = ViewData["side"] as string ?? "left";
+    var title = ViewData["title"] as string ?? "";
+    var drawerClass = side == "right" ? "drawer-right" : "drawer-left";
+    var transformClass = side == "right" ? "translate-x-full" : "-translate-x-full";
+}
+<div id="@id" class="drawer-backdrop hidden" onclick="closeDrawer('@id')">
+    <div class="@drawerClass @transformClass" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="@(id)-title">
+        <div class="flex items-center justify-between px-4 py-4 border-b border-brand-border">
+            <h2 id="@(id)-title" class="text-lg font-semibold">@title</h2>
+            <button class="btn-icon" onclick="closeDrawer('@id')" aria-label="Close drawer">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="p-4">
+            @RenderBody()
+        </div>
+    </div>
+</div>

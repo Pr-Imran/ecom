@@ -1,0 +1,7 @@
+@{
+    var message = ViewData["message"] as string ?? "";
+}
+@if (!string.IsNullOrEmpty(message))
+{
+    <p class="form-validation-message @ViewData["class"]" role="alert">@message</p>
+}

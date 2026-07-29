@@ -1,0 +1,36 @@
+@{
+    var currentPage = (int)(ViewData["page"] ?? 1);
+    var totalPages = (int)(ViewData["totalPages"] ?? 1);
+    var baseUrl = ViewData["baseUrl"] as string ?? "?page=";
+}
+@if (totalPages > 1)
+{
+    <nav class="pagination @ViewData["class"]" aria-label="Pagination">
+        <a href="@baseUrl@(Math.Max(1, currentPage - 1))"
+           class="@(currentPage <= 1 ? "pagination-item-disabled" : "pagination-item")"
+           aria-label="Previous page"
+           @(currentPage <= 1 ? "aria-disabled=true tabindex=-1" : "")>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+        </a>
+
+        @for (int i = 1; i <= totalPages; i++)
+        {
+            <a href="@baseUrl@i"
+               class="@(i == currentPage ? "pagination-item-active" : "pagination-item")"
+               @(i == currentPage ? "aria-current=page" : "")>
+                @i
+            </a>
+        }
+
+        <a href="@baseUrl@(Math.Min(totalPages, currentPage + 1))"
+           class="@(currentPage >= totalPages ? "pagination-item-disabled" : "pagination-item")"
+           aria-label="Next page"
+           @(currentPage >= totalPages ? "aria-disabled=true tabindex=-1" : "")>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        </a>
+    </nav>
+}

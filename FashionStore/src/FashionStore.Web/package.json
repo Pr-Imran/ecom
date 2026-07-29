@@ -1,0 +1,14 @@
+{
+  "name": "fashionstore.web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "css:dev": "npx tailwindcss -i ./wwwroot/css/site.css -o ./wwwroot/css/site.min.css --watch",
+    "css:build": "npx tailwindcss -i ./wwwroot/css/site.css -o ./wwwroot/css/site.min.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49"
+  }
+}

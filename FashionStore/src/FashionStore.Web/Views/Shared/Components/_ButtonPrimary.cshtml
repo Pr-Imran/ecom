@@ -1,0 +1,6 @@
+<button type="@(ViewData["type"] ?? "button")"
+        class="btn-primary @ViewData["class"]"
+        @(ViewData["disabled"] != null ? "disabled" : "")
+        @(ViewData["aria-label"] != null ? $"aria-label=\"{ViewData["aria-label"]}\"" : "")>
+    @RenderBody()
+</button>

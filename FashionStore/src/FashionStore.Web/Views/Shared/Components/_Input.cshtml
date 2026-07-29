@@ -1,0 +1,23 @@
+@{
+    var label = ViewData["label"] as string ?? "";
+    var name = ViewData["name"] as string ?? "";
+    var type = ViewData["type"] as string ?? "text";
+    var placeholder = ViewData["placeholder"] as string ?? "";
+    var value = ViewData["value"] as string ?? "";
+    var required = ViewData["required"] != null;
+    var disabled = ViewData["disabled"] != null;
+    var autocomplete = ViewData["autocomplete"] as string;
+}
+@if (!string.IsNullOrEmpty(label))
+{
+    <label for="@name" class="form-label">@label @(required ? "*" : "")</label>
+}
+<input type="@type"
+       name="@name"
+       id="@name"
+       value="@value"
+       placeholder="@placeholder"
+       class="form-input @ViewData["class"]"
+       @(required ? "required" : "")
+       @(disabled ? "disabled" : "")
+       @(autocomplete != null ? $"autocomplete=\"{autocomplete}\"" : "") />

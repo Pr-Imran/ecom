@@ -1,0 +1,398 @@
+@{
+    ViewData["Title"] = "Component Preview";
+}
+
+<div class="max-w-4xl mx-auto px-4 py-8 space-y-12">
+    <div>
+        <h1 class="text-3xl font-bold text-brand-primary mb-2">FashionStore Design System</h1>
+        <p class="text-brand-text-muted">Reusable UI component preview</p>
+    </div>
+
+    <!-- Buttons -->
+    <section>
+        <h2 class="text-xl font-semibold mb-4">Buttons</h2>
+        <div class="flex flex-wrap gap-3 items-center">
+            <button class="btn-primary">Primary Button</button>
+            <button class="btn-secondary">Secondary Button</button>
+            <button class="btn-outline">Outline Button</button>
+            <button class="btn-danger">Danger Button</button>
+            <button class="btn-primary" disabled>Disabled</button>
+            <button class="btn-icon" aria-label="Icon button">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                </svg>
+            </button>
+        </div>
+    </section>
+
+    <!-- Form Elements -->
+    <section>
+        <h2 class="text-xl font-semibold mb-4">Form Elements</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="form-label">Text Input</label>
+                <input type="text" placeholder="Enter your name" class="form-input" />
+            </div>
+            <div>
+                <label class="form-label">Select</label>
+                <select class="form-select">
+                    <option>Option 1</option>
+                    <option>Option 2</option>
+                    <option>Option 3</option>
+                </select>
+            </div>
+            <div class="md:col-span-2">
+                <label class="form-label">Textarea</label>
+                <textarea class="form-textarea" placeholder="Enter your message" rows="3"></textarea>
+            </div>
+            <div>
+                <label class="inline-flex items-center gap-2 min-h-[44px] cursor-pointer">
+                    <input type="checkbox" class="form-checkbox" checked />
+                    <span class="text-sm">Checkbox option</span>
+                </label>
+            </div>
+            <div>
+                <label class="inline-flex items-center gap-2 min-h-[44px] cursor-pointer">
+                    <input type="radio" name="demo-radio" class="form-radio" checked />
+                    <span class="text-sm">Radio option 1</span>
+                </label>
+                <label class="inline-flex items-center gap-2 min-h-[44px] cursor-pointer">
+                    <input type="radio" name="demo-radio" class="form-radio" />
+                    <span class="text-sm">Radio option 2</span>
+                </label>
+            </div>
+            <div>
+                <label class="flex items-center gap-3 min-h-[44px] cursor-pointer">
+                    <span class="form-toggle-on form-toggle">
+                        <span class="form-toggle-knob"></span>
+                        <input type="checkbox" class="sr-only" checked />
+                    </span>
+                    <span class="text-sm">Toggle (on)</span>
+                </label>
+                <label class="flex items-center gap-3 min-h-[44px] cursor-pointer">
+                    <span class="form-toggle-off form-toggle">
+                        <span class="form-toggle-knob"></span>
+                        <input type="checkbox" class="sr-only" />
+                    </span>
+                    <span class="text-sm">Toggle (off)</span>
+                </label>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quantity Selector -->
+    <section>
+        <h2 class="text-xl font-semibold mb-4">Quantity Selector</h2>
+        <div class="quantity-selector">
+            <button type="button" class="quantity-btn" aria-label="Decrease">-</button>
+            <input type="number" value="1" min="1" max="99" class="quantity-input" />
+            <button type="button" class="quantity-btn" aria-label="Increase">+</button>
+        </div>
+    </section>
+
+    <!-- Badges -->
+    <section>
+        <h2 class="text-xl font-semibold mb-4">Badges</h2>
+        <div class="flex flex-wrap gap-2">
+            <span class="badge-neutral">Neutral</span>
+            <span class="badge-success">Success</span>
+            <span class="badge-warning">Warning</span>
+            <span class="badge-danger">Danger</span>
+            <span class="badge-info">Info</span>
+        </div>
+    </section>
+
+    <!-- Alerts -->
+    <section>
+        <h2 class="text-xl font-semibold mb-4">Alerts</h2>
+        <div class="space-y-3">
+            <div class="alert-info" role="alert">
+                <div class="flex-1"><p class="font-medium">Info</p><p class="text-sm">This is an informational message.</p></div>
+            </div>
+            <div class="alert-success" role="alert">
+                <div class="flex-1"><p class="font-medium">Success</p><p class="text-sm">Operation completed successfully.</p></div>
+            </div>
+            <div class="alert-warning" role="alert">
+                <div class="flex-1"><p class="font-medium">Warning</p><p class="text-sm">Please review your input.</p></div>
+            </div>
+            <div class="alert-danger" role="alert">
+                <div class="flex-1"><p class="font-medium">Error</p><p class="text-sm">Something went wrong.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Card -->
+    <section>
+        <h2 class="text-xl font-semibold mb-4">Card</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="card">
+                <div class="card-header">Card Header</div>
+                <div class="card-body">
+                    <p class="text-sm text-brand-text-muted">Card body content goes here.</p>
+                </div>
+                <div class="card-footer">Card Footer</div>
+            </div>
+            <div class="product-card">
+                <div class="product-card-image bg-brand-surface"></div>
+                <div class="product-card-body">
+                    <p class="text-sm font-medium">Product Name</p>
+                    <span class="price-current">$49.99</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Price Display -->
+    <section>
+        <h2 class="text-xl font-semibold mb-4">Price Display</h2>
+        <div class="space-y-2">
+            <div class="inline-flex items-baseline gap-2">
+                <span class="price-current">$49.99</span>
+            </div>
+            <div class="inline-flex items-baseline gap-2">
+                <span class="price-current">$39.99</span>
+                <span class="price-original">$59.99</span>
+                <span class="price-discount">-33%</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tabs -->
+    <section>
+        <h2 class="text-xl font-semibold mb-4">Tabs</h2>
+        <div class="tabs">
+            <button class="tab-active" role="tab" aria-selected="true">Description</button>
+            <button class="tab" role="tab" aria-selected="false">Reviews</button>
+            <button class="tab" role="tab" aria-selected="false">Shipping</button>
+        </div>
+    </section>
+
+    <!-- Accordion -->
+    <section>
+        <h2 class="text-xl font-semibold mb-4">Accordion</h2>
+        <div class="accordion">
+            <div class="accordion-item">
+                <button class="accordion-trigger" aria-expanded="false">
+                    <span>Section 1</span>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="accordion-item">
+                <button class="accordion-trigger" aria-expanded="false">
+                    <span>Section 2</span>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Breadcrumb -->
+    <section>
+        <h2 class="text-xl font-semibold mb-4">Breadcrumb</h2>
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="#" class="breadcrumb-item">Home</a>
+            <span class="breadcrumb-separator">/</span>
+            <a href="#" class="breadcrumb-item">Category</a>
+            <span class="breadcrumb-separator">/</span>
+            <span class="text-brand-text-primary">Product</span>
+        </nav>
+    </section>
+
+    <!-- Pagination -->
+    <section>
+        <h2 class="text-xl font-semibold mb-4">Pagination</h2>
+        <nav class="pagination" aria-label="Pagination">
+            <span class="pagination-item-disabled" aria-disabled="true">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            </span>
+            <span class="pagination-item-active" aria-current="page">1</span>
+            <a href="#" class="pagination-item">2</a>
+            <a href="#" class="pagination-item">3</a>
+            <a href="#" class="pagination-item" aria-label="Next page">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </a>
+        </nav>
+    </section>
+
+    <!-- Empty State -->
+    <section>
+        <h2 class="text-xl font-semibold mb-4">Empty State</h2>
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                </svg>
+            </div>
+            <h3 class="empty-state-title">No items found</h3>
+            <p class="empty-state-description">Try adjusting your search or filter criteria.</p>
+        </div>
+    </section>
+
+    <!-- Skeleton Loader -->
+    <section>
+        <h2 class="text-xl font-semibold mb-4">Skeleton Loader</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div class="card">
+                <div class="skeleton-image"></div>
+                <div class="card-body space-y-2">
+                    <div class="skeleton-text w-3/4"></div>
+                    <div class="skeleton-text w-1/2"></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="skeleton-image"></div>
+                <div class="card-body space-y-2">
+                    <div class="skeleton-text w-3/4"></div>
+                    <div class="skeleton-text w-1/2"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Spinner -->
+    <section>
+        <h2 class="text-xl font-semibold mb-4">Loading Spinner</h2>
+        <div class="flex items-center gap-4">
+            <div class="spinner-sm"></div>
+            <div class="spinner"></div>
+            <div class="spinner-lg"></div>
+            <div class="inline-flex items-center gap-2">
+                <div class="spinner"></div>
+                <span class="text-sm text-brand-text-muted">Loading...</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Mobile List Card -->
+    <section>
+        <h2 class="text-xl font-semibold mb-4">Mobile List Card</h2>
+        <div class="space-y-2">
+            <div class="mobile-list-card">
+                <div class="w-12 h-12 rounded-brand bg-brand-surface flex-shrink-0"></div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium truncate">Item name</p>
+                    <p class="text-xs text-brand-text-muted">Description text</p>
+                </div>
+                <span class="text-sm font-medium flex-shrink-0">$29.99</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Form Validation -->
+    <section>
+        <h2 class="text-xl font-semibold mb-4">Form Validation</h2>
+        <div>
+            <label class="form-label">Email *</label>
+            <input type="email" value="invalid-email" class="form-input border-brand-danger" />
+            <p class="form-validation-message">Please enter a valid email address.</p>
+        </div>
+    </section>
+
+    <!-- Interactive Demo -->
+    <section>
+        <h2 class="text-xl font-semibold mb-4">Interactive Components</h2>
+        <div class="flex flex-wrap gap-3">
+            <button class="btn-primary" onclick="openModal('demo-modal')">Open Modal</button>
+            <button class="btn-outline" onclick="openBottomSheet('demo-sheet')">Open Bottom Sheet</button>
+            <button class="btn-secondary" onclick="openDrawer('demo-drawer')">Open Drawer</button>
+            <button class="btn-primary" onclick="showToast('Item added to cart', 'success')">Show Toast</button>
+        </div>
+    </section>
+
+    <!-- Responsive Table -->
+    <section>
+        <h2 class="text-xl font-semibold mb-4">Responsive Table</h2>
+        <div class="table-responsive border border-brand-border rounded-brand-lg">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Order</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>#1001</td>
+                        <td>2026-07-29</td>
+                        <td><span class="badge-success">Completed</span></td>
+                        <td>$149.99</td>
+                    </tr>
+                    <tr>
+                        <td>#1002</td>
+                        <td>2026-07-28</td>
+                        <td><span class="badge-warning">Pending</span></td>
+                        <td>$79.50</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Modal -->
+    <div id="demo-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="demo-modal-title">
+        <div class="modal-backdrop" onclick="closeModal('demo-modal')"></div>
+        <div class="modal-content animate-slide-up">
+            <div class="modal-header">
+                <h2 id="demo-modal-title" class="text-lg font-semibold">Modal Title</h2>
+                <button class="btn-icon" onclick="closeModal('demo-modal')" aria-label="Close">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="text-brand-text-muted">This is a modal dialog with focus trapping and Escape key support.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline" onclick="closeModal('demo-modal')">Cancel</button>
+                <button class="btn-primary" onclick="closeModal('demo-modal')">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Sheet -->
+    <div id="demo-sheet" class="bottomsheet-backdrop hidden" onclick="closeBottomSheet('demo-sheet')">
+        <div class="bottomsheet animate-slide-up" onclick="event.stopPropagation()" role="dialog" aria-modal="true">
+            <div class="bottomsheet-handle"></div>
+            <div class="flex items-center justify-between px-4 py-3">
+                <h2 class="text-lg font-semibold">Bottom Sheet</h2>
+                <button class="btn-icon" onclick="closeBottomSheet('demo-sheet')" aria-label="Close">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="px-4 pb-6 space-y-3">
+                <p class="text-brand-text-muted">Choose an option:</p>
+                <button class="btn-outline w-full justify-start">Option 1</button>
+                <button class="btn-outline w-full justify-start">Option 2</button>
+                <button class="btn-outline w-full justify-start">Option 3</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Drawer -->
+    <div id="demo-drawer" class="drawer-backdrop hidden" onclick="closeDrawer('demo-drawer')">
+        <div class="drawer-left -translate-x-full" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="demo-drawer-title">
+            <div class="flex items-center justify-between px-4 py-4 border-b border-brand-border">
+                <h2 id="demo-drawer-title" class="text-lg font-semibold">Drawer</h2>
+                <button class="btn-icon" onclick="closeDrawer('demo-drawer')" aria-label="Close">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-4 space-y-2">
+                <a href="#" class="dropdown-item">Menu Item 1</a>
+                <a href="#" class="dropdown-item">Menu Item 2</a>
+                <a href="#" class="dropdown-item">Menu Item 3</a>
+            </div>
+        </div>
+    </div>
+</div>

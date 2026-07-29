@@ -1,0 +1,15 @@
+@{
+    var tabs = (ViewData["tabs"] as string[]) ?? Array.Empty<string>();
+    var activeTab = (int)(ViewData["active"] ?? 0);
+}
+<div class="tabs @ViewData["class"]" role="tablist">
+    @for (int i = 0; i < tabs.Length; i++)
+    {
+        <button class="@(i == activeTab ? "tab-active" : "tab")"
+                role="tab"
+                aria-selected="@(i == activeTab ? "true" : "false")"
+                onclick="switchTab(this, @i)">
+            @tabs[i]
+        </button>
+    }
+</div>

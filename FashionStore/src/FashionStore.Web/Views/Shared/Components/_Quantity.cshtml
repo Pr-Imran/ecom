@@ -1,0 +1,26 @@
+@{
+    var name = ViewData["name"] as string ?? "quantity";
+    var value = (int)(ViewData["value"] ?? 1);
+    var min = (int)(ViewData["min"] ?? 1);
+    var max = (int)(ViewData["max"] ?? 99);
+}
+<div class="quantity-selector @ViewData["class"]">
+    <button type="button"
+            class="quantity-btn"
+            onclick="updateQuantity('@name', -1, @min, @max)"
+            aria-label="Decrease quantity"
+            @(value <= min ? "disabled" : "")>-</button>
+    <input type="number"
+           name="@name"
+           id="@name"
+           value="@value"
+           min="@min"
+           max="@max"
+           class="quantity-input"
+           onchange="this.value = Math.max(@min, Math.min(@max, parseInt(this.value) || @min))" />
+    <button type="button"
+            class="quantity-btn"
+            onclick="updateQuantity('@name', 1, @min, @max)"
+            aria-label="Increase quantity"
+            @(value >= max ? "disabled" : "")>+</button>
+</div>

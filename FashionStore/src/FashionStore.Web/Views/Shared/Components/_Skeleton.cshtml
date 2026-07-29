@@ -1,0 +1,39 @@
+@{
+    var variant = ViewData["variant"] as string ?? "text";
+    var count = (int)(ViewData["count"] ?? 3);
+}
+@if (variant == "card")
+{
+    for (int i = 0; i < count; i++)
+    {
+        <div class="card @ViewData["class"]">
+            <div class="skeleton-image"></div>
+            <div class="card-body space-y-2">
+                <div class="skeleton-text w-3/4"></div>
+                <div class="skeleton-text w-1/2"></div>
+            </div>
+        </div>
+    }
+}
+else if (variant == "list")
+{
+    for (int i = 0; i < count; i++)
+    {
+        <div class="flex items-center gap-3 p-3">
+            <div class="skeleton-avatar w-10 h-10"></div>
+            <div class="flex-1 space-y-2">
+                <div class="skeleton-text w-3/4"></div>
+                <div class="skeleton-text w-1/2"></div>
+            </div>
+        </div>
+    }
+}
+else
+{
+    <div class="space-y-3 @ViewData["class"]">
+        @for (int i = 0; i < count; i++)
+        {
+            <div class="skeleton-text @(i == 0 ? "w-3/4" : "w-full")"></div>
+        }
+    </div>
+}

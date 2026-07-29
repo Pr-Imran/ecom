@@ -1,0 +1,20 @@
+@{
+    var id = ViewData["id"] as string ?? "sheet-" + Guid.NewGuid().ToString("N")[..8];
+    var title = ViewData["title"] as string ?? "";
+}
+<div id="@id" class="bottomsheet-backdrop hidden" onclick="closeBottomSheet('@id')">
+    <div class="bottomsheet animate-slide-up" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="@(id)-title">
+        <div class="bottomsheet-handle"></div>
+        <div class="flex items-center justify-between px-4 py-3">
+            <h2 id="@(id)-title" class="text-lg font-semibold">@title</h2>
+            <button class="btn-icon" onclick="closeBottomSheet('@id')" aria-label="Close">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="px-4 pb-6">
+            @RenderBody()
+        </div>
+    </div>
+</div>

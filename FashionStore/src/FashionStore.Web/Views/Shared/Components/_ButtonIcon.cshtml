@@ -1,0 +1,6 @@
+<button type="@(ViewData["type"] ?? "button")"
+        class="btn-icon @ViewData["class"]"
+        aria-label="@(ViewData["label"] ?? "Button")"
+        @(ViewData["disabled"] != null ? "disabled" : "")>
+    @RenderBody()
+</button>

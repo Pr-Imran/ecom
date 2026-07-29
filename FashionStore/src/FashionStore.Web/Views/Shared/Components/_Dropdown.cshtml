@@ -1,0 +1,15 @@
+@{
+    var id = ViewData["id"] as string ?? "dropdown-" + Guid.NewGuid().ToString("N")[..8];
+    var label = ViewData["label"] as string ?? "Menu";
+}
+<div class="relative inline-block">
+    <button onclick="toggleDropdown('@id')" class="btn-outline" aria-expanded="false" aria-haspopup="true">
+        @label
+        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>
+    </button>
+    <div id="@id" class="dropdown hidden">
+        @RenderBody()
+    </div>
+</div>

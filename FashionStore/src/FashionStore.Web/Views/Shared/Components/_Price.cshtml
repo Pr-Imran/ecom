@@ -1,0 +1,24 @@
+@{
+    var amount = (decimal)(ViewData["amount"] ?? 0m);
+    var originalAmount = ViewData["originalAmount"] as decimal?;
+    var discountPercent = ViewData["discount"] as int?;
+    var showCurrency = ViewData["showCurrency"] as bool? ?? true;
+    var currency = ViewData["currency"] as string ?? "$";
+}
+<div class="inline-flex items-baseline gap-2 flex-wrap @ViewData["class"]">
+    <span class="price-current">
+        @if (showCurrency) { @currency }
+        @amount.ToString("N2")
+    </span>
+    @if (originalAmount.HasValue && originalAmount.Value > amount)
+    {
+        <span class="price-original">
+            @if (showCurrency) { @currency }
+            @originalAmount.Value.ToString("N2")
+        </span>
+    }
+    @if (discountPercent.HasValue && discountPercent.Value > 0)
+    {
+        <span class="price-discount">-@discountPercent%</span>
+    }
+</div>

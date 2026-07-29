@@ -1,0 +1,15 @@
+@{
+    var size = ViewData["size"] as string ?? "md";
+    var label = ViewData["label"] as string ?? "Loading...";
+    var className = size switch
+    {
+        "sm" => "spinner-sm",
+        "lg" => "spinner-lg",
+        _ => "spinner"
+    };
+}
+<div class="inline-flex items-center gap-2 @ViewData["class"]" role="status">
+    <div class="@className"></div>
+    <span class="text-sm text-brand-text-muted">@label</span>
+    <span class="sr-only">@label</span>
+</div>

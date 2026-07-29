@@ -1,0 +1,5 @@
+<button type="@(ViewData["type"] ?? "button")"
+        class="btn-danger @ViewData["class"]"
+        @(ViewData["disabled"] != null ? "disabled" : "")>
+    @RenderBody()
+</button>

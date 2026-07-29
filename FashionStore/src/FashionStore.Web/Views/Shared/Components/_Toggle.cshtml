@@ -1,0 +1,20 @@
+@{
+    var name = ViewData["name"] as string ?? "";
+    var checkedState = ViewData["checked"] != null;
+    var disabled = ViewData["disabled"] != null;
+    var label = ViewData["label"] as string ?? "";
+}
+<label class="flex items-center gap-3 min-h-[44px] cursor-pointer">
+    <span class="@(checkedState ? "form-toggle-on" : "form-toggle-off") form-toggle">
+        <span class="form-toggle-knob"></span>
+        <input type="checkbox"
+               name="@name"
+               class="sr-only"
+               @(checkedState ? "checked" : "")
+               @(disabled ? "disabled" : "") />
+    </span>
+    @if (!string.IsNullOrEmpty(label))
+    {
+        <span class="text-sm text-brand-text-primary">@label</span>
+    }
+</label>

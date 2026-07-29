@@ -1,0 +1,13 @@
+@{
+    var variant = ViewData["variant"] as string ?? "neutral";
+    var label = ViewData["label"] as string ?? "";
+    var classes = variant switch
+    {
+        "success" => "badge-success",
+        "warning" => "badge-warning",
+        "danger" => "badge-danger",
+        "info" => "badge-info",
+        _ => "badge-neutral"
+    };
+}
+<span class="@classes @ViewData["class"]">@label@(RenderBody())</span>
