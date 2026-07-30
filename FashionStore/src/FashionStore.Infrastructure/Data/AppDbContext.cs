@@ -14,6 +14,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     }
 
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<Category> Categories => Set<Category>();
+    public DbSet<Brand> Brands => Set<Brand>();
+    public DbSet<Collection> Collections => Set<Collection>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -64,6 +67,34 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.CreatedAtUtc);
             entity.HasIndex(e => e.Action);
+        });
+
+        modelBuilder.Entity<Category>(entity =>
+        {
+            entity.ToTable("Categories");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(200);
+            entity.HasIndex(e => e.Slug).IsUnique();
+            entity.HasOne(e => e.ParentCategory).WithMany(c => c.Children).HasForeignKey(e => e.ParentCategoryId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Brand>(entity =>
+        {
+            entity.ToTable("Brands");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(200);
+            entity.HasIndex(e => e.Slug).IsUnique();
+        });
+
+        modelBuilder.Entity<Collection>(entity =>
+        {
+            entity.ToTable("Collections");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(200);
+            entity.HasIndex(e => e.Slug).IsUnique();
         });
 
         // Apply soft delete filter

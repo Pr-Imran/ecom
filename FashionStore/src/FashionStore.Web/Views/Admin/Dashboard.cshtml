@@ -1,0 +1,125 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Dashboard";
+    ViewData["PageTitle"] = "Dashboard";
+}
+
+<div class="space-y-6">
+    @* Welcome Section *@
+    <div class="bg-gradient-to-r from-brand-primary to-brand-primary/80 rounded-lg p-6 text-white">
+        <h2 class="text-2xl font-bold mb-2">Welcome back, @ViewData["UserDisplayName"]!</h2>
+        <p class="text-white/90">Manage your store's categories, brands, and collections from here.</p>
+    </div>
+
+    @* Quick Stats *@
+    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-lg border p-4">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-gray-600">Categories</span>
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                </svg>
+            </div>
+            <p class="text-2xl font-bold text-gray-900">0</p>
+            <p class="text-xs text-gray-500 mt-1">Manage product categories</p>
+        </div>
+
+        <div class="bg-white rounded-lg border p-4">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-gray-600">Brands</span>
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
+                </svg>
+            </div>
+            <p class="text-2xl font-bold text-gray-900">0</p>
+            <p class="text-xs text-gray-500 mt-1">Product brands</p>
+        </div>
+
+        <div class="bg-white rounded-lg border p-4">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-gray-600">Collections</span>
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                </svg>
+            </div>
+            <p class="text-2xl font-bold text-gray-900">0</p>
+            <p class="text-xs text-gray-500 mt-1">Seasonal collections</p>
+        </div>
+
+        <div class="bg-white rounded-lg border p-4">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-gray-600">Products</span>
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7a6 6 0 00-12 0m12 0a6 6 0 00-12 0m12 0v2.586a1 1 0 01-.293.707l-3.414 3.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293L6.293 13.586A1 1 0 016 12.879V7m0 3.586V19a2 2 0 002 2h12a2 2 0 002-2v-8.414z"/>
+                </svg>
+            </div>
+            <p class="text-2xl font-bold text-gray-900">0</p>
+            <p class="text-xs text-gray-500 mt-1">Total products</p>
+        </div>
+    </div>
+
+    @* Quick Actions *@
+    <div class="bg-white rounded-lg shadow-sm border p-6">
+        <h3 class="text-lg font-bold mb-4">Quick Actions</h3>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <a href="/admin/categories" class="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                <div class="w-10 h-10 bg-brand-primary/10 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="font-medium text-gray-900">Manage Categories</p>
+                    <p class="text-xs text-gray-500">Create & organize categories</p>
+                </div>
+            </a>
+
+            <a href="/admin/brands" class="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                <div class="w-10 h-10 bg-brand-primary/10 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="font-medium text-gray-900">Manage Brands</p>
+                    <p class="text-xs text-gray-500">Add & edit product brands</p>
+                </div>
+            </a>
+
+            <a href="/admin/collections" class="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                <div class="w-10 h-10 bg-brand-primary/10 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="font-medium text-gray-900">Manage Collections</p>
+                    <p class="text-xs text-gray-500">Seasonal & featured collections</p>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    @* Getting Started Guide *@
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <h3 class="text-lg font-bold text-blue-900 mb-3">Getting Started</h3>
+        <ol class="space-y-2 text-sm text-blue-800">
+            <li class="flex items-start gap-2">
+                <span class="font-bold">1.</span>
+                <span>Start by creating your main product categories (e.g., Men, Women, Kids)</span>
+            </li>
+            <li class="flex items-start gap-2">
+                <span class="font-bold">2.</span>
+                <span>Add the brands you carry (e.g., Nike, Adidas, Zara)</span>
+            </li>
+            <li class="flex items-start gap-2">
+                <span class="font-bold">3.</span>
+                <span>Set up seasonal collections to group products (e.g., Summer 2026, Holiday Sale)</span>
+            </li>
+            <li class="flex items-start gap-2">
+                <span class="font-bold">4.</span>
+                <span>Once categories, brands, and collections are set up, you can start adding products</span>
+            </li>
+        </ol>
+    </div>
+</div>

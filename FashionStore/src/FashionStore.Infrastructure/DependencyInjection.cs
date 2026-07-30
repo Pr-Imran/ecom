@@ -1,4 +1,5 @@
 using FashionStore.Application.Configuration;
+using FashionStore.Application.Interfaces;
 using FashionStore.Infrastructure.Data;
 using FashionStore.Infrastructure.Services;
 using Microsoft.AspNetCore.Builder;
@@ -23,6 +24,13 @@ public static class DependencyInjection
         var securitySettings = configuration
             .GetSection(SecuritySettings.SectionName)
             .Get<SecuritySettings>()!;
+
+        var cacheSettings = configuration
+            .GetSection(CacheSettings.SectionName)
+            .Get<CacheSettings>()!;
+
+        services.AddSingleton(cacheSettings);
+        services.AddDistributedMemoryCache();
 
         services.AddDbContext<AppDbContext>(options =>
         {
@@ -73,6 +81,9 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<FashionStore.Application.Services.INavigationService, NavigationService>();
         services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<ICategoryService, CategoryService>();
+        services.AddScoped<IBrandService, BrandService>();
+        services.AddScoped<ICollectionService, CollectionService>();
         services.AddAuthorization();
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>("database");

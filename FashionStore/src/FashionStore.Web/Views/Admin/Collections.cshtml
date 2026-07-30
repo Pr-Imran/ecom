@@ -1,0 +1,320 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Collections";
+    ViewData["PageTitle"] = "Collections";
+}
+
+<div class="space-y-4">
+    @* Desktop Toolbar *@
+    <div class="hidden lg:flex items-center justify-between gap-4">
+        <div class="flex-1 max-w-md">
+            <input type="text" id="desktopSearch" placeholder="Search collections..." 
+                   class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+        </div>
+        <div class="flex items-center gap-2">
+            <label class="text-sm text-gray-600">Show:</label>
+            <select id="filterStatus" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-primary">
+                <option value="active">Active Only</option>
+                <option value="all">All</option>
+            </select>
+            <button id="btnAdd" class="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium">
+                + Add Collection
+            </button>
+        </div>
+    </div>
+
+    @* Collections List - Desktop Table *@
+    <div class="hidden lg:block bg-white rounded-lg shadow-sm border overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-50 border-b">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Slug</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Period</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="collectionsTableBody" class="divide-y divide-gray-200">
+                <tr>
+                    <td colspan="6" class="px-6 py-8 text-center text-gray-500 text-sm">
+                        <p>No collections yet. Click "Add Collection" to create one.</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    @* Collections List - Mobile Cards *@
+    <div id="collectionsCards" class="lg:hidden space-y-3 pb-24">
+        <div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8">
+            <p>No collections yet. Tap the + button to create one.</p>
+        </div>
+    </div>
+</div>
+
+@* Floating Add Button (Mobile) *@
+<button id="btnAddMobile" class="lg:hidden fixed bottom-20 right-4 w-14 h-14 bg-brand-primary text-white rounded-full shadow-lg flex items-center justify-center hover:bg-brand-primary/90 z-30">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+</button>
+
+@* Collection Form Modal *@
+<div id="collectionModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-2xl">
+            <h3 id="modalTitle" class="text-lg font-bold">Add Collection</h3>
+            <button class="btn-close-modal text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="collectionForm" class="p-6 space-y-4">
+            <input type="hidden" id="collectionId" />
+            
+            <div>
+                <label for="collectionName" class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <input type="text" id="collectionName" required maxlength="200"
+                       class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+            </div>
+
+            <div>
+                <label for="collectionSlug" class="block text-sm font-medium text-gray-700 mb-1">Slug</label>
+                <input type="text" id="collectionSlug" maxlength="200" readonly
+                       class="w-full border border-gray-300 rounded-lg px-4 py-2.5 bg-gray-50 text-gray-600 text-sm" />
+                <p class="text-xs text-gray-500 mt-1">Auto-generated from name</p>
+            </div>
+
+            <div>
+                <label for="collectionDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea id="collectionDescription" maxlength="2000" rows="3"
+                          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm"></textarea>
+            </div>
+
+            <div>
+                <label for="collectionBannerImageUrl" class="block text-sm font-medium text-gray-700 mb-1">Banner Image URL</label>
+                <input type="url" id="collectionBannerImageUrl" maxlength="500"
+                       class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="collectionStartAtUtc" class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                    <input type="datetime-local" id="collectionStartAtUtc"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+                <div>
+                    <label for="collectionEndAtUtc" class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                    <input type="datetime-local" id="collectionEndAtUtc"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+            </div>
+
+            <div class="flex items-center gap-6">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="collectionIsActive" checked class="w-4 h-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary" />
+                    <span class="text-sm text-gray-700">Active</span>
+                </label>
+                <div class="flex-1">
+                    <label for="collectionDisplayOrder" class="block text-sm font-medium text-gray-700 mb-1">Display Order</label>
+                    <input type="number" id="collectionDisplayOrder" value="0" min="0"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+            </div>
+
+            <div class="border-t pt-4 mt-4">
+                <h4 class="text-sm font-medium text-gray-700 mb-3">SEO</h4>
+                <div class="space-y-3">
+                    <div>
+                        <label for="collectionSeoTitle" class="block text-xs text-gray-600 mb-1">SEO Title</label>
+                        <input type="text" id="collectionSeoTitle" maxlength="200"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label for="collectionSeoDescription" class="block text-xs text-gray-600 mb-1">SEO Description</label>
+                        <textarea id="collectionSeoDescription" maxlength="2000" rows="2"
+                                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <div class="sticky bottom-0 bg-white border-t px-6 py-4 flex items-center justify-end gap-3 rounded-b-2xl">
+            <button type="button" class="btn-close-modal px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+            <button type="submit" form="collectionForm" class="px-6 py-2 bg-brand-primary text-white rounded-lg text-sm hover:bg-brand-primary/90 font-medium">Save Collection</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let collections = [];
+        let isEditing = false;
+
+        document.getElementById('collectionName').addEventListener('input', function() {
+            const slug = this.value.toLowerCase().replace(/ /g, '-').replace(/--+/g, '-').trim('-');
+            document.getElementById('collectionSlug').value = slug;
+        });
+
+        document.querySelectorAll('.btn-close-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('collectionModal').classList.add('hidden');
+            });
+        });
+
+        document.getElementById('btnAdd').addEventListener('click', openAddModal);
+        document.getElementById('btnAddMobile').addEventListener('click', openAddModal);
+
+        function openAddModal() {
+            isEditing = false;
+            document.getElementById('modalTitle').textContent = 'Add Collection';
+            document.getElementById('collectionForm').reset();
+            document.getElementById('collectionId').value = '';
+            document.getElementById('collectionModal').classList.remove('hidden');
+        }
+
+        async function loadCollections() {
+            const includeInactive = document.getElementById('filterStatus').value === 'all';
+            const response = await fetch(`/api/admin/collections?includeInactive=${includeInactive}`);
+            if (response.ok) {
+                collections = await response.json();
+                renderCollections();
+            }
+        }
+
+        function renderCollections() {
+            const tableBody = document.getElementById('collectionsTableBody');
+            if (collections.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500 text-sm">No collections found</td></tr>';
+            } else {
+                tableBody.innerHTML = collections.map(c => {
+                    const period = [];
+                    if (c.startAtUtc) period.push(new Date(c.startAtUtc).toLocaleDateString());
+                    if (c.endAtUtc) period.push(new Date(c.endAtUtc).toLocaleDateString());
+                    return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">${c.name}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${c.slug}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${period.join(' - ') || 'Ongoing'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${c.displayOrder}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-medium ${c.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                                ${c.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="editCollection('${c.id}')" class="text-brand-primary hover:text-brand-primary/80 mr-3">Edit</button>
+                            <button onclick="deleteCollection('${c.id}')" class="text-red-600 hover:text-red-700">Delete</button>
+                        </td>
+                    </tr>
+                `;
+                }).join('');
+            }
+
+            const cardsContainer = document.getElementById('collectionsCards');
+            if (collections.length === 0) {
+                cardsContainer.innerHTML = '<div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8"><p>No collections yet.</p></div>';
+            } else {
+                cardsContainer.innerHTML = collections.map(c => {
+                    const period = [];
+                    if (c.startAtUtc) period.push(new Date(c.startAtUtc).toLocaleDateString());
+                    if (c.endAtUtc) period.push(new Date(c.endAtUtc).toLocaleDateString());
+                    return `
+                    <div class="bg-white rounded-lg border p-4">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex-1">
+                                <h3 class="font-bold text-gray-900">${c.name}</h3>
+                                <p class="text-xs text-gray-500 mt-1">${c.slug}</p>
+                            </div>
+                            <span class="px-2 py-1 rounded-full text-xs font-medium ${c.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                                ${c.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                        </div>
+                        <div class="text-xs text-gray-600 mb-3">
+                            ${period.length > 0 ? `<div>Period: ${period.join(' - ')}</div>` : '<div>Ongoing</div>'}
+                        </div>
+                        <div class="flex gap-2 pt-3 border-t">
+                            <button onclick="editCollection('${c.id}')" class="flex-1 px-3 py-2 bg-brand-primary text-white rounded-lg text-sm">Edit</button>
+                            <button onclick="deleteCollection('${c.id}')" class="px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm">Delete</button>
+                        </div>
+                    </div>
+                `;
+                }).join('');
+            }
+        }
+
+        async function editCollection(id) {
+            const collection = collections.find(c => c.id === id);
+            if (!collection) return;
+
+            isEditing = true;
+            document.getElementById('modalTitle').textContent = 'Edit Collection';
+            document.getElementById('collectionId').value = collection.id;
+            document.getElementById('collectionName').value = collection.name;
+            document.getElementById('collectionSlug').value = collection.slug;
+            document.getElementById('collectionDescription').value = collection.description || '';
+            document.getElementById('collectionBannerImageUrl').value = collection.bannerImageUrl || '';
+            document.getElementById('collectionStartAtUtc').value = collection.startAtUtc ? new Date(collection.startAtUtc).toISOString().slice(0, 16) : '';
+            document.getElementById('collectionEndAtUtc').value = collection.endAtUtc ? new Date(collection.endAtUtc).toISOString().slice(0, 16) : '';
+            document.getElementById('collectionDisplayOrder').value = collection.displayOrder;
+            document.getElementById('collectionIsActive').checked = collection.isActive;
+            document.getElementById('collectionSeoTitle').value = collection.seoTitle || '';
+            document.getElementById('collectionSeoDescription').value = collection.seoDescription || '';
+            
+            document.getElementById('collectionModal').classList.remove('hidden');
+        }
+
+        async function deleteCollection(id) {
+            if (!confirm('Are you sure you want to delete this collection?')) return;
+
+            const response = await fetch(`/api/admin/collections/${id}`, { method: 'DELETE' });
+            if (response.ok) {
+                await loadCollections();
+            } else {
+                const error = await response.json();
+                alert(error.error || 'Failed to delete collection');
+            }
+        }
+
+        document.getElementById('collectionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const data = {
+                id: document.getElementById('collectionId').value || undefined,
+                name: document.getElementById('collectionName').value,
+                description: document.getElementById('collectionDescription').value,
+                bannerImageUrl: document.getElementById('collectionBannerImageUrl').value || null,
+                startAtUtc: document.getElementById('collectionStartAtUtc').value || null,
+                endAtUtc: document.getElementById('collectionEndAtUtc').value || null,
+                displayOrder: parseInt(document.getElementById('collectionDisplayOrder').value),
+                isActive: document.getElementById('collectionIsActive').checked,
+                seoTitle: document.getElementById('collectionSeoTitle').value || null,
+                seoDescription: document.getElementById('collectionSeoDescription').value || null
+            };
+
+            const url = isEditing ? `/api/admin/collections/${data.id}` : '/api/admin/collections';
+            const method = isEditing ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                document.getElementById('collectionModal').classList.add('hidden');
+                await loadCollections();
+            } else {
+                const error = await response.json();
+                alert(error.error || 'Failed to save collection');
+            }
+        });
+
+        document.getElementById('filterStatus').addEventListener('change', loadCollections);
+        loadCollections();
+    </script>
+}
