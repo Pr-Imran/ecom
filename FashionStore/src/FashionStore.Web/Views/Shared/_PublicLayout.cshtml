@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - FashionStore</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="min-h-screen flex flex-col bg-gray-50">
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="border-b">
+            <div class="container mx-auto px-4 py-4">
+                <div class="flex items-center justify-between gap-4">
+                    <a href="/" class="text-2xl font-bold text-brand-primary">FashionStore</a>
+                    <nav class="flex items-center gap-6">
+                        <a href="/" class="text-gray-700 hover:text-brand-primary">Home</a>
+                        <a href="/products" class="text-gray-700 hover:text-brand-primary">Products</a>
+                        <a href="/demo/layouts" class="text-gray-700 hover:text-brand-primary">Demo</a>
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <a href="/account" class="text-gray-700 hover:text-brand-primary">My Account</a>
+                            <a href="/admin" class="text-brand-primary hover:text-brand-primary/80">Admin</a>
+                        }
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+    <main class="flex-1 container mx-auto px-4 py-6">
+        @RenderBody()
+    </main>
+    <footer class="bg-gray-900 text-white py-8">
+        <div class="container mx-auto px-4 text-center">
+            <p>&copy; @DateTime.UtcNow.Year FashionStore. All rights reserved.</p>
+        </div>
+    </footer>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

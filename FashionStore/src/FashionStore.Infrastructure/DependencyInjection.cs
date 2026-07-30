@@ -71,6 +71,7 @@ public static class DependencyInjection
 
         services.AddScoped<IRoleSeeder, RoleSeeder>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<FashionStore.Application.Services.INavigationService, NavigationService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddAuthorization();
         services.AddHealthChecks()

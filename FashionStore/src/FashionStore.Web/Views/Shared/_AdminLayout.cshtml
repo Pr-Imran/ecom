@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Admin - FashionStore</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <style>
+        .sidebar { transition: width 0.3s; }
+        .admin-min { min-height: calc(100vh - 64px); }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="flex min-h-screen">
+        @* Desktop Sidebar *@
+        <aside class="hidden lg:block w-64 bg-gray-900 text-white sidebar">
+            <div class="h-16 flex items-center justify-center border-b border-gray-800">
+                <span class="text-lg font-bold">FashionStore Admin</span>
+            </div>
+            <nav class="p-4">
+                <ul class="space-y-1">
+                    @foreach (var item in (ViewData["AdminNav"] as IEnumerable<FashionStore.Application.DTOs.Navigation.NavigationItem> ?? Enumerable.Empty<FashionStore.Application.DTOs.Navigation.NavigationItem>()))
+                    {
+                        var isActive = Context.Request.Path.StartsWithSegments(item.Url);
+                        <li>
+                            <a href="@item.Url" class="block px-3 py-2.5 rounded-lg transition-colors @(isActive ? "bg-brand-primary text-white" : "text-gray-300 hover:bg-gray-800 hover:text-white")">
+                                <div class="flex items-center gap-3">
+                                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                    </svg>
+                                    <span class="text-sm font-medium">@item.Label</span>
+                                </div>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        </aside>
+
+        @* Main Content *@
+        <div class="flex-1 flex flex-col admin-min">
+            <header class="h-16 bg-white border-b sticky top-0 z-40">
+                <div class="flex items-center justify-between h-full px-4">
+                    <h1 class="text-lg font-bold text-gray-900">@ViewData["PageTitle"]</h1>
+                    <a href="/account/logout" class="text-sm text-red-600 hover:text-red-700">Sign Out</a>
+                </div>
+            </header>
+            <main class="p-6 flex-1">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

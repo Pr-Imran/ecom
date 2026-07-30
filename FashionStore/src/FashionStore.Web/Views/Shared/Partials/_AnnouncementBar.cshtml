@@ -1,0 +1,28 @@
+@model IEnumerable<FashionStore.Application.DTOs.Navigation.Announcement>
+
+@if (Model != null && Model.Any())
+{
+    <div id="announcement-bar" class="bg-brand-primary text-white text-sm py-2 px-4">
+        <div class="container mx-auto flex flex-wrap items-center justify-center gap-4">
+            @foreach (var announcement in Model)
+            {
+                <div class="announcement-item flex items-center gap-2 @(announcement.Style == "danger" ? "bg-red-600" : (announcement.Style == "warning" ? "bg-yellow-600" : "")) rounded px-3 py-1">
+                    @if (!string.IsNullOrEmpty(announcement.LinkUrl))
+                    {
+                        <a href="@announcement.LinkUrl" class="hover:underline font-medium">
+                            @announcement.Message
+                            @if (!string.IsNullOrEmpty(announcement.LinkText))
+                            {
+                                <span class="ml-1">→</span>
+                            }
+                        </a>
+                    }
+                    else
+                    {
+                        <span>@announcement.Message</span>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+}

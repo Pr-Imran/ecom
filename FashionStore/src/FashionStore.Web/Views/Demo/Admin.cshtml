@@ -1,0 +1,82 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Demo";
+}
+
+<div class="space-y-6">
+    <div class="bg-white rounded-lg shadow-sm border p-6">
+        <h2 class="text-2xl font-bold mb-4">Admin Layout Demo</h2>
+        
+        <div class="prose max-w-none">
+            <p class="text-gray-600 mb-6">
+                This page demonstrates the admin layout. Note the collapsible sidebar on desktop and drawer on mobile.
+            </p>
+
+            <div class="grid md:grid-cols-3 gap-4 mb-6">
+                <div class="border rounded-lg p-4">
+                    <h4 class="font-bold mb-2 text-sm">Desktop Sidebar</h4>
+                    <ul class="space-y-1 text-xs text-gray-600">
+                        <li>• Collapsible (20rem → 5rem)</li>
+                        <li>• Expandable sub-menus</li>
+                        <li>• Permission-based items</li>
+                    </ul>
+                </div>
+                <div class="border rounded-lg p-4">
+                    <h4 class="font-bold mb-2 text-sm">Mobile Drawer</h4>
+                    <ul class="space-y-1 text-xs text-gray-600">
+                        <li>• Slide-out navigation</li>
+                        <li>• Full-screen overlay</li>
+                        <li>• Touch-friendly spacing</li>
+                    </ul>
+                </div>
+                <div class="border rounded-lg p-4">
+                    <h4 class="font-bold mb-2 text-sm">Header Area</h4>
+                    <ul class="space-y-1 text-xs text-gray-600">
+                        <li>• Breadcrumb navigation</li>
+                        <li>• Notification area</li>
+                        <li>• User dropdown menu</li>
+                    </ul>
+                </div>
+            </div>
+
+            @* Show available sections *@
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <h4 class="font-bold text-sm mb-2">Available Sections:</h4>
+                <div class="grid md:grid-cols-2 gap-3 text-xs">
+                    <code class="bg-white px-3 py-2 rounded">@RenderSection("Actions") - Desktop action buttons</code>
+                    <code class="bg-white px-3 py-2 rounded">@RenderSection("MobileActions") - Mobile sticky action bar</code>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-3">
+                <a href="/admin" class="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90">Back to Dashboard</a>
+                <a href="/demo/layouts" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">View All Layouts</a>
+            </div>
+        </div>
+    </div>
+
+    @* Example action buttons section *@
+    <div class="bg-white rounded-lg shadow-sm border p-6">
+        <h3 class="text-lg font-bold mb-4">Example Action Buttons</h3>
+        <div class="flex flex-wrap gap-3">
+            <button class="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90">Primary Action</button>
+            <button class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Secondary</button>
+            <button class="px-4 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50">Danger</button>
+        </div>
+    </div>
+</div>
+
+@section Actions {
+    <button class="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90">
+        <span class="hidden sm:inline">Add New Item</span>
+        <span class="sm:hidden">+</span>
+    </button>
+    <button class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Export</button>
+}
+
+@section MobileActions {
+    <div class="flex gap-2">
+        <button class="flex-1 px-4 py-2 bg-brand-primary text-white rounded-lg">Primary</button>
+        <button class="px-4 py-2 border border-gray-300 rounded-lg">Secondary</button>
+    </div>
+}

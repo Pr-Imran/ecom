@@ -1,0 +1,97 @@
+@{
+    Layout = "_PublicLayout";
+    ViewData["Title"] = "State Components Demo";
+}
+
+@{
+    var type = Context.Request.Query["type"].ToString();
+    var states = new[] { "empty", "loading", "not-found", "access-denied", "error", "offline" };
+    var currentState = states.Contains(type) ? type : "empty";
+}
+
+@if (currentState == "empty")
+{
+    @await Html.PartialAsync("_State", new FashionStore.Application.DTOs.StateViewModel
+    {
+        Type = "empty",
+        Title = "No Orders Yet",
+        Message = "You haven't placed any orders. Start shopping to see your orders here!",
+        PrimaryAction = new FashionStore.Application.DTOs.ActionLink("Browse Products", "/products"),
+        SecondaryAction = new FashionStore.Application.DTOs.ActionLink("View Categories", "/categories")
+    })
+}
+else if (currentState == "loading")
+{
+    @await Html.PartialAsync("_State", new FashionStore.Application.DTOs.StateViewModel
+    {
+        Type = "loading",
+        Title = "Loading...",
+        Message = "Please wait while we fetch your data."
+    })
+}
+else if (currentState == "not-found")
+{
+    @await Html.PartialAsync("_State", new FashionStore.Application.DTOs.StateViewModel
+    {
+        Type = "not-found",
+        Title = "Page Not Found",
+        Message = "The page you're looking for doesn't exist or has been moved.",
+        PrimaryAction = new FashionStore.Application.DTOs.ActionLink("Go Home", "/"),
+        SecondaryAction = new FashionStore.Application.DTOs.ActionLink("Contact Support", "/contact")
+    })
+}
+else if (currentState == "access-denied")
+{
+    @await Html.PartialAsync("_State", new FashionStore.Application.DTOs.StateViewModel
+    {
+        Type = "access-denied",
+        Title = "Access Denied",
+        Message = "You don't have permission to view this resource.",
+        PrimaryAction = new FashionStore.Application.DTOs.ActionLink("Go Back", "javascript:history.back()"),
+        SecondaryAction = new FashionStore.Application.DTOs.ActionLink("Contact Admin", "/contact")
+    })
+}
+else if (currentState == "error")
+{
+    @await Html.PartialAsync("_State", new FashionStore.Application.DTOs.StateViewModel
+    {
+        Type = "error",
+        Title = "Something Went Wrong",
+        Message = "An unexpected error occurred. Please try again later.",
+        Details = "Example stack trace or error information for debugging purposes.",
+        PrimaryAction = new FashionStore.Application.DTOs.ActionLink("Try Again", Context.Request.Path),
+        SecondaryAction = new FashionStore.Application.DTOs.ActionLink("Report Issue", "/support")
+    })
+}
+else if (currentState == "offline")
+{
+    @await Html.PartialAsync("_State", new FashionStore.Application.DTOs.StateViewModel
+    {
+        Type = "offline",
+        Title = "Connection Lost",
+        Message = "You're offline. Some features may not be available until you reconnect.",
+        PrimaryAction = new FashionStore.Application.DTOs.ActionLink("Retry", "javascript:location.reload()")
+    })
+}
+
+<div class="mt-8 border-t pt-6">
+    <h3 class="text-lg font-bold mb-4">All State Previews</h3>
+    <div class="flex flex-wrap gap-2">
+        @foreach (var s in states)
+        {
+            <a href="/demo/states?type=@s"
+               class="px-4 py-2 rounded-lg text-sm font-medium transition-colors @(currentState == s ? "bg-brand-primary text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200")">
+                @(s switch {
+                    "empty" => "Empty",
+                    "loading" => "Loading",
+                    "not-found" => "Not Found",
+                    "access-denied" => "Access Denied",
+                    "error" => "Error",
+                    "offline" => "Offline",
+                    _ => s
+                })
+            </a>
+        }
+    </div>
+    <a href="/demo/layouts" class="mt-4 inline-block px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">← Back to Layouts Demo</a>
+</div>

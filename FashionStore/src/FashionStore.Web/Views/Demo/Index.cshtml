@@ -1,0 +1,183 @@
+@{
+    Layout = "_PublicLayout";
+    ViewData["Title"] = "Layouts Demonstration";
+    ViewData["ShowPromoMenu"] = true;
+}
+
+<div class="space-y-8">
+    @* Header Section *@
+    <section class="bg-white rounded-lg shadow-sm border p-6">
+        <h2 class="text-2xl font-bold mb-4">Public Desktop & Mobile Layout Demo</h2>
+        <p class="text-gray-600 mb-4">
+            This page demonstrates all Phase 4 layouts. Switch between desktop and mobile view to see responsive design in action.
+        </p>
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="border rounded-lg p-4 hover:border-brand-primary cursor-pointer" onclick="window.location.href='/demo/layouts'">
+                <div class="text-3xl font-bold text-brand-primary mb-2">✓</div>
+                <div class="font-medium">Announcement Bar</div>
+                <div class="text-sm text-gray-500">Promotional messages</div>
+            </div>
+            <div class="border rounded-lg p-4 hover:border-brand-primary cursor-pointer" onclick="window.location.href='/demo/layouts'">
+                <div class="text-3xl font-bold text-brand-primary mb-2">✓</div>
+                <div class="font-medium">Desktop Header</div>
+                <div class="text-sm text-gray-500">Logo, search, cart, account</div>
+            </div>
+            <div class="border rounded-lg p-4 hover:border-brand-primary cursor-pointer" onclick="window.location.href='/demo/layouts'">
+                <div class="text-3xl font-bold text-brand-primary mb-2">✓</div>
+                <div class="font-medium">Mobile Bottom Nav</div>
+                <div class="text-sm text-gray-500">App-style navigation</div>
+            </div>
+            <div class="border rounded-lg p-4 hover:border-brand-primary cursor-pointer" onclick="window.location.href='/demo/layouts'">
+                <div class="text-3xl font-bold text-brand-primary mb-2">✓</div>
+                <div class="font-medium">Newsletter Footer</div>
+                <div class="text-sm text-gray-500">Cookie consent</div>
+            </div>
+        </div>
+    </section>
+
+    @* Empty State Demo *@
+    <section class="bg-white rounded-lg shadow-sm border p-6">
+        <h3 class="text-lg font-bold mb-4">State Components</h3>
+        <p class="text-gray-600 mb-4">Click to preview different state presentations:</p>
+        <div class="flex flex-wrap gap-3">
+            <a href="/demo/states?type=empty" class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Empty State</a>
+            <a href="/demo/states?type=loading" class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Loading State</a>
+            <a href="/demo/states?type=not-found" class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Not Found</a>
+            <a href="/demo/states?type=access-denied" class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Access Denied</a>
+            <a href="/demo/states?type=error" class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Error State</a>
+            <a href="/demo/states?type=offline" class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Offline State</a>
+        </div>
+    </section>
+
+    @* Layout Links *@
+    <section class="bg-white rounded-lg shadow-sm border p-6">
+        <h3 class="text-lg font-bold mb-4">View All Layouts</h3>
+        <div class="grid md:grid-cols-3 gap-4">
+            <a href="/demo/account" class="border rounded-lg p-4 hover:border-brand-primary hover:shadow-sm transition-shadow">
+                <div class="flex items-center gap-3 mb-2">
+                    <svg class="w-6 h-6 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    <div class="font-medium">Customer Account Layout</div>
+                </div>
+                <div class="text-sm text-gray-500">Desktop sidebar + mobile cards + bottom nav</div>
+            </a>
+
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a href="/demo/layouts/admin" class="border rounded-lg p-4 hover:border-brand-primary hover:shadow-sm transition-shadow">
+                    <div class="flex items-center gap-3 mb-2">
+                        <svg class="w-6 h-6 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.256 2.924-1.256 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.256.426 1.256 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.256-2.924 1.256-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.256-.426-1.256-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        <div class="font-medium">Admin Layout</div>
+                    </div>
+                    <div class="text-sm text-gray-500">Collapsible sidebar + mobile drawer + breadcrumbs</div>
+                </a>
+            }
+            else
+            {
+                <div class="border rounded-lg p-4 bg-gray-50">
+                    <div class="flex items-center gap-3 mb-2">
+                        <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                        <div class="font-medium">Admin Layout</div>
+                    </div>
+                    <div class="text-sm text-gray-500">Sign in as admin to view</div>
+                </div>
+            }
+
+            <a href="/" class="border rounded-lg p-4 hover:border-brand-primary hover:shadow-sm transition-shadow">
+                <div class="flex items-center gap-3 mb-2">
+                    <svg class="w-6 h-6 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                    </svg>
+                    <div class="font-medium">Home Page</div>
+                </div>
+                <div class="text-sm text-gray-500">Full public layout example</div>
+            </a>
+        </div>
+    </section>
+
+    @* Features List *@
+    <section class="bg-white rounded-lg shadow-sm border p-6">
+        <h3 class="text-lg font-bold mb-4">Phase 4 Features</h3>
+        <div class="grid md:grid-cols-2 gap-4 text-sm">
+            <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <div>
+                    <div class="font-medium">Announcement Bar</div>
+                    <div class="text-gray-500">Promotional messages with expiry support</div>
+                </div>
+            </div>
+            <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <div>
+                    <div class="font-medium">Desktop Category Navigation</div>
+                    <div class="text-gray-500">Horizontal mega-menu style</div>
+                </div>
+            </div>
+            <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <div>
+                    <div class="font-medium">Mobile Bottom Navigation</div>
+                    <div class="text-gray-500">Native app-style 5-tab navigation</div>
+                </div>
+            </div>
+            <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <div>
+                    <div class="font-medium">Account Sidebar & Mobile Cards</div>
+                    <div class="text-gray-500">Responsive customer navigation</div>
+                </div>
+            </div>
+            <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <div>
+                    <div class="font-medium">Admin Collapsible Sidebar</div>
+                    <div class="text-gray-500">Desktop + mobile drawer</div>
+                </div>
+            </div>
+            <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <div>
+                    <div class="font-medium">Permission-Based Navigation</div>
+                    <div class="text-gray-500">Hide links without access</div>
+                </div>
+            </div>
+            <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <div>
+                    <div class="font-medium">Consistent State Components</div>
+                    <div class="text-gray-500">Empty, loading, error, not-found states</div>
+                </div>
+            </div>
+            <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <div>
+                    <div class="font-medium">Cookie Consent</div>
+                    <div class="text-gray-500">GDPR compliant footer component</div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>

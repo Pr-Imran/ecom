@@ -4,7 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <NoWarn>CA1873;CA1848;CA1305;CS8602</NoWarn>
+    <NoWarn>CA1873;CA1848;CA1305;CS8602;CA1861;CA1707;CA1311;CA1304;CS8620;CS8605</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
