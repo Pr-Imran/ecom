@@ -1,0 +1,27 @@
+@{
+    ViewData["Title"] = "Access Denied";
+}
+
+<div class="min-h-screen flex items-center justify-center px-4 bg-brand-surface">
+    <div class="text-center max-w-md">
+        <div class="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-6">
+            <svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+        </div>
+
+        <h1 class="text-2xl font-bold text-brand-primary mb-3">Access Denied</h1>
+        <p class="text-brand-text-muted mb-6">
+            You don't have permission to access this resource. Please contact your administrator if you believe this is an error.
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+            <a href="javascript:history.back()" class="btn-outline">Go Back</a>
+            <a asp-action="Index" asp-controller="Home" class="btn-primary">Go Home</a>
+        </div>
+
+        <div class="mt-8 text-xs text-brand-text-muted">
+            <p>Error Code: FORBIDDEN_001</p>
+        </div>
+    </div>
+</div>

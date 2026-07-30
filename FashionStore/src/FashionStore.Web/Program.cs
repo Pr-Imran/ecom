@@ -2,6 +2,7 @@ using FashionStore.Application;
 using FashionStore.Application.Configuration;
 using FashionStore.Infrastructure;
 using FashionStore.Web.Middleware;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.OpenApi.Models;
 using Serilog;
 
@@ -54,6 +55,40 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("global", options =>
+    {
+        options.PermitLimit = 100;
+        options.Window = TimeSpan.FromMinutes(1);
+        options.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = 10;
+    });
+
+    options.AddFixedWindowLimiter("login", options =>
+    {
+        options.PermitLimit = 5;
+        options.Window = TimeSpan.FromMinutes(1);
+        options.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = 10;
+    });
+
+    options.AddFixedWindowLimiter("passwordreset", options =>
+    {
+        options.PermitLimit = 3;
+        options.Window = TimeSpan.FromMinutes(5);
+        options.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = 5;
+    });
+
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = 429;
+        context.HttpContext.Response.Headers.RetryAfter = "60";
+        await context.HttpContext.Response.WriteAsJsonAsync(new { error = "Too many requests. Please try again later.", retryAfterSeconds = 60 }, token);
+    };
+});
+
 var app = builder.Build();
 
 app.UseRequestCorrelation();
@@ -76,6 +111,7 @@ app.UseGlobalExceptionHandling();
 
 app.UseHttpsRedirection();
 app.UseRouting();
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.UseStaticFiles();

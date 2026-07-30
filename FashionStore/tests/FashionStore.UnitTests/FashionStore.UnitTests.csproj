@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <IsPackable>false</IsPackable>
+    <NoWarn>CA1861;CA1707</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\FashionStore.Domain\FashionStore.Domain.csproj" />
     <ProjectReference Include="..\..\src\FashionStore.Application\FashionStore.Application.csproj" />
+    <ProjectReference Include="..\..\src\FashionStore.Infrastructure\FashionStore.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

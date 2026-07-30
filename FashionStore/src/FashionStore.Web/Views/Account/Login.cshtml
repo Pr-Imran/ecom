@@ -1,0 +1,74 @@
+@model FashionStore.Application.DTOs.Auth.LoginRequest
+@{
+    ViewData["Title"] = "Login";
+    var returnUrl = ViewData["ReturnUrl"] as string;
+}
+
+<div class="min-h-screen flex flex-col justify-center py-8 px-4 sm:px-6 lg:px-8 bg-brand-surface">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="text-center">
+            <h1 class="text-3xl font-bold text-brand-primary">Welcome Back</h1>
+            <p class="mt-2 text-sm text-brand-text-muted">Sign in to your account</p>
+        </div>
+    </div>
+
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="card">
+            <div class="card-body">
+                @if (ViewData.ModelState.ErrorCount > 0)
+                {
+                    foreach (var key in ViewData.ModelState.Keys)
+                    {
+                        foreach (var error in ViewData.ModelState[key].Errors)
+                        {
+                            <div class="alert-danger mb-4" role="alert">
+                                <p class="text-sm">@error.ErrorMessage</p>
+                            </div>
+                        }
+                    }
+                }
+
+                <form asp-action="Login" method="POST" class="space-y-5">
+                    <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
+
+                    <div>
+                        <label for="EmailOrUserName" class="form-label">Email</label>
+                        <input asp-for="EmailOrUserName" type="email" autocomplete="email" required
+                               class="form-input" placeholder="Enter your email" />
+                        <span asp-validation-for="EmailOrUserName" class="text-brand-danger text-sm mt-1"></span>
+                    </div>
+
+                    <div>
+                        <label for="Password" class="form-label">Password</label>
+                        <input asp-for="Password" type="password" autocomplete="current-password" required
+                               class="form-input" placeholder="Enter your password" />
+                        <span asp-validation-for="Password" class="text-brand-danger text-sm mt-1"></span>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <input asp-for="RememberMe" type="checkbox" class="form-checkbox" />
+                            <label asp-for="RememberMe" class="ml-2 text-sm text-brand-text-primary">Remember me</label>
+                        </div>
+                        <a asp-action="ForgotPassword" class="text-sm text-brand-accent hover:underline">Forgot password?</a>
+                    </div>
+
+                    <button type="submit" class="btn-primary w-full">Sign In</button>
+                </form>
+
+                <div class="mt-6 text-center">
+                    <p class="text-sm text-brand-text-muted">
+                        Don't have an account?
+                        <a asp-action="Register" asp-route-returnUrl="@returnUrl" class="text-brand-accent font-medium hover:underline">
+                            Create one
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

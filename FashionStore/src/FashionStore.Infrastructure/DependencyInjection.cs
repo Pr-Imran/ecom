@@ -1,9 +1,12 @@
 using FashionStore.Application.Configuration;
 using FashionStore.Infrastructure.Data;
+using FashionStore.Infrastructure.Services;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace FashionStore.Infrastructure;
 
@@ -16,6 +19,10 @@ public static class DependencyInjection
         var dbSettings = configuration
             .GetSection(DatabaseSettings.SectionName)
             .Get<DatabaseSettings>()!;
+
+        var securitySettings = configuration
+            .GetSection(SecuritySettings.SectionName)
+            .Get<SecuritySettings>()!;
 
         services.AddDbContext<AppDbContext>(options =>
         {
@@ -31,6 +38,41 @@ public static class DependencyInjection
                 });
         });
 
+        services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
+        {
+            options.Password.RequireDigit = securitySettings.PasswordRequireDigit;
+            options.Password.RequireLowercase = true;
+            options.Password.RequireUppercase = securitySettings.PasswordRequireUppercase;
+            options.Password.RequireNonAlphanumeric = securitySettings.PasswordRequireNonAlphanumeric;
+            options.Password.RequiredLength = securitySettings.PasswordRequiredLength;
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(securitySettings.LockoutDurationMinutes);
+            options.Lockout.MaxFailedAccessAttempts = securitySettings.MaxFailedLoginAttempts;
+            options.Lockout.AllowedForNewUsers = true;
+            options.User.RequireUniqueEmail = true;
+            options.SignIn.RequireConfirmedEmail = securitySettings.RequireEmailConfirmation;
+            options.SignIn.RequireConfirmedPhoneNumber = false;
+        })
+        .AddEntityFrameworkStores<AppDbContext>()
+        .AddDefaultTokenProviders()
+        .AddClaimsPrincipalFactory<ApplicationClaimsPrincipalFactory>();
+
+        services.ConfigureApplicationCookie(options =>
+        {
+            options.Cookie.Name = ".FashionStore.Auth";
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+            options.Cookie.SameSite = SameSiteMode.Lax;
+            options.SlidingExpiration = true;
+            options.ExpireTimeSpan = TimeSpan.FromDays(1);
+            options.LoginPath = "/Account/Login";
+            options.LogoutPath = "/Account/Logout";
+            options.AccessDeniedPath = "/Account/AccessDenied";
+        });
+
+        services.AddScoped<IRoleSeeder, RoleSeeder>();
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IEmailService, EmailService>();
+        services.AddAuthorization();
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>("database");
 

@@ -1,0 +1,42 @@
+@{
+    ViewData["Title"] = "Email Confirmation";
+    var success = (bool)(ViewData["Success"] ?? false);
+    var message = ViewData["Message"] as string ?? (success ? "Your email has been confirmed successfully!" : "Email confirmation failed or link has expired.");
+}
+
+<div class="min-h-screen flex items-center justify-center py-8 px-4 bg-brand-surface">
+    <div class="w-full max-w-md">
+        <div class="card">
+            <div class="card-body text-center">
+                @if (success)
+                {
+                    <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-bold text-brand-primary mb-2">Email Confirmed!</h2>
+                    <p class="text-brand-text-muted mb-6">@message</p>
+                    <div class="flex flex-col gap-3">
+                        <a asp-action="Login" class="btn-primary">Sign In Now</a>
+                        <a asp-action="Index" asp-controller="Home" class="btn-outline">Browse Products</a>
+                    </div>
+                }
+                else
+                {
+                    <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-bold text-brand-primary mb-2">Confirmation Failed</h2>
+                    <p class="text-brand-text-muted mb-6">@message</p>
+                    <div class="flex flex-col gap-3">
+                        <a asp-action="Login" class="btn-primary">Back to Login</a>
+                        <a asp-action="Contact" asp-controller="Home" class="btn-outline">Contact Support</a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
