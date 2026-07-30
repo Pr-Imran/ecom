@@ -84,6 +84,7 @@ public static class DependencyInjection
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IBrandService, BrandService>();
         services.AddScoped<ICollectionService, CollectionService>();
+        services.AddScoped<IProductService, ProductService>();
         services.AddAuthorization();
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>("database");

@@ -1,0 +1,129 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Products";
+    ViewData["PageTitle"] = "Products";
+}
+
+<div class="space-y-4">
+    @* Desktop Toolbar *@
+    <div class="hidden lg:flex items-center justify-between gap-4">
+        <div class="flex-1 max-w-md">
+            <input type="text" id="desktopSearch" placeholder="Search products..." 
+                   class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+        </div>
+        <div class="flex items-center gap-2">
+            <select id="filterCategory" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-primary">
+                <option value="">All Categories</option>
+            </select>
+            <select id="filterBrand" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-primary">
+                <option value="">All Brands</option>
+            </select>
+            <button id="btnAdd" class="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium">+ Add Product</button>
+        </div>
+    </div>
+
+    @* Desktop Table *@
+    <div class="hidden lg:block bg-white rounded-lg shadow-sm border overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-50 border-b">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">SKU</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="productsTableBody" class="divide-y divide-gray-200"></tbody>
+        </table>
+    </div>
+
+    @* Mobile Cards *@
+    <div id="productsCards" class="lg:hidden space-y-3 pb-24"></div>
+</div>
+
+<button id="btnAddMobile" class="lg:hidden fixed bottom-20 right-4 w-14 h-14 bg-brand-primary text-white rounded-full shadow-lg z-30">+</button>
+
+@section Scripts {
+<script>
+let products = [];
+let categories = [];
+let brands = [];
+
+document.getElementById('btnAdd').addEventListener('click', () => alert('Create product form - Phase 6'));
+document.getElementById('btnAddMobile').addEventListener('click', () => alert('Create product form - Phase 6'));
+
+async function loadProducts() {
+    const response = await fetch('/api/admin/products?page=1&pageSize=20');
+    if (response.ok) products = await response.json();
+    renderProducts();
+}
+
+async function loadCategories() {
+    const response = await fetch('/api/admin/categories?includeInactive=false');
+    if (response.ok) categories = await response.json();
+    updateCategorySelect();
+}
+
+async function loadBrands() {
+    const response = await fetch('/api/admin/brands?includeInactive=false');
+    if (response.ok) brands = await response.json();
+}
+
+function renderProducts() {
+    const tableBody = document.getElementById('productsTableBody');
+    const cardsContainer = document.getElementById('productsCards');
+    
+    if (products.products && products.products.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">No products yet</td></tr>';
+        cardsContainer.innerHTML = '<div class="bg-white rounded-lg border p-4 text-center text-gray-500 py-8">No products yet</div>';
+        return;
+    }
+
+    const items = products.products || [];
+    
+    tableBody.innerHTML = items.map(p => `
+        <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4"><div class="text-sm font-medium">${p.name}</div><div class="text-xs text-gray-500">${p.shortDescription || ''}</div></td>
+            <td class="px-6 py-4 text-sm text-gray-500">${p.baseSku}</td>
+            <td class="px-6 py-4 text-sm text-gray-500">${p.categoryName || '-'}</td>
+            <td class="px-6 py-4 text-sm font-medium">$${p.basePrice.toFixed(2)}</td>
+            <td class="px-6 py-4"><span class="px-2 py-1 rounded-full text-xs ${p.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">${p.isActive ? 'Active' : 'Inactive'}</span></td>
+            <td class="px-6 py-4 text-right text-sm">
+                <button onclick="alert('Edit product ${p.id}')" class="text-brand-primary hover:text-brand-primary/80 mr-3">Edit</button>
+                <button onclick="alert('Delete product ${p.id}')" class="text-red-600 hover:text-red-700">Delete</button>
+            </td>
+        </tr>
+    `).join('');
+
+    cardsContainer.innerHTML = items.map(p => `
+        <div class="bg-white rounded-lg border p-4">
+            <div class="flex items-start justify-between mb-3">
+                <div class="flex-1"><h3 class="font-bold text-gray-900">${p.name}</h3><p class="text-xs text-gray-500 mt-1">${p.baseSku}</p></div>
+                <span class="px-2 py-1 rounded-full text-xs ${p.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">${p.isActive ? 'Active' : 'Inactive'}</span>
+            </div>
+            <div class="text-sm font-bold text-brand-primary mb-3">$${p.basePrice.toFixed(2)}</div>
+            <div class="flex gap-2 pt-3 border-t">
+                <button onclick="alert('Edit product ${p.id}')" class="flex-1 px-3 py-2 bg-brand-primary text-white rounded-lg text-sm">Edit</button>
+                <button onclick="alert('Delete product ${p.id}')" class="px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm">Delete</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function updateCategorySelect() {
+    const select = document.getElementById('filterCategory');
+    categories.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        select.appendChild(opt);
+    });
+}
+
+loadProducts();
+loadCategories();
+loadBrands();
+</script>
+}

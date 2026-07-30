@@ -50,4 +50,12 @@ public class AdminPagesController : Controller
         ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
         return View();
     }
+
+    [HttpGet("/admin/products")]
+    public async Task<IActionResult> Products(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        return View();
+    }
 }

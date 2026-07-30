@@ -17,6 +17,10 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Brand> Brands => Set<Brand>();
     public DbSet<Collection> Collections => Set<Collection>();
+    public DbSet<Product> Products => Set<Product>();
+    public DbSet<ProductTag> ProductTags => Set<ProductTag>();
+    public DbSet<RelatedProduct> RelatedProducts => Set<RelatedProduct>();
+    public DbSet<ProductSpecification> ProductSpecifications => Set<ProductSpecification>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -95,6 +99,67 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Slug).IsRequired().HasMaxLength(200);
             entity.HasIndex(e => e.Slug).IsUnique();
+        });
+
+        modelBuilder.Entity<Product>(entity =>
+        {
+            entity.ToTable("Products");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(200);
+            entity.HasIndex(e => e.Slug).IsUnique();
+            entity.HasIndex(e => e.CategoryId);
+            entity.HasIndex(e => e.BrandId);
+            entity.HasIndex(e => e.CollectionId);
+            entity.HasIndex(e => e.BaseSku).IsUnique();
+            entity.HasIndex(e => e.IsActive);
+            entity.HasIndex(e => e.IsFeatured);
+            entity.HasIndex(e => e.CreatedAtUtc);
+            
+            entity.HasOne(e => e.Category).WithMany().HasForeignKey(e => e.CategoryId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Brand).WithMany().HasForeignKey(e => e.BrandId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(e => e.Collection).WithMany().HasForeignKey(e => e.CollectionId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<ProductTag>(entity =>
+        {
+            entity.ToTable("ProductTags");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(100);
+            entity.HasIndex(e => e.Slug).IsUnique();
+        });
+
+        modelBuilder.Entity<ProductTagMapping>(entity =>
+        {
+            entity.ToTable("ProductTagMappings");
+            entity.HasKey(e => new { e.ProductId, e.ProductTagId });
+            entity.HasOne(e => e.Product).WithMany(p => p.ProductTagMappings).HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.ProductTag).WithMany(p => p.ProductTagMappings).HasForeignKey(e => e.ProductTagId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RelatedProduct>(entity =>
+        {
+            entity.ToTable("RelatedProducts");
+            entity.HasKey(e => new { e.ProductId, e.RelatedProductId });
+            entity.HasOne(e => e.Product).WithMany(p => p.RelatedProducts).HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.RelatedProductEntity).WithMany(p => p.RelatedToProducts).HasForeignKey(e => e.RelatedProductId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ProductSpecification>(entity =>
+        {
+            entity.ToTable("ProductSpecifications");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Value).IsRequired().HasMaxLength(500);
+            entity.HasOne(e => e.Product).WithMany(p => p.Specifications).HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ProductSizeGuideMapping>(entity =>
+        {
+            entity.ToTable("ProductSizeGuideMappings");
+            entity.HasKey(e => new { e.ProductId, e.SizeGuideId });
+            entity.HasOne(e => e.Product).WithMany(p => p.SizeGuideMappings).HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // Apply soft delete filter
