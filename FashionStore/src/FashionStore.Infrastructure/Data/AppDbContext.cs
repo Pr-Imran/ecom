@@ -21,6 +21,10 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<ProductTag> ProductTags => Set<ProductTag>();
     public DbSet<RelatedProduct> RelatedProducts => Set<RelatedProduct>();
     public DbSet<ProductSpecification> ProductSpecifications => Set<ProductSpecification>();
+    public DbSet<ProductAttribute> ProductAttributes => Set<ProductAttribute>();
+    public DbSet<ProductAttributeValue> ProductAttributeValues => Set<ProductAttributeValue>();
+    public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
+    public DbSet<ProductVariantAttributeValue> ProductVariantAttributeValues => Set<ProductVariantAttributeValue>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -160,6 +164,49 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             entity.ToTable("ProductSizeGuideMappings");
             entity.HasKey(e => new { e.ProductId, e.SizeGuideId });
             entity.HasOne(e => e.Product).WithMany(p => p.SizeGuideMappings).HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ProductAttribute>(entity =>
+        {
+            entity.ToTable("ProductAttributes");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(100);
+            entity.HasIndex(e => e.Slug).IsUnique();
+            entity.HasIndex(e => e.IsActive);
+        });
+
+        modelBuilder.Entity<ProductAttributeValue>(entity =>
+        {
+            entity.ToTable("ProductAttributeValues");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(100);
+            entity.HasIndex(e => new { e.ProductAttributeId, e.Slug }).IsUnique();
+            entity.HasIndex(e => e.IsActive);
+            entity.HasOne(e => e.ProductAttribute).WithMany(a => a.Values).HasForeignKey(e => e.ProductAttributeId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ProductVariant>(entity =>
+        {
+            entity.ToTable("ProductVariants");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Sku).IsRequired().HasMaxLength(100);
+            entity.HasIndex(e => e.ProductId);
+            entity.HasIndex(e => e.Sku).IsUnique();
+            entity.HasIndex(e => e.IsActive);
+            entity.HasIndex(e => e.IsDefault);
+            entity.HasOne(e => e.Product).WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ProductVariantAttributeValue>(entity =>
+        {
+            entity.ToTable("ProductVariantAttributeValues");
+            entity.HasKey(e => new { e.ProductVariantId, e.ProductAttributeValueId });
+            entity.HasOne(e => e.Variant).WithMany(v => v.VariantAttributeValues).HasForeignKey(e => e.ProductVariantId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.AttributeValue).WithMany(a => a.VariantAttributeValues).HasForeignKey(e => e.ProductAttributeValueId).OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => new { e.ProductVariantId, e.ProductAttributeValueId }).IsUnique();
         });
 
         // Apply soft delete filter

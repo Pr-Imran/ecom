@@ -58,4 +58,22 @@ public class AdminPagesController : Controller
         ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
         return View();
     }
+
+    [HttpGet("/admin/variations")]
+    public async Task<IActionResult> Variations(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Variations";
+        return View();
+    }
+
+    [HttpGet("/admin/attributes")]
+    public async Task<IActionResult> Attributes(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Product Attributes";
+        return View();
+    }
 }

@@ -1,0 +1,266 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Product Variations";
+    ViewData["PageTitle"] = "Product Variations";
+}
+
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-xl font-bold text-gray-900">Variation Builder</h2>
+            <p class="text-sm text-gray-500 mt-1">Manage product attributes and generate variant combinations</p>
+        </div>
+        <button id="btnNewAttribute" class="px-4 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium">+ New Attribute</button>
+    </div>
+
+    @* Attributes Grid *@
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="attributesGrid"></div>
+</div>
+
+@* Attribute Form Modal *@
+<div id="attributeModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-2xl">
+            <h3 id="attrModalTitle" class="text-lg font-bold">New Attribute</h3>
+            <button class="btn-close text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="attributeForm" class="p-6 space-y-4">
+            <input type="hidden" id="attrId" />
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <input type="text" id="attrName" required maxlength="100" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary" />
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Display Type</label>
+                    <select id="attrDisplayType" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm">
+                        <option value="Dropdown">Dropdown</option>
+                        <option value="Swatch">Swatch</option>
+                        <option value="Text">Text</option>
+                        <option value="Image">Image</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Display Order</label>
+                    <input type="number" id="attrDisplayOrder" value="0" min="0" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm" />
+                </div>
+            </div>
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="attrIsVariation" checked class="w-4 h-4 text-brand-primary rounded focus:ring-brand-primary" />
+                <span class="text-sm text-gray-700">Is variation attribute</span>
+            </label>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea id="attrDescription" rows="2" maxlength="500" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm"></textarea>
+            </div>
+            <div class="flex justify-end gap-3 pt-4 border-t">
+                <button type="button" class="btn-close px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-6 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium">Save Attribute</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Attribute Value Modal *@
+<div id="valueModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-2xl">
+            <h3 id="valueModalTitle" class="text-lg font-bold">New Value</h3>
+            <button class="btn-close text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="valueForm" class="p-6 space-y-4">
+            <input type="hidden" id="valueId" />
+            <input type="hidden" id="valueAttrId" />
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <input type="text" id="valueName" required maxlength="100" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm" />
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Display Value</label>
+                    <input type="text" id="valueDisplayValue" maxlength="50" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Hex Colour</label>
+                    <input type="text" id="valueHexColour" maxlength="20" placeholder="#000000" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm" />
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
+                <input type="url" id="valueImageUrl" maxlength="500" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Display Order</label>
+                <input type="number" id="valueDisplayOrder" value="0" min="0" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm" />
+            </div>
+            <div class="flex justify-end gap-3 pt-4 border-t">
+                <button type="button" class="btn-close px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-6 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium">Save Value</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+let attributes = [];
+
+document.querySelectorAll('.btn-close').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.getElementById('attributeModal').classList.add('hidden');
+        document.getElementById('valueModal').classList.add('hidden');
+    });
+});
+
+document.getElementById('btnNewAttribute').addEventListener('click', () => {
+    document.getElementById('attrModalTitle').textContent = 'New Attribute';
+    document.getElementById('attributeForm').reset();
+    document.getElementById('attrId').value = '';
+    document.getElementById('attributeModal').classList.remove('hidden');
+});
+
+document.getElementById('attributeForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('attrId').value;
+    const data = {
+        id: id || undefined,
+        name: document.getElementById('attrName').value,
+        displayType: document.getElementById('attrDisplayType').value,
+        isVariationAttribute: document.getElementById('attrIsVariation').checked,
+        displayOrder: parseInt(document.getElementById('attrDisplayOrder').value) || 0,
+        description: document.getElementById('attrDescription').value || null
+    };
+    const url = id ? `/api/admin/attributes/${id}` : '/api/admin/attributes';
+    const method = id ? 'PUT' : 'POST';
+    const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    if (response.ok) {
+        document.getElementById('attributeModal').classList.add('hidden');
+        await loadAttributes();
+    } else {
+        const err = await response.json();
+        alert(err.error || 'Failed to save attribute');
+    }
+});
+
+document.getElementById('valueForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('valueId').value;
+    const attrId = document.getElementById('valueAttrId').value;
+    const data = {
+        id: id || undefined,
+        productAttributeId: attrId,
+        name: document.getElementById('valueName').value,
+        displayValue: document.getElementById('valueDisplayValue').value || null,
+        hexColour: document.getElementById('valueHexColour').value || null,
+        imageUrl: document.getElementById('valueImageUrl').value || null,
+        displayOrder: parseInt(document.getElementById('valueDisplayOrder').value) || 0
+    };
+    const url = id ? `/api/admin/attribute-values/${id}` : '/api/admin/attribute-values';
+    const method = id ? 'PUT' : 'POST';
+    const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    if (response.ok) {
+        document.getElementById('valueModal').classList.add('hidden');
+        await loadAttributes();
+    } else {
+        const err = await response.json();
+        alert(err.error || 'Failed to save value');
+    }
+});
+
+async function loadAttributes() {
+    const response = await fetch('/api/admin/attributes?includeInactive=true');
+    if (response.ok) attributes = await response.json();
+    renderAttributes();
+}
+
+function openValueModal(attrId, valueId = '', value = {}) {
+    document.getElementById('valueModalTitle').textContent = valueId ? 'Edit Value' : 'New Value';
+    document.getElementById('valueId').value = valueId;
+    document.getElementById('valueAttrId').value = attrId;
+    document.getElementById('valueName').value = value.name || '';
+    document.getElementById('valueDisplayValue').value = value.displayValue || '';
+    document.getElementById('valueHexColour').value = value.hexColour || '';
+    document.getElementById('valueImageUrl').value = value.imageUrl || '';
+    document.getElementById('valueDisplayOrder').value = value.displayOrder || 0;
+    document.getElementById('valueModal').classList.remove('hidden');
+}
+
+function editAttribute(attr) {
+    document.getElementById('attrModalTitle').textContent = 'Edit Attribute';
+    document.getElementById('attrId').value = attr.id;
+    document.getElementById('attrName').value = attr.name;
+    document.getElementById('attrDisplayType').value = attr.displayType;
+    document.getElementById('attrDisplayOrder').value = attr.displayOrder;
+    document.getElementById('attrIsVariation').checked = attr.isVariationAttribute;
+    document.getElementById('attrDescription').value = attr.description || '';
+    document.getElementById('attributeModal').classList.remove('hidden');
+}
+
+async function deleteAttribute(id) {
+    if (!confirm('Delete this attribute? This will also remove its values.')) return;
+    const response = await fetch(`/api/admin/attributes/${id}`, { method: 'DELETE' });
+    if (response.ok) {
+        await loadAttributes();
+    } else {
+        const err = await response.json();
+        alert(err.error || 'Failed to delete');
+    }
+}
+
+async function deleteValue(id) {
+    if (!confirm('Delete this attribute value?')) return;
+    const response = await fetch(`/api/admin/attribute-values/${id}`, { method: 'DELETE' });
+    if (response.ok) {
+        await loadAttributes();
+    } else {
+        const err = await response.json();
+        alert(err.error || 'Failed to delete');
+    }
+}
+
+function renderAttributes() {
+    const grid = document.getElementById('attributesGrid');
+    if (!attributes.length) {
+        grid.innerHTML = '<div class="sm:col-span-2 lg:col-span-3 bg-white rounded-lg border p-8 text-center text-gray-500">No attributes yet. Create your first attribute (e.g. Colour, Size).</div>';
+        return;
+    }
+    grid.innerHTML = attributes.map(attr => `
+        <div class="bg-white rounded-lg border p-4">
+            <div class="flex items-start justify-between mb-2">
+                <div>
+                    <h3 class="font-bold text-gray-900">${attr.name}</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">/${attr.slug} · ${attr.displayType}</p>
+                </div>
+                <span class="px-2 py-0.5 rounded-full text-xs ${attr.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">${attr.isActive ? 'Active' : 'Inactive'}</span>
+            </div>
+            <div class="text-xs text-gray-600 mb-3">${attr.isVariationAttribute ? 'Variation attribute' : 'Non-variation'}</div>
+            <div class="space-y-1.5 mb-4">
+                ${attr.values && attr.values.length ? attr.values.map(v => `
+                    <div class="flex items-center gap-2 bg-gray-50 rounded px-2 py-1.5">
+                        ${v.hexColour ? `<span class="w-4 h-4 rounded-full border border-gray-300" style="background:${v.hexColour}"></span>` : ''}
+                        <span class="text-sm flex-1">${v.name}${v.displayValue && v.displayValue !== v.name ? ` (${v.displayValue})` : ''}</span>
+                        <button onclick="openValueModal('${attr.id}','${v.id}',${JSON.stringify(v)})" class="text-brand-primary text-xs">Edit</button>
+                        <button onclick="deleteValue('${v.id}')" class="text-red-500 text-xs">Del</button>
+                    </div>
+                `).join('') : '<p class="text-xs text-gray-400 italic">No values yet</p>'}
+            </div>
+            <div class="flex gap-2 pt-3 border-t">
+                <button onclick="openValueModal('${attr.id}')" class="flex-1 px-3 py-1.5 bg-brand-primary text-white rounded text-sm">+ Value</button>
+                <button onclick="editAttribute(${JSON.stringify(attr)})" class="px-3 py-1.5 border rounded text-sm">Edit</button>
+                <button onclick="deleteAttribute('${attr.id}')" class="px-3 py-1.5 border border-red-200 text-red-600 rounded text-sm">Delete</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+loadAttributes();
+</script>
+}
