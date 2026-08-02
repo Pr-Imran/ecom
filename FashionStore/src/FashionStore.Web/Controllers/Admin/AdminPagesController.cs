@@ -68,6 +68,15 @@ public class AdminPagesController : Controller
         return View();
     }
 
+    [HttpGet("/admin/images")]
+    public async Task<IActionResult> Images(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Product Images";
+        return View();
+    }
+
     [HttpGet("/admin/attributes")]
     public async Task<IActionResult> Attributes(CancellationToken cancellationToken = default)
     {

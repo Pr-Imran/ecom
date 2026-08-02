@@ -96,4 +96,5 @@ public class Product : AuditedEntity
     public virtual ICollection<RelatedProduct> RelatedToProducts { get; set; } = new List<RelatedProduct>();
     public virtual ICollection<ProductSpecification> Specifications { get; set; } = new List<ProductSpecification>();
     public virtual ICollection<ProductSizeGuideMapping> SizeGuideMappings { get; set; } = new List<ProductSizeGuideMapping>();
+    public virtual ICollection<ProductImage> Images { get; set; } = new List<ProductImage>();
 }

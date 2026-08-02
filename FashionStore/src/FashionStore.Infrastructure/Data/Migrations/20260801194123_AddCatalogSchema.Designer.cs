@@ -4,16 +4,19 @@ using FashionStore.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace FashionStore.Infrastructure.Migrations
+namespace FashionStore.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260801194123_AddCatalogSchema")]
+    partial class AddCatalogSchema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -494,94 +497,6 @@ namespace FashionStore.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("ProductAttributeValues", (string)null);
-                });
-
-            modelBuilder.Entity("FashionStore.Domain.Entities.ProductImage", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("AltText")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("Caption")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("ContentType")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("int");
-
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<int>("Height")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ImageFormat")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<bool>("IsMain")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("OriginalFileName")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<string>("ProcessingStatus")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("ProductVariantId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<long>("SizeBytes")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime?>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Width")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProductVariantId");
-
-                    b.HasIndex("ProductId", "DisplayOrder");
-
-                    b.HasIndex("ProductId", "IsMain");
-
-                    b.ToTable("ProductImages", (string)null);
                 });
 
             modelBuilder.Entity("FashionStore.Domain.Entities.ProductSizeGuideMapping", b =>
@@ -1189,24 +1104,6 @@ namespace FashionStore.Infrastructure.Migrations
                     b.Navigation("ProductAttribute");
                 });
 
-            modelBuilder.Entity("FashionStore.Domain.Entities.ProductImage", b =>
-                {
-                    b.HasOne("FashionStore.Domain.Entities.Product", "Product")
-                        .WithMany("Images")
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("FashionStore.Domain.Entities.ProductVariant", "Variant")
-                        .WithMany()
-                        .HasForeignKey("ProductVariantId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
-                    b.Navigation("Product");
-
-                    b.Navigation("Variant");
-                });
-
             modelBuilder.Entity("FashionStore.Domain.Entities.ProductSizeGuideMapping", b =>
                 {
                     b.HasOne("FashionStore.Domain.Entities.Product", "Product")
@@ -1390,8 +1287,6 @@ namespace FashionStore.Infrastructure.Migrations
 
             modelBuilder.Entity("FashionStore.Domain.Entities.Product", b =>
                 {
-                    b.Navigation("Images");
-
                     b.Navigation("ProductTagMappings");
 
                     b.Navigation("RelatedProducts");

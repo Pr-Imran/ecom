@@ -3,6 +3,7 @@ using FashionStore.Application.Configuration;
 using FashionStore.Infrastructure;
 using FashionStore.Web.Middleware;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi.Models;
 using Serilog;
 
@@ -29,8 +30,14 @@ builder.Services.Configure<StoreSettings>(
     builder.Configuration.GetSection(StoreSettings.SectionName));
 builder.Services.Configure<EmailSettings>(
     builder.Configuration.GetSection(EmailSettings.SectionName));
+builder.Services.AddSingleton(
+    builder.Configuration.GetSection(EmailSettings.SectionName).Get<EmailSettings>() ?? new EmailSettings());
 builder.Services.Configure<FileStorageSettings>(
     builder.Configuration.GetSection(FileStorageSettings.SectionName));
+builder.Services.Configure<ImageSettings>(
+    builder.Configuration.GetSection(ImageSettings.SectionName));
+builder.Services.Configure<CloudFileStorageSettings>(
+    builder.Configuration.GetSection(CloudFileStorageSettings.SectionName));
 builder.Services.Configure<PaymentSettings>(
     builder.Configuration.GetSection(PaymentSettings.SectionName));
 builder.Services.Configure<InvoiceSettings>(
@@ -115,6 +122,14 @@ app.UseRateLimiter();
 app.UseAuthorization();
 
 app.UseStaticFiles();
+
+var uploadsBasePath = Path.Combine(app.Environment.ContentRootPath, builder.Configuration["FileStorage:BasePath"] ?? "uploads");
+Directory.CreateDirectory(uploadsBasePath);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(uploadsBasePath),
+    RequestPath = builder.Configuration["FileStorage:PublicUrlBase"] ?? "/uploads"
+});
 
 app.MapControllerRoute(
     name: "default",

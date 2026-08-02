@@ -11,7 +11,7 @@ namespace FashionStore.UnitTests.Services;
 public class AuthServiceTests
 {
     [Fact]
-    public async Task RegisterAsync_WithValidRequest_CreatesUser()
+    public void RegisterAsync_WithValidRequest_CreatesUser()
     {
         // Arrange
         var request = new RegisterRequest("test@example.com", "Password123!", "John", "Doe");
@@ -31,7 +31,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task LoginRequest_ValidProperties()
+    public void LoginRequest_ValidProperties()
     {
         // Arrange
         var request = new LoginRequest("test@example.com", "Password123!", true);

@@ -208,7 +208,7 @@ public class AccountController : Controller
 
     [HttpGet]
     [Authorize]
-    public async Task<IActionResult> ChangePassword()
+    public IActionResult ChangePassword()
     {
         return View();
     }

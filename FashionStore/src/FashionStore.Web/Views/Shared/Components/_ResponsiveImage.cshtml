@@ -1,0 +1,62 @@
+@using FashionStore.Application.DTOs.Images
+@model StorefrontImageModel
+
+@{
+    var fallback = "/images/placeholder.svg";
+    var src = Model.Url ?? fallback;
+    var width = Model.DisplayWidth ?? Model.Width;
+    var height = Model.DisplayHeight ?? Model.Height;
+    var srcset = BuildSrcset(Model);
+    var aspectRatio = width > 0 && height > 0 ? (height / (double)width * 100).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) : null;
+    var style = aspectRatio != null ? $"aspect-ratio: {width} / {height};" : null;
+}
+
+<img src="@src"
+     @if (!string.IsNullOrEmpty(srcset))
+     {
+         @:srcset="@srcset"
+     }
+     @if (!string.IsNullOrEmpty(Model.AltText))
+     {
+         @:alt="@Model.AltText"
+     }
+     else
+     {
+         @:alt=""
+     }
+     @if (Model.LazyLoad)
+     {
+         @:loading="lazy"
+     }
+     @if (width > 0)
+     {
+         @:width="@width"
+     }
+     @if (height > 0)
+     {
+         @:height="@height"
+     }
+     class="@Model.CssClass"
+     style="@style"
+     onerror="this.onerror=null;this.src='@fallback';" />
+
+@functions {
+    private static string? BuildSrcset(StorefrontImageModel model)
+    {
+        var entries = new List<string>();
+        AddEntry(entries, model.ThumbnailUrl, 96);
+        AddEntry(entries, model.ProductCardUrl, 400);
+        AddEntry(entries, model.ProductDetailUrl, 800);
+        AddEntry(entries, model.GalleryUrl, 1200);
+
+        return entries.Count > 0 ? string.Join(", ", entries) : null;
+    }
+
+    private static void AddEntry(List<string> entries, string? url, int width)
+    {
+        if (!string.IsNullOrEmpty(url))
+        {
+            entries.Add($"{url} {width}w");
+        }
+    }
+}

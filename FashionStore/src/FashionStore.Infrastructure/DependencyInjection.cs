@@ -2,6 +2,8 @@ using FashionStore.Application.Configuration;
 using FashionStore.Application.Interfaces;
 using FashionStore.Infrastructure.Data;
 using FashionStore.Infrastructure.Services;
+using FashionStore.Infrastructure.Services.Images;
+using FashionStore.Infrastructure.Services.Storage;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -19,17 +21,27 @@ public static class DependencyInjection
     {
         var dbSettings = configuration
             .GetSection(DatabaseSettings.SectionName)
-            .Get<DatabaseSettings>()!;
+            .Get<DatabaseSettings>() ?? new DatabaseSettings();
 
         var securitySettings = configuration
             .GetSection(SecuritySettings.SectionName)
-            .Get<SecuritySettings>()!;
+            .Get<SecuritySettings>() ?? new SecuritySettings();
 
         var cacheSettings = configuration
             .GetSection(CacheSettings.SectionName)
-            .Get<CacheSettings>()!;
+            .Get<CacheSettings>() ?? new CacheSettings();
+
+        var fileStorageSettings = configuration
+            .GetSection(FileStorageSettings.SectionName)
+            .Get<FileStorageSettings>() ?? new FileStorageSettings();
+
+        var imageSettings = configuration
+            .GetSection(ImageSettings.SectionName)
+            .Get<ImageSettings>() ?? new ImageSettings();
 
         services.AddSingleton(cacheSettings);
+        services.AddSingleton(fileStorageSettings);
+        services.AddSingleton(imageSettings);
         services.AddDistributedMemoryCache();
 
         services.AddDbContext<AppDbContext>(options =>
@@ -86,6 +98,12 @@ public static class DependencyInjection
         services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<IProductService, ProductService>();
         services.AddScoped<IProductVariationService, ProductVariationService>();
+        services.AddScoped<IFileStorageService, LocalFileStorageService>();
+        services.AddScoped<IImageValidationService, ImageValidationService>();
+        services.AddScoped<IImageProcessingService, ImageProcessingService>();
+        services.AddScoped<IImageService, ImageService>();
+        services.AddSingleton<IImageProcessingDispatcher, ImageProcessingDispatcher>();
+        services.AddHostedService<ImageProcessingBackgroundService>();
         services.AddAuthorization();
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>("database");

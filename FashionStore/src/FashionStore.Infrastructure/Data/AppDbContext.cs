@@ -25,6 +25,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<ProductAttributeValue> ProductAttributeValues => Set<ProductAttributeValue>();
     public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
     public DbSet<ProductVariantAttributeValue> ProductVariantAttributeValues => Set<ProductVariantAttributeValue>();
+    public DbSet<ProductImage> ProductImages => Set<ProductImage>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -207,6 +208,24 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             entity.HasOne(e => e.AttributeValue).WithMany(a => a.VariantAttributeValues).HasForeignKey(e => e.ProductAttributeValueId).OnDelete(DeleteBehavior.Restrict);
 
             entity.HasIndex(e => new { e.ProductVariantId, e.ProductAttributeValueId }).IsUnique();
+        });
+
+        modelBuilder.Entity<ProductImage>(entity =>
+        {
+            entity.ToTable("ProductImages");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FileName).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.OriginalFileName).HasMaxLength(255);
+            entity.Property(e => e.AltText).HasMaxLength(500);
+            entity.Property(e => e.Caption).HasMaxLength(500);
+            entity.Property(e => e.ImageFormat).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.ContentType).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.ProcessingStatus).IsRequired().HasMaxLength(20);
+            entity.HasIndex(e => new { e.ProductId, e.DisplayOrder });
+            entity.HasIndex(e => new { e.ProductId, e.IsMain });
+            entity.HasIndex(e => e.ProductVariantId);
+            entity.HasOne(e => e.Product).WithMany(p => p.Images).HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Variant).WithMany().HasForeignKey(e => e.ProductVariantId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // Apply soft delete filter

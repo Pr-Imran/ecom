@@ -1,0 +1,445 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Product Images";
+    ViewData["PageTitle"] = "Product Images";
+}
+
+<div class="space-y-6">
+    @* Step 1: Select product *@
+    <div class="bg-white rounded-lg border p-5">
+        <h3 class="font-bold text-gray-900 mb-3">1. Select Product</h3>
+        <div class="flex flex-col sm:flex-row gap-3">
+            <select id="productSelect" class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary">
+                <option value="">Loading products...</option>
+            </select>
+            <button id="btnLoadImages" class="px-4 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium disabled:opacity-50" disabled>
+                Load Images
+            </button>
+        </div>
+    </div>
+
+    @* Step 2: Upload + gallery *@
+    <div id="gallerySection" class="hidden space-y-6">
+        @* Upload dropzone (desktop) *@
+        <div id="dropzone" class="hidden lg:flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl bg-white p-8 cursor-pointer transition-colors hover:border-brand-primary">
+            <svg class="w-10 h-10 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <p class="text-sm text-gray-600 font-medium">Drag & drop images here</p>
+            <p class="text-xs text-gray-400 mt-1">JPG, PNG, WebP or AVIF up to 10MB</p>
+            <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,image/avif" multiple class="hidden" />
+            <button type="button" class="mt-4 px-4 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium">Browse Files</button>
+        </div>
+
+        @* Upload area (mobile) *@
+        <div class="lg:hidden">
+            <input type="file" id="fileInputMobile" accept="image/*" multiple class="w-full border border-gray-300 rounded-lg p-3 text-sm" />
+            <p class="text-xs text-gray-500 mt-1">Tap to take a photo or choose from your gallery. Large touch targets below for reordering.</p>
+        </div>
+
+        @* Upload progress *@
+        <div id="uploadProgress" class="hidden bg-white rounded-lg border p-4">
+            <div class="flex items-center justify-between mb-2">
+                <span id="uploadProgressLabel" class="text-sm text-gray-600">Uploading...</span>
+                <span id="uploadProgressCount" class="text-xs text-gray-400"></span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+                <div id="uploadProgressBar" class="bg-brand-primary h-2 rounded-full transition-all" style="width:0%"></div>
+            </div>
+        </div>
+
+        @* Failed uploads with retry *@
+        <div id="failedUploads" class="hidden space-y-2">
+            <h4 class="font-bold text-gray-900 text-sm">Failed uploads</h4>
+            <div id="failedUploadsList" class="space-y-2"></div>
+        </div>
+
+        @* Image gallery *@
+        <div>
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-bold text-gray-900">Images <span id="imageCount" class="text-sm text-gray-500 font-normal"></span></h3>
+                <button id="btnSaveOrder" class="hidden px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">Save Order</button>
+            </div>
+
+            @* Desktop grid with drag & drop *@
+            <div id="imageGrid" class="hidden lg:grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+
+            @* Mobile list with big touch reorder buttons *@
+            <div id="mobileImageList" class="lg:hidden space-y-3"></div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+let currentProductId = null;
+let images = [];
+let productVariants = [];
+let failedUploads = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadProducts();
+    setupDropzone();
+    setupMobileUpload();
+});
+
+async function loadProducts() {
+    const response = await fetch('/api/admin/products?page=1&pageSize=100');
+    const products = response.ok ? await response.json() : [];
+    const list = Array.isArray(products) ? products : (products.products || []);
+    const select = document.getElementById('productSelect');
+    select.innerHTML = '<option value="">Select a product...</option>' +
+        list.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    document.getElementById('btnLoadImages').disabled = !list.length;
+}
+
+document.getElementById('btnLoadImages').addEventListener('click', async () => {
+    currentProductId = document.getElementById('productSelect').value;
+    if (!currentProductId) return;
+    document.getElementById('gallerySection').classList.remove('hidden');
+    await Promise.all([loadImages(), loadVariants()]);
+});
+
+async function loadVariants() {
+    const response = await fetch(`/api/admin/products/${currentProductId}/variants`);
+    productVariants = response.ok ? await response.json() : [];
+    if (!Array.isArray(productVariants)) productVariants = [];
+}
+
+async function loadImages() {
+    const response = await fetch(`/api/admin/images/product/${currentProductId}`);
+    images = response.ok ? await response.json() : [];
+    if (!Array.isArray(images)) images = [];
+    renderImages();
+}
+
+function setupDropzone() {
+    const dropzone = document.getElementById('dropzone');
+    const input = document.getElementById('fileInput');
+    dropzone.addEventListener('click', () => input.click());
+    dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('border-brand-primary', 'bg-brand-primary/5');
+    });
+    dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('border-brand-primary', 'bg-brand-primary/5');
+    });
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('border-brand-primary', 'bg-brand-primary/5');
+        uploadFiles(e.dataTransfer.files);
+    });
+    input.addEventListener('change', () => {
+        uploadFiles(input.files);
+        input.value = '';
+    });
+}
+
+function setupMobileUpload() {
+    const input = document.getElementById('fileInputMobile');
+    input.addEventListener('change', () => {
+        uploadFiles(input.files);
+        input.value = '';
+    });
+}
+
+function uploadFiles(fileList) {
+    const files = Array.from(fileList);
+    if (!files.length) return;
+    showUploadProgress(files.length);
+    files.forEach((file, index) => uploadFile(file, index, files.length));
+}
+
+function uploadFile(file, index, total) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `/api/admin/images/product/${currentProductId}`);
+
+    xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+            const pct = Math.round((index + e.loaded / e.total) / total * 100);
+            updateUploadProgress(pct, `${file.name}`);
+        }
+    };
+
+    xhr.onload = async () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+            await loadImages();
+        } else {
+            let message = 'Upload failed';
+            try {
+                const err = JSON.parse(xhr.responseText);
+                message = (err.errors || []).join('; ') || err.error || message;
+            } catch (e) { }
+            addFailedUpload(file, message);
+        }
+        completeUploadProgress();
+    };
+
+    xhr.onerror = () => {
+        addFailedUpload(file, 'Network error');
+        completeUploadProgress();
+    };
+
+    xhr.send(formData);
+}
+
+function showUploadProgress(total) {
+    const el = document.getElementById('uploadProgress');
+    el.classList.remove('hidden');
+    document.getElementById('uploadProgressCount').textContent = `0 / ${total}`;
+    document.getElementById('uploadProgressBar').style.width = '0%';
+}
+
+function updateUploadProgress(pct, label) {
+    document.getElementById('uploadProgressLabel').textContent = label;
+    document.getElementById('uploadProgressBar').style.width = `${pct}%`;
+}
+
+let completedUploads = 0;
+function completeUploadProgress() {
+    completedUploads++;
+    document.getElementById('uploadProgressCount').textContent = `${completedUploads} done`;
+    if (completedUploads >= 1 && document.getElementById('uploadProgressBar').style.width === '100%') {
+        setTimeout(() => document.getElementById('uploadProgress').classList.add('hidden'), 800);
+        completedUploads = 0;
+    }
+}
+
+function addFailedUpload(file, message) {
+    failedUploads.push({ file, message });
+    renderFailedUploads();
+}
+
+function renderFailedUploads() {
+    const container = document.getElementById('failedUploads');
+    const list = document.getElementById('failedUploadsList');
+    if (!failedUploads.length) {
+        container.classList.add('hidden');
+        return;
+    }
+    container.classList.remove('hidden');
+    list.innerHTML = failedUploads.map((item, idx) => `
+        <div class="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+            <div class="min-w-0">
+                <div class="text-sm font-medium text-gray-800 truncate">${item.file.name}</div>
+                <div class="text-xs text-red-600">${item.message}</div>
+            </div>
+            <button data-retry-idx="${idx}" class="flex-shrink-0 ml-3 px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm">Retry</button>
+        </div>
+    `).join('');
+    list.querySelectorAll('[data-retry-idx]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const item = failedUploads.splice(parseInt(btn.dataset.retryIdx), 1)[0];
+            renderFailedUploads();
+            uploadFiles([item.file]);
+        });
+    });
+}
+
+function renderImages() {
+    document.getElementById('imageCount').textContent = `(${images.length})`;
+    const grid = document.getElementById('imageGrid');
+    const mobile = document.getElementById('mobileImageList');
+    document.getElementById('btnSaveOrder').classList.toggle('hidden', images.length < 2);
+
+    if (!images.length) {
+        grid.innerHTML = '<div class="col-span-full bg-white rounded-lg border p-8 text-center text-gray-500 text-sm">No images yet. Upload your first product image above.</div>';
+        mobile.innerHTML = '<div class="bg-white rounded-lg border p-6 text-center text-gray-500 text-sm">No images yet.</div>';
+        return;
+    }
+
+    grid.innerHTML = images.map((img, idx) => `
+        <div class="bg-white rounded-lg border overflow-hidden" data-image-id="${img.id}" draggable="true">
+            <div class="relative aspect-square bg-gray-100">
+                <img src="${img.thumbnailUrl || img.url}" alt="${escapeHtml(img.altText || '')}" class="w-full h-full object-cover" loading="lazy" />
+                <div class="absolute top-2 left-2 flex flex-col gap-1">
+                    ${img.isMain ? '<span class="px-2 py-0.5 bg-brand-primary text-white rounded text-xs font-bold">MAIN</span>' : ''}
+                    <span class="px-2 py-0.5 bg-black/50 text-white rounded text-xs">#${idx + 1}</span>
+                </div>
+                <span class="absolute top-2 right-2 px-2 py-0.5 rounded text-xs ${img.processingStatus === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}">${img.processingStatus}</span>
+            </div>
+            <div class="p-3 space-y-2">
+                <input type="text" data-field="alt" data-id="${img.id}" value="${escapeHtml(img.altText || '')}" placeholder="Alt text"
+                       class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" />
+                <select data-field="variant" data-id="${img.id}" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm">
+                    <option value="">No variant</option>
+                    ${productVariants.map(v => `<option value="${v.id}" ${img.variantId === v.id ? 'selected' : ''}>${v.sku || v.name || v.id}</option>`).join('')}
+                </select>
+                <div class="flex items-center gap-2 pt-1">
+                    <button data-action="main" data-id="${img.id}" ${img.isMain ? 'disabled' : ''}
+                            class="flex-1 px-2 py-1.5 rounded text-xs font-medium ${img.isMain ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-brand-primary/10 text-brand-primary hover:bg-brand-primary/20'}">Set Main</button>
+                    <button data-action="replace" data-id="${img.id}" class="px-2 py-1.5 rounded text-xs font-medium border border-gray-300 hover:bg-gray-50">Replace</button>
+                    <button data-action="delete" data-id="${img.id}" class="px-2 py-1.5 rounded text-xs font-medium border border-red-200 text-red-600 hover:bg-red-50">Delete</button>
+                </div>
+                <div class="flex items-center justify-center gap-2 text-xs text-gray-400">
+                    <button data-action="move" data-dir="-1" data-id="${img.id}" class="px-2 py-1 rounded border hover:bg-gray-50" ${idx === 0 ? 'disabled' : ''}>&uarr;</button>
+                    <span>Drag to reorder</span>
+                    <button data-action="move" data-dir="1" data-id="${img.id}" class="px-2 py-1 rounded border hover:bg-gray-50" ${idx === images.length - 1 ? 'disabled' : ''}>&darr;</button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    mobile.innerHTML = images.map((img, idx) => `
+        <div class="bg-white rounded-lg border p-3" data-image-id="${img.id}">
+            <div class="flex gap-3">
+                <div class="relative w-20 h-20 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
+                    <img src="${img.thumbnailUrl || img.url}" alt="${escapeHtml(img.altText || '')}" class="w-full h-full object-cover" loading="lazy" />
+                    ${img.isMain ? '<span class="absolute top-1 left-1 px-1.5 py-0.5 bg-brand-primary text-white rounded text-[10px] font-bold">MAIN</span>' : ''}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs text-gray-500">#${idx + 1}</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] ${img.processingStatus === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}">${img.processingStatus}</span>
+                    </div>
+                    <input type="text" data-field="alt" data-id="${img.id}" value="${escapeHtml(img.altText || '')}" placeholder="Alt text"
+                           class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm mb-1" />
+                    <select data-field="variant" data-id="${img.id}" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm">
+                        <option value="">No variant</option>
+                        ${productVariants.map(v => `<option value="${v.id}" ${img.variantId === v.id ? 'selected' : ''}>${v.sku || v.name || v.id}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 mt-3">
+                <button data-action="move" data-dir="-1" data-id="${img.id}" class="w-12 h-12 border border-gray-300 rounded-lg text-xl text-gray-600 active:bg-gray-100" ${idx === 0 ? 'disabled' : ''}>&#9650;</button>
+                <button data-action="move" data-dir="1" data-id="${img.id}" class="w-12 h-12 border border-gray-300 rounded-lg text-xl text-gray-600 active:bg-gray-100" ${idx === images.length - 1 ? 'disabled' : ''}>&#9660;</button>
+                <button data-action="main" data-id="${img.id}" ${img.isMain ? 'disabled' : ''}
+                        class="flex-1 h-12 rounded-lg text-sm font-medium ${img.isMain ? 'bg-gray-100 text-gray-400' : 'bg-brand-primary/10 text-brand-primary'}">${img.isMain ? 'Main Image' : 'Set Main'}</button>
+                <button data-action="delete" data-id="${img.id}" class="w-12 h-12 border border-red-200 text-red-600 rounded-lg active:bg-red-50">&times;</button>
+            </div>
+        </div>
+    `).join('');
+
+    bindImageActions();
+    setupDragDrop();
+}
+
+function bindImageActions() {
+    document.querySelectorAll('[data-field="alt"]').forEach(input => {
+        input.addEventListener('change', async () => {
+            const id = input.dataset.id;
+            await fetch(`/api/admin/images/${id}/alt`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ altText: input.value })
+            });
+        });
+    });
+
+    document.querySelectorAll('[data-field="variant"]').forEach(select => {
+        select.addEventListener('change', async () => {
+            const id = select.dataset.id;
+            const variantId = select.value || null;
+            await fetch(`/api/admin/images/${id}/variant`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ variantId })
+            });
+        });
+    });
+
+    document.querySelectorAll('[data-action="main"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            if (btn.disabled) return;
+            const response = await fetch(`/api/admin/images/${btn.dataset.id}/main`, { method: 'POST' });
+            if (response.ok) await loadImages();
+        });
+    });
+
+    document.querySelectorAll('[data-action="move"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.dataset.id;
+            const dir = parseInt(btn.dataset.dir);
+            const idx = images.findIndex(i => i.id === id);
+            const target = idx + dir;
+            if (target < 0 || target >= images.length) return;
+            const moved = images.splice(idx, 1)[0];
+            images.splice(target, 0, moved);
+            images.forEach((img, i) => img.displayOrder = i);
+            renderImages();
+            saveOrder();
+        });
+    });
+
+    document.querySelectorAll('[data-action="delete"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            if (!confirm('Delete this image?')) return;
+            const response = await fetch(`/api/admin/images/${btn.dataset.id}`, { method: 'DELETE' });
+            if (response.ok) await loadImages();
+        });
+    });
+
+    document.querySelectorAll('[data-action="replace"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.dataset.id;
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/jpeg,image/png,image/webp,image/avif';
+            input.onchange = async () => {
+                if (!input.files.length) return;
+                const formData = new FormData();
+                formData.append('file', input.files[0]);
+                const response = await fetch(`/api/admin/images/${id}/replace`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (response.ok) await loadImages();
+            };
+            input.click();
+        });
+    });
+}
+
+function setupDragDrop() {
+    const grid = document.getElementById('imageGrid');
+    let dragged = null;
+
+    grid.querySelectorAll('[draggable="true"]').forEach(card => {
+        card.addEventListener('dragstart', () => {
+            dragged = card;
+            card.classList.add('opacity-50');
+        });
+        card.addEventListener('dragend', () => {
+            card.classList.remove('opacity-50');
+            dragged = null;
+        });
+        card.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (dragged && dragged !== card) card.classList.add('ring-2', 'ring-brand-primary');
+        });
+        card.addEventListener('dragleave', () => card.classList.remove('ring-2', 'ring-brand-primary'));
+        card.addEventListener('drop', (e) => {
+            e.preventDefault();
+            card.classList.remove('ring-2', 'ring-brand-primary');
+            if (!dragged || dragged === card) return;
+            const fromId = dragged.dataset.imageId;
+            const toId = card.dataset.imageId;
+            const fromIdx = images.findIndex(i => i.id === fromId);
+            const toIdx = images.findIndex(i => i.id === toId);
+            const moved = images.splice(fromIdx, 1)[0];
+            images.splice(toIdx, 0, moved);
+            renderImages();
+            saveOrder();
+        });
+    });
+}
+
+async function saveOrder() {
+    const items = images.map((img, i) => ({ imageId: img.id, displayOrder: i }));
+    await fetch(`/api/admin/images/product/${currentProductId}/reorder`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(items)
+    });
+}
+
+document.getElementById('btnSaveOrder').addEventListener('click', saveOrder);
+
+function escapeHtml(value) {
+    return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+</script>
+}
+
