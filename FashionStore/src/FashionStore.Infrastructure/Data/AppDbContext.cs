@@ -26,6 +26,10 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
     public DbSet<ProductVariantAttributeValue> ProductVariantAttributeValues => Set<ProductVariantAttributeValue>();
     public DbSet<ProductImage> ProductImages => Set<ProductImage>();
+    public DbSet<Warehouse> Warehouses => Set<Warehouse>();
+    public DbSet<WarehouseStock> WarehouseStocks => Set<WarehouseStock>();
+    public DbSet<InventoryTransaction> InventoryTransactions => Set<InventoryTransaction>();
+    public DbSet<StockReservation> StockReservations => Set<StockReservation>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -226,6 +230,59 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             entity.HasIndex(e => e.ProductVariantId);
             entity.HasOne(e => e.Product).WithMany(p => p.Images).HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.Variant).WithMany().HasForeignKey(e => e.ProductVariantId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Warehouse>(entity =>
+        {
+            entity.ToTable("Warehouses");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(50);
+            entity.HasIndex(e => e.Code).IsUnique();
+            entity.HasIndex(e => e.IsActive);
+            entity.HasIndex(e => e.IsDefault);
+        });
+
+        modelBuilder.Entity<WarehouseStock>(entity =>
+        {
+            entity.ToTable("WarehouseStocks");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.WarehouseId, e.ProductVariantId }).IsUnique();
+            entity.HasIndex(e => e.ProductVariantId);
+            entity.HasIndex(e => e.OnHandQuantity);
+            entity.HasIndex(e => e.LowStockThreshold);
+            entity.HasOne(e => e.Warehouse).WithMany(w => w.StockItems).HasForeignKey(e => e.WarehouseId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Variant).WithMany().HasForeignKey(e => e.ProductVariantId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<InventoryTransaction>(entity =>
+        {
+            entity.ToTable("InventoryTransactions");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ReferenceId).HasMaxLength(100);
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+            entity.Property(e => e.AdministratorId).HasMaxLength(450);
+            entity.HasIndex(e => e.ProductVariantId);
+            entity.HasIndex(e => e.WarehouseId);
+            entity.HasIndex(e => e.CreatedAtUtc);
+            entity.HasIndex(e => e.Reason);
+            entity.HasIndex(e => e.ReferenceType);
+            entity.HasOne(e => e.Warehouse).WithMany(w => w.Transactions).HasForeignKey(e => e.WarehouseId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Variant).WithMany().HasForeignKey(e => e.ProductVariantId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StockReservation>(entity =>
+        {
+            entity.ToTable("StockReservations");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.CartReference).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.ReferenceId).HasMaxLength(100);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.ExpiresAtUtc);
+            entity.HasIndex(e => e.CartReference);
+            entity.HasIndex(e => e.ProductVariantId);
+            entity.HasOne(e => e.Variant).WithMany().HasForeignKey(e => e.ProductVariantId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Warehouse).WithMany(w => w.Reservations).HasForeignKey(e => e.WarehouseId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // Apply soft delete filter

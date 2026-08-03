@@ -1,7 +1,9 @@
 using FashionStore.Application;
 using FashionStore.Application.Configuration;
+using FashionStore.Application.Interfaces;
 using FashionStore.Infrastructure;
 using FashionStore.Web.Middleware;
+using Hangfire;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi.Models;
@@ -130,6 +132,29 @@ app.UseStaticFiles(new StaticFileOptions
     FileProvider = new PhysicalFileProvider(uploadsBasePath),
     RequestPath = builder.Configuration["FileStorage:PublicUrlBase"] ?? "/uploads"
 });
+
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new[] { new HangfireDashboardAuthorizationFilter() },
+    StatsPollingInterval = 5000
+});
+
+using (var scope = app.Services.CreateScope())
+{
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var inventorySettings = scope.ServiceProvider.GetRequiredService<InventorySettings>();
+    try
+    {
+        RecurringJob.AddOrUpdate<IInventoryService>(
+            "inventory-release-expired-reservations",
+            service => service.ReleaseExpiredReservationsAsync(CancellationToken.None),
+            inventorySettings.ExpiredReservationReleaseCron);
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "Hangfire recurring job could not be registered. Background storage may be unavailable.");
+    }
+}
 
 app.MapControllerRoute(
     name: "default",

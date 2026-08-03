@@ -3,6 +3,7 @@ namespace FashionStore.Application.Configuration;
 public sealed class BackgroundJobSettings
 {
     public const string SectionName = "BackgroundJobs";
+    public bool Enabled { get; init; } = true;
     public string ServerName { get; init; } = "FashionStore-Server";
     public int WorkerCount { get; init; } = 5;
     public int RetentionDays { get; init; } = 7;

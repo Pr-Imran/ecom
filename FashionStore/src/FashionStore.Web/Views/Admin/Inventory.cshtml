@@ -1,0 +1,665 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Inventory";
+    ViewData["PageTitle"] = "Inventory";
+}
+
+<div class="space-y-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+            <h2 class="text-xl font-bold text-gray-900">Stock Control</h2>
+            <p class="text-sm text-gray-500 mt-1">Monitor stock levels, adjust quantities, and manage reservations</p>
+        </div>
+        <div class="flex gap-2">
+            <button id="btnExport" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">Export CSV</button>
+            <button id="btnWarehouses" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">Warehouses</button>
+        </div>
+    </div>
+
+    @* Summary cards *@
+    <div class="grid grid-cols-2 lg:grid-cols-6 gap-4" id="summaryCards"></div>
+
+    @* Filters *@
+    <div class="bg-white rounded-lg border p-4 space-y-4">
+        <div class="flex flex-wrap gap-3 items-center">
+            <input id="searchTerm" type="text" placeholder="Search SKU or product name..."
+                class="flex-1 min-w-[200px] border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary" />
+            <select id="warehouseFilter" class="border border-gray-300 rounded-lg px-4 py-2.5 text-sm">
+                <option value="">All warehouses</option>
+            </select>
+            <div class="flex flex-wrap gap-3 text-sm text-gray-700">
+                <label class="flex items-center gap-2"><input type="checkbox" id="lowStockOnly" class="w-4 h-4 rounded"> Low stock</label>
+                <label class="flex items-center gap-2"><input type="checkbox" id="outOfStockOnly" class="w-4 h-4 rounded"> Out of stock</label>
+                <label class="flex items-center gap-2"><input type="checkbox" id="backorderOnly" class="w-4 h-4 rounded"> Backorder</label>
+            </div>
+            <button id="btnSearch" class="px-4 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium">Search</button>
+        </div>
+    </div>
+
+    @* Inventory table *@
+    <div class="bg-white rounded-lg border overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500">
+                        <th class="px-4 py-3">Product / SKU</th>
+                        <th class="px-4 py-3">Warehouses</th>
+                        <th class="px-4 py-3 text-right">On hand</th>
+                        <th class="px-4 py-3 text-right">Reserved</th>
+                        <th class="px-4 py-3 text-right">Available</th>
+                        <th class="px-4 py-3 text-right">Low stock</th>
+                        <th class="px-4 py-3 text-center">Backorder</th>
+                        <th class="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryBody"></tbody>
+            </table>
+        </div>
+        <div class="px-4 py-3 border-t flex flex-wrap items-center justify-between gap-3">
+            <span id="paginationInfo" class="text-xs text-gray-500"></span>
+            <div class="flex gap-2">
+                <button id="btnPrev" class="px-3 py-1.5 border rounded text-sm disabled:opacity-40">Prev</button>
+                <button id="btnNext" class="px-3 py-1.5 border rounded text-sm disabled:opacity-40">Next</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Adjust stock modal *@
+<div id="adjustModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-2xl">
+            <h3 id="adjustModalTitle" class="text-lg font-bold">Adjust Stock</h3>
+            <button class="btn-close text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="adjustForm" class="p-6 space-y-4">
+            <input type="hidden" id="adjustVariantId" />
+            <div class="text-sm text-gray-500" id="adjustVariantLabel"></div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Warehouse</label>
+                <select id="adjustWarehouseId" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm"></select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Adjustment Quantity *</label>
+                <input type="number" id="adjustQuantity" required step="1" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm" placeholder="Use + or - (e.g. 10 or -5)" />
+                <p class="text-xs text-gray-400 mt-1">Positive increases stock, negative decreases it.</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Reason *</label>
+                <select id="adjustReason" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm">
+                    <option value="1">Initial Stock</option>
+                    <option value="2">Purchase Receipt</option>
+                    <option value="3">Manual Increase</option>
+                    <option value="4">Manual Decrease</option>
+                    <option value="7">Order Fulfilment</option>
+                    <option value="8">Customer Return</option>
+                    <option value="9">Damaged Stock</option>
+                    <option value="10">Lost Stock</option>
+                    <option value="11">Correction</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea id="adjustNotes" rows="2" maxlength="500" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm"></textarea>
+            </div>
+            <div class="flex justify-end gap-3 pt-4 border-t">
+                <button type="button" class="btn-close px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-6 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium">Save Adjustment</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Thresholds modal *@
+<div id="thresholdsModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-2xl">
+            <h3 class="text-lg font-bold">Stock Settings</h3>
+            <button class="btn-close text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="thresholdsForm" class="p-6 space-y-4">
+            <input type="hidden" id="thresholdsVariantId" />
+            <div class="text-sm text-gray-500" id="thresholdsVariantLabel"></div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Warehouse</label>
+                <select id="thresholdsWarehouseId" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm"></select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Low Stock Threshold</label>
+                    <input type="number" id="thresholdsLowStock" min="0" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm" placeholder="e.g. 10" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Reorder Level</label>
+                    <input type="number" id="thresholdsReorderLevel" min="0" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm" placeholder="e.g. 20" />
+                </div>
+            </div>
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="thresholdsAllowBackorder" class="w-4 h-4 text-brand-primary rounded focus:ring-brand-primary" />
+                <span class="text-sm text-gray-700">Allow backorders when out of stock</span>
+            </label>
+            <div class="flex justify-end gap-3 pt-4 border-t">
+                <button type="button" class="btn-close px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-6 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium">Save Settings</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Variant detail modal *@
+<div id="detailModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-2xl">
+            <h3 id="detailModalTitle" class="text-lg font-bold">Variant Inventory</h3>
+            <button class="btn-close text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6 space-y-6">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="detailTotals"></div>
+            <div>
+                <h4 class="text-sm font-semibold text-gray-700 mb-2">Warehouse breakdown</h4>
+                <div class="overflow-x-auto border rounded-lg">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500">
+                                <th class="px-4 py-2">Warehouse</th>
+                                <th class="px-4 py-2 text-right">On hand</th>
+                                <th class="px-4 py-2 text-right">Reserved</th>
+                                <th class="px-4 py-2 text-right">Available</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailWarehouses"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div>
+                <h4 class="text-sm font-semibold text-gray-700 mb-2">Recent transactions</h4>
+                <div class="overflow-x-auto border rounded-lg">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500">
+                                <th class="px-4 py-2">Date</th>
+                                <th class="px-4 py-2">Warehouse</th>
+                                <th class="px-4 py-2 text-right">Change</th>
+                                <th class="px-4 py-2">Reason</th>
+                                <th class="px-4 py-2">Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailTransactions"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Warehouse modal *@
+<div id="warehouseModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-2xl">
+            <h3 id="warehouseModalTitle" class="text-lg font-bold">Warehouses</h3>
+            <button class="btn-close text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <p class="text-sm text-gray-500">Manage fulfilment locations</p>
+                <button id="btnNewWarehouse" class="px-3 py-1.5 bg-brand-primary text-white rounded text-sm">+ New Warehouse</button>
+            </div>
+            <div id="warehouseList" class="space-y-3"></div>
+        </div>
+    </div>
+</div>
+
+@* Warehouse form modal *@
+<div id="warehouseFormModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-2xl">
+            <h3 id="warehouseFormTitle" class="text-lg font-bold">New Warehouse</h3>
+            <button class="btn-close text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="warehouseForm" class="p-6 space-y-4">
+            <input type="hidden" id="warehouseId" />
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                    <input type="text" id="warehouseName" required maxlength="150" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Code *</label>
+                    <input type="text" id="warehouseCode" required maxlength="20" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm" placeholder="e.g. WH-01" />
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <input type="text" id="warehouseDescription" maxlength="300" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm" />
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">City</label>
+                    <input type="text" id="warehouseCity" maxlength="100" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                    <input type="text" id="warehouseCountry" maxlength="100" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm" />
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <input type="text" id="warehouseAddress" maxlength="300" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm" />
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Display Order</label>
+                    <input type="number" id="warehouseDisplayOrder" value="0" min="0" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm" />
+                </div>
+                <div class="space-y-2 pt-6">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="warehouseIsActive" checked class="w-4 h-4 text-brand-primary rounded focus:ring-brand-primary" />
+                        <span class="text-sm text-gray-700">Active</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="warehouseIsDefault" class="w-4 h-4 text-brand-primary rounded focus:ring-brand-primary" />
+                        <span class="text-sm text-gray-700">Default warehouse</span>
+                    </label>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 pt-4 border-t">
+                <button type="button" class="btn-close px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-6 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium">Save Warehouse</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+let warehouses = [];
+let currentPage = 1;
+let currentResult = { items: [], totalCount: 0, page: 1, pageSize: 20, totalPages: 0 };
+let currentSearch = { searchTerm: '', lowStockOnly: false, outOfStockOnly: false, backorderOnly: false, warehouseId: '' };
+
+document.querySelectorAll('.btn-close').forEach(btn => {
+    btn.addEventListener('click', () => closeModals());
+});
+
+function closeModals() {
+    ['adjustModal', 'thresholdsModal', 'detailModal', 'warehouseModal', 'warehouseFormModal'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+    });
+}
+
+async function api(url, options = {}) {
+    const response = await fetch(url, options);
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || 'Request failed');
+    }
+    if (response.status === 204) return null;
+    const type = response.headers.get('content-type') || '';
+    return type.includes('json') ? response.json() : response;
+}
+
+async function loadSummary() {
+    try {
+        const s = await api('/api/admin/inventory/summary');
+        const cards = [
+            { label: 'Total On Hand', value: s.totalOnHand, cls: 'text-gray-900' },
+            { label: 'Total Reserved', value: s.totalReserved, cls: 'text-amber-600' },
+            { label: 'Total Available', value: s.totalAvailable, cls: 'text-brand-primary' },
+            { label: 'Low Stock', value: s.lowStockCount, cls: 'text-orange-600' },
+            { label: 'Out of Stock', value: s.outOfStockCount, cls: 'text-red-600' },
+            { label: 'Active Reservations', value: s.activeReservationCount, cls: 'text-indigo-600' }
+        ];
+        document.getElementById('summaryCards').innerHTML = cards.map(c => `
+            <div class="bg-white rounded-lg border p-4">
+                <div class="text-xs text-gray-500 uppercase tracking-wider">${c.label}</div>
+                <div class="text-2xl font-bold mt-1 ${c.cls}">${c.value}</div>
+            </div>
+        `).join('');
+    } catch (err) {
+        document.getElementById('summaryCards').innerHTML = '<div class="col-span-full text-red-500 text-sm">Failed to load summary</div>';
+    }
+}
+
+async function loadWarehouses() {
+    try {
+        warehouses = await api('/api/admin/inventory/warehouses?includeInactive=true');
+    } catch (err) {
+        warehouses = [];
+    }
+    const warehouseFilter = document.getElementById('warehouseFilter');
+    warehouseFilter.innerHTML = '<option value="">All warehouses</option>' +
+        warehouses.filter(w => w.isActive).map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+    document.getElementById('adjustWarehouseId').innerHTML =
+        warehouses.filter(w => w.isActive).map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+    document.getElementById('thresholdsWarehouseId').innerHTML =
+        '<option value="">All warehouses</option>' +
+        warehouses.filter(w => w.isActive).map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+}
+
+function renderWarehouses() {
+    const list = document.getElementById('warehouseList');
+    if (!warehouses.length) {
+        list.innerHTML = '<p class="text-sm text-gray-400 italic">No warehouses yet. Create one to start tracking stock by location.</p>';
+        return;
+    }
+    list.innerHTML = warehouses.map(w => `
+        <div class="border rounded-lg p-4 flex items-center justify-between gap-3">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="font-semibold text-gray-900">${w.name}</span>
+                    ${w.isDefault ? '<span class="px-2 py-0.5 rounded-full text-xs bg-indigo-100 text-indigo-800">Default</span>' : ''}
+                    ${w.isActive ? '<span class="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-800">Active</span>' : '<span class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-800">Inactive</span>'}
+                </div>
+                <p class="text-xs text-gray-500 mt-1">${w.code} · ${w.city || 'No city'}${w.country ? ', ' + w.country : ''}</p>
+                ${w.description ? `<p class="text-xs text-gray-500 mt-0.5">${w.description}</p>` : ''}
+            </div>
+            <div class="flex gap-2">
+                <button onclick="editWarehouse(${JSON.stringify(w)})" class="px-3 py-1.5 border rounded text-sm">Edit</button>
+                <button onclick="deleteWarehouse('${w.id}')" class="px-3 py-1.5 border border-red-200 text-red-600 rounded text-sm">Delete</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function editWarehouse(w) {
+    document.getElementById('warehouseFormTitle').textContent = 'Edit Warehouse';
+    document.getElementById('warehouseId').value = w.id;
+    document.getElementById('warehouseName').value = w.name;
+    document.getElementById('warehouseCode').value = w.code;
+    document.getElementById('warehouseDescription').value = w.description || '';
+    document.getElementById('warehouseAddress').value = w.address || '';
+    document.getElementById('warehouseCity').value = w.city || '';
+    document.getElementById('warehouseCountry').value = w.country || '';
+    document.getElementById('warehouseIsActive').checked = w.isActive;
+    document.getElementById('warehouseIsDefault').checked = w.isDefault;
+    document.getElementById('warehouseDisplayOrder').value = w.displayOrder || 0;
+    document.getElementById('warehouseFormModal').classList.remove('hidden');
+}
+
+async function deleteWarehouse(id) {
+    if (!confirm('Delete this warehouse? Warehouses with stock cannot be deleted.')) return;
+    try {
+        await api(`/api/admin/inventory/warehouses/${id}`, { method: 'DELETE' });
+        await loadWarehouses();
+        renderWarehouses();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+document.getElementById('btnNewWarehouse').addEventListener('click', () => {
+    document.getElementById('warehouseFormTitle').textContent = 'New Warehouse';
+    document.getElementById('warehouseForm').reset();
+    document.getElementById('warehouseId').value = '';
+    document.getElementById('warehouseIsActive').checked = true;
+    document.getElementById('warehouseDisplayOrder').value = 0;
+    document.getElementById('warehouseFormModal').classList.remove('hidden');
+});
+
+document.getElementById('warehouseForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('warehouseId').value;
+    const data = {
+        id: id || undefined,
+        name: document.getElementById('warehouseName').value,
+        code: document.getElementById('warehouseCode').value,
+        description: document.getElementById('warehouseDescription').value || null,
+        address: document.getElementById('warehouseAddress').value || null,
+        city: document.getElementById('warehouseCity').value || null,
+        country: document.getElementById('warehouseCountry').value || null,
+        isActive: document.getElementById('warehouseIsActive').checked,
+        isDefault: document.getElementById('warehouseIsDefault').checked,
+        displayOrder: parseInt(document.getElementById('warehouseDisplayOrder').value) || 0
+    };
+    try {
+        const url = id ? `/api/admin/inventory/warehouses/${id}` : '/api/admin/inventory/warehouses';
+        const method = id ? 'PUT' : 'POST';
+        await api(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        document.getElementById('warehouseFormModal').classList.add('hidden');
+        await loadWarehouses();
+        renderWarehouses();
+    } catch (err) {
+        alert(err.message);
+    }
+});
+
+document.getElementById('btnWarehouses').addEventListener('click', () => {
+    document.getElementById('warehouseModal').classList.remove('hidden');
+    renderWarehouses();
+});
+
+document.getElementById('btnExport').addEventListener('click', () => {
+    const params = new URLSearchParams();
+    if (currentSearch.searchTerm) params.set('searchTerm', currentSearch.searchTerm);
+    if (currentSearch.lowStockOnly) params.set('lowStockOnly', 'true');
+    if (currentSearch.outOfStockOnly) params.set('outOfStockOnly', 'true');
+    if (currentSearch.backorderOnly) params.set('backorderOnly', 'true');
+    if (currentSearch.warehouseId) params.set('warehouseId', currentSearch.warehouseId);
+    window.open(`/api/admin/inventory/export?${params.toString()}`, '_blank');
+});
+
+function openAdjust(row) {
+    document.getElementById('adjustVariantId').value = row.variantId;
+    document.getElementById('adjustVariantLabel').textContent = `${row.sku} · ${row.productName}`;
+    document.getElementById('adjustForm').reset();
+    document.getElementById('adjustQuantity').required = true;
+    document.getElementById('adjustModal').classList.remove('hidden');
+}
+
+document.getElementById('adjustForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {
+        variantId: document.getElementById('adjustVariantId').value,
+        warehouseId: document.getElementById('adjustWarehouseId').value || null,
+        adjustmentQuantity: parseInt(document.getElementById('adjustQuantity').value) || 0,
+        reason: parseInt(document.getElementById('adjustReason').value),
+        notes: document.getElementById('adjustNotes').value || null,
+        administratorId: '@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value'
+    };
+    try {
+        await api('/api/admin/inventory/adjust', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        document.getElementById('adjustModal').classList.add('hidden');
+        await refreshAll();
+    } catch (err) {
+        alert(err.message);
+    }
+});
+
+function openThresholds(row) {
+    document.getElementById('thresholdsVariantId').value = row.variantId;
+    document.getElementById('thresholdsVariantLabel').textContent = `${row.sku} · ${row.productName}`;
+    document.getElementById('thresholdsLowStock').value = row.lowStockThreshold ?? '';
+    document.getElementById('thresholdsReorderLevel').value = row.reorderLevel ?? '';
+    document.getElementById('thresholdsAllowBackorder').checked = row.allowBackorder;
+    document.getElementById('thresholdsModal').classList.remove('hidden');
+}
+
+document.getElementById('thresholdsForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {
+        variantId: document.getElementById('thresholdsVariantId').value,
+        warehouseId: document.getElementById('thresholdsWarehouseId').value || null,
+        lowStockThreshold: document.getElementById('thresholdsLowStock').value === '' ? null : parseInt(document.getElementById('thresholdsLowStock').value),
+        reorderLevel: document.getElementById('thresholdsReorderLevel').value === '' ? null : parseInt(document.getElementById('thresholdsReorderLevel').value),
+        allowBackorder: document.getElementById('thresholdsAllowBackorder').checked
+    };
+    try {
+        await api('/api/admin/inventory/variants/' + data.variantId + '/thresholds', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        document.getElementById('thresholdsModal').classList.add('hidden');
+        await refreshAll();
+    } catch (err) {
+        alert(err.message);
+    }
+});
+
+async function openDetail(variantId) {
+    try {
+        const detail = await api(`/api/admin/inventory/variants/${variantId}`);
+        document.getElementById('detailModalTitle').textContent = `${detail.sku} · ${detail.productName}`;
+        document.getElementById('detailTotals').innerHTML = [
+            { label: 'Total On Hand', value: detail.totalOnHand, cls: 'text-gray-900' },
+            { label: 'Total Reserved', value: detail.totalReserved, cls: 'text-amber-600' },
+            { label: 'Total Available', value: detail.totalAvailable, cls: 'text-brand-primary' },
+            { label: 'Backorder', value: detail.allowBackorder ? 'Yes' : 'No', cls: detail.allowBackorder ? 'text-green-600' : 'text-gray-500' }
+        ].map(c => `
+            <div class="bg-gray-50 rounded-lg p-3">
+                <div class="text-xs text-gray-500">${c.label}</div>
+                <div class="text-lg font-bold mt-0.5 ${c.cls}">${c.value}</div>
+            </div>
+        `).join('');
+        document.getElementById('detailWarehouses').innerHTML = detail.warehouses.length ? detail.warehouses.map(w => `
+            <tr class="border-t">
+                <td class="px-4 py-2">${w.warehouseName}</td>
+                <td class="px-4 py-2 text-right">${w.onHandQuantity}</td>
+                <td class="px-4 py-2 text-right">${w.reservedQuantity}</td>
+                <td class="px-4 py-2 text-right font-medium">${w.availableQuantity}</td>
+            </tr>
+        `).join('') : '<tr class="border-t"><td colspan="4" class="px-4 py-2 text-center text-gray-400">No warehouse stock</td></tr>';
+        document.getElementById('detailModal').classList.remove('hidden');
+        loadTransactions(variantId);
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+async function loadTransactions(variantId) {
+    try {
+        const transactions = await api(`/api/admin/inventory/variants/${variantId}/transactions?limit=30`);
+        document.getElementById('detailTransactions').innerHTML = transactions.length ? transactions.map(t => `
+            <tr class="border-t">
+                <td class="px-4 py-2 text-xs">${new Date(t.createdAtUtc).toLocaleString()}</td>
+                <td class="px-4 py-2">${t.warehouseName}</td>
+                <td class="px-4 py-2 text-right font-medium ${t.quantityChange >= 0 ? 'text-green-600' : 'text-red-600'}">${t.quantityChange >= 0 ? '+' : ''}${t.quantityChange}</td>
+                <td class="px-4 py-2">${reasonLabel(t.reason)}</td>
+                <td class="px-4 py-2 text-xs text-gray-500">${t.notes || ''}</td>
+            </tr>
+        `).join('') : '<tr class="border-t"><td colspan="5" class="px-4 py-2 text-center text-gray-400">No transactions yet</td></tr>';
+    } catch (err) {
+        document.getElementById('detailTransactions').innerHTML = '<tr><td colspan="5" class="px-4 py-2 text-red-500">Failed to load transactions</td></tr>';
+    }
+}
+
+function reasonLabel(value) {
+    const reasons = {
+        1: 'Initial Stock', 2: 'Purchase Receipt', 3: 'Manual Increase', 4: 'Manual Decrease',
+        5: 'Order Reservation', 6: 'Reservation Release', 7: 'Order Fulfilment', 8: 'Customer Return',
+        9: 'Damaged Stock', 10: 'Lost Stock', 11: 'Correction'
+    };
+    return reasons[value] || value;
+}
+
+function stockBadge(row) {
+    const available = row.totalAvailable;
+    if (available <= 0) return '<span class="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-800">Out of stock</span>';
+    if (row.lowStockThreshold != null && available <= row.lowStockThreshold) return '<span class="px-2 py-0.5 rounded-full text-xs bg-orange-100 text-orange-800">Low stock</span>';
+    return '<span class="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-800">In stock</span>';
+}
+
+async function loadInventory() {
+    const params = new URLSearchParams({
+        page: currentPage,
+        pageSize: 20,
+        sortDescending: true
+    });
+    if (currentSearch.searchTerm) params.set('searchTerm', currentSearch.searchTerm);
+    if (currentSearch.lowStockOnly) params.set('lowStockOnly', 'true');
+    if (currentSearch.outOfStockOnly) params.set('outOfStockOnly', 'true');
+    if (currentSearch.backorderOnly) params.set('backorderOnly', 'true');
+    if (currentSearch.warehouseId) params.set('warehouseId', currentSearch.warehouseId);
+    try {
+        currentResult = await api(`/api/admin/inventory?${params.toString()}`);
+        const body = document.getElementById('inventoryBody');
+        if (!currentResult.items.length) {
+            body.innerHTML = '<tr><td colspan="8" class="px-4 py-8 text-center text-gray-400">No inventory found. Adjust stock or add products to see them here.</td></tr>';
+        } else {
+            body.innerHTML = currentResult.items.map(row => `
+                <tr class="border-t hover:bg-gray-50">
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-3">
+                            ${row.variantImageUrl ? `<img src="${row.variantImageUrl}" alt="" class="w-10 h-10 rounded object-cover">` : '<div class="w-10 h-10 rounded bg-gray-100 flex items-center justify-center text-gray-400">--</div>'}
+                            <div>
+                                <div class="font-medium text-gray-900">${row.productName}</div>
+                                <div class="text-xs text-gray-500">${row.sku}</div>
+                                ${Object.entries(row.attributeValues || {}).map(([k, v]) => `<span class="text-xs text-gray-400 mr-1">${k}: ${v}</span>`).join('')}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-center">${row.warehouseCount}</td>
+                    <td class="px-4 py-3 text-right">${row.totalOnHand}</td>
+                    <td class="px-4 py-3 text-right">${row.totalReserved}</td>
+                    <td class="px-4 py-3 text-right font-medium">${row.totalAvailable} ${stockBadge(row)}</td>
+                    <td class="px-4 py-3 text-right">${row.lowStockThreshold ?? '—'}</td>
+                    <td class="px-4 py-3 text-center">${row.allowBackorder ? '<span class="text-green-600">Yes</span>' : '<span class="text-gray-400">No</span>'}</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                        <button onclick="openDetail('${row.variantId}')" class="text-brand-primary text-sm mr-2">View</button>
+                        <button onclick="openAdjust(${JSON.stringify(row)})" class="text-brand-primary text-sm mr-2">Adjust</button>
+                        <button onclick="openThresholds(${JSON.stringify(row)})" class="text-sm text-gray-500">Settings</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        const totalPages = Math.max(1, currentResult.totalPages);
+        document.getElementById('paginationInfo').textContent = `Showing ${currentResult.items.length ? ((currentResult.page - 1) * currentResult.pageSize + 1) : 0}-${(currentResult.page - 1) * currentResult.pageSize + currentResult.items.length} of ${currentResult.totalCount}`;
+        document.getElementById('btnPrev').disabled = currentPage <= 1;
+        document.getElementById('btnNext').disabled = currentPage >= totalPages;
+    } catch (err) {
+        document.getElementById('inventoryBody').innerHTML = `<tr><td colspan="8" class="px-4 py-8 text-center text-red-500">${err.message}</td></tr>`;
+    }
+}
+
+function collectFilters() {
+    currentSearch = {
+        searchTerm: document.getElementById('searchTerm').value.trim(),
+        lowStockOnly: document.getElementById('lowStockOnly').checked,
+        outOfStockOnly: document.getElementById('outOfStockOnly').checked,
+        backorderOnly: document.getElementById('backorderOnly').checked,
+        warehouseId: document.getElementById('warehouseFilter').value
+    };
+    currentPage = 1;
+}
+
+document.getElementById('btnSearch').addEventListener('click', () => { collectFilters(); loadInventory(); });
+document.getElementById('searchTerm').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { collectFilters(); loadInventory(); }
+});
+document.getElementById('btnPrev').addEventListener('click', () => { if (currentPage > 1) { currentPage--; loadInventory(); } });
+document.getElementById('btnNext').addEventListener('click', () => {
+    if (currentPage < Math.max(1, currentResult.totalPages)) { currentPage++; loadInventory(); }
+});
+
+async function refreshAll() {
+    await Promise.all([loadSummary(), loadInventory()]);
+}
+
+loadWarehouses();
+refreshAll();
+</script>
+}

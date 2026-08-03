@@ -1,9 +1,12 @@
+using FashionStore.Application.Authorization;
 using FashionStore.Application.Configuration;
 using FashionStore.Application.Interfaces;
 using FashionStore.Infrastructure.Data;
 using FashionStore.Infrastructure.Services;
 using FashionStore.Infrastructure.Services.Images;
 using FashionStore.Infrastructure.Services.Storage;
+using Hangfire;
+using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -39,9 +42,19 @@ public static class DependencyInjection
             .GetSection(ImageSettings.SectionName)
             .Get<ImageSettings>() ?? new ImageSettings();
 
+        var backgroundJobSettings = configuration
+            .GetSection(BackgroundJobSettings.SectionName)
+            .Get<BackgroundJobSettings>() ?? new BackgroundJobSettings();
+
+        var inventorySettings = configuration
+            .GetSection(InventorySettings.SectionName)
+            .Get<InventorySettings>() ?? new InventorySettings();
+
         services.AddSingleton(cacheSettings);
         services.AddSingleton(fileStorageSettings);
         services.AddSingleton(imageSettings);
+        services.AddSingleton(backgroundJobSettings);
+        services.AddSingleton(inventorySettings);
         services.AddDistributedMemoryCache();
 
         services.AddDbContext<AppDbContext>(options =>
@@ -98,15 +111,44 @@ public static class DependencyInjection
         services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<IProductService, ProductService>();
         services.AddScoped<IProductVariationService, ProductVariationService>();
+        services.AddScoped<IInventoryService, InventoryService>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
         services.AddScoped<IImageValidationService, ImageValidationService>();
         services.AddScoped<IImageProcessingService, ImageProcessingService>();
         services.AddScoped<IImageService, ImageService>();
         services.AddSingleton<IImageProcessingDispatcher, ImageProcessingDispatcher>();
         services.AddHostedService<ImageProcessingBackgroundService>();
-        services.AddAuthorization();
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy(InventoryPolicies.InventoryManage, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireClaim("permission", ApplicationPermissions.Products.ManageInventory));
+        });
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>("database");
+
+        services.AddHangfire(config => config
+            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UseSqlServerStorage(dbSettings.ConnectionString, new SqlServerStorageOptions
+            {
+                CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+                SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+                QueuePollInterval = TimeSpan.FromSeconds(15),
+                UseRecommendedIsolationLevel = true,
+                DisableGlobalLocks = true
+            }));
+
+        if (backgroundJobSettings.Enabled)
+        {
+            services.AddHangfireServer(options =>
+            {
+                options.ServerName = backgroundJobSettings.ServerName;
+                options.WorkerCount = backgroundJobSettings.WorkerCount;
+                options.Queues = backgroundJobSettings.Queues;
+            });
+        }
 
         return services;
     }

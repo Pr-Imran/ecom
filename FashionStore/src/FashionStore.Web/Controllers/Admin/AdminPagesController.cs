@@ -85,4 +85,13 @@ public class AdminPagesController : Controller
         ViewData["PageTitle"] = "Product Attributes";
         return View();
     }
+
+    [HttpGet("/admin/inventory")]
+    public async Task<IActionResult> Inventory(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Inventory";
+        return View();
+    }
 }

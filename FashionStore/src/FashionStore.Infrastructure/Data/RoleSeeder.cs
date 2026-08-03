@@ -158,7 +158,7 @@ public class RoleSeeder : IRoleSeeder
             "Admin" => new[]
             {
                 Dashboard.View,
-                Products.View, Products.Create, Products.Update, Products.Delete,
+                Products.View, Products.Create, Products.Update, Products.Delete, Products.ManageInventory,
                 Categories.Manage, Brands.Manage,
                 Orders.View, Orders.UpdateStatus, Orders.Cancel, Orders.Refund, Orders.PrintInvoice,
                 Customers.View, Customers.Update,

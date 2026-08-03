@@ -78,7 +78,8 @@ public class NavigationService : INavigationService
                     HasPermission(permissions, "Brands.Manage") ? new NavigationItem("brands", "Brands", "/admin/brands", null) : null,
                     HasPermission(permissions, "Products.View") ? new NavigationItem("variations", "Variations", "/admin/variations", null) : null,
                     HasPermission(permissions, "Products.View") ? new NavigationItem("attributes", "Attributes", "/admin/attributes", null) : null,
-                    HasPermission(permissions, "Products.View") ? new NavigationItem("images", "Images", "/admin/images", null) : null
+                    HasPermission(permissions, "Products.View") ? new NavigationItem("images", "Images", "/admin/images", null) : null,
+                    HasPermission(permissions, "Products.ManageInventory") ? new NavigationItem("inventory", "Inventory", "/admin/inventory", null) : null
                 }.Where(c => c != null).Cast<NavigationItem>()
             });
         }
