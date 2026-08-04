@@ -1,8 +1,53 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@model HomePageData
+@{
+    ViewData["Title"] = "FashionStore";
+    ViewData["ShowNewsletter"] = Model.ShowNewsletter;
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+@await Html.PartialAsync("~/Views/Shared/Partials/_AnnouncementBar.cshtml", Model.Announcements)
+
+<partial name="Partials/_HeroSection" model="Model.Hero" />
+
+@if (Model.PromoBanners.Count > 0)
+{
+    <partial name="Partials/_PromoBanners" model="Model.PromoBanners" />
+}
+
+@if (Model.Categories.Count > 0)
+{
+    <partial name="Partials/_Categories" model="Model.Categories" />
+}
+
+<partial name="Partials/_ProductRail"
+         model='("New Arrivals", "Fresh from the runway", "/products?sort=newest", Model.NewArrivals)' />
+
+<partial name="Partials/_ProductRail"
+         model='("Featured Products", "Handpicked by our stylists", "/products?sort=featured", Model.FeaturedProducts)' />
+
+<partial name="Partials/_ProductRail"
+         model='("Best Sellers", "Loved by thousands of shoppers", "/products?sort=best-selling", Model.BestSellers)' />
+
+@if (Model.Collections.Count > 0)
+{
+    <partial name="Partials/_Collections" model="Model.Collections" />
+}
+
+<partial name="Partials/_ProductRail"
+         model='("On Sale", "Limited-time deals, while stock lasts", "/products?on-sale=true", Model.SaleProducts)' />
+
+@if (Model.Brands.Count > 0)
+{
+    <partial name="Partials/_Brands" model="Model.Brands" />
+}
+
+@if (Model.Benefits.Count > 0)
+{
+    <partial name="Partials/_Benefits" model="Model.Benefits" />
+}
+
+@if (Model.Lookbook is not null)
+{
+    <partial name="Partials/_Lookbook" model="Model.Lookbook" />
+}
+
+@await Html.PartialAsync("~/Views/Shared/Partials/_Footer.cshtml")

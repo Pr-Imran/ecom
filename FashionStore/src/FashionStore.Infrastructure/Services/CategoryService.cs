@@ -292,5 +292,6 @@ public class CategoryService : ICategoryService
     private async Task InvalidateCategoryCacheAsync(CancellationToken cancellationToken = default)
     {
         await _cache.RemoveAsync("categories:hierarchy", cancellationToken);
+        await _cache.RemoveAsync(Application.Common.CacheKeys.HomePage, cancellationToken);
     }
 }

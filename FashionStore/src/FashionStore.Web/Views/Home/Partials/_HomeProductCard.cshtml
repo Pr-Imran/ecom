@@ -1,0 +1,62 @@
+@model HomeProductCardDto
+
+@{
+    var imageUrl = Model.ImageCardUrl ?? Model.ImageUrl ?? "/images/placeholder.svg";
+}
+
+<a href="/products/@Model.Slug" class="group block" aria-label="@Model.Name">
+    <div class="relative aspect-[4/5] rounded-brand-sm overflow-hidden bg-brand-surface border border-brand-border">
+        <img src="@imageUrl"
+             alt="@(Model.ImageAltText ?? Model.Name)"
+             class="w-full h-full object-cover transition-transform duration-brand group-hover:scale-105"
+             loading="lazy"
+             width="400"
+             height="500"
+             onerror="this.onerror=null;this.src='/images/placeholder.svg';" />
+
+        @if (Model.DiscountPercent.HasValue && Model.DiscountPercent.Value > 0)
+        {
+            <span class="absolute top-2 left-2 badge badge-danger">-@Model.DiscountPercent%</span>
+        }
+        @if (Model.IsNew)
+        {
+            <span class="absolute top-2 @(Model.DiscountPercent.HasValue && Model.DiscountPercent.Value > 0 ? "left-16" : "left-2") badge badge-neutral">New</span>
+        }
+        @if (!Model.IsInStock)
+        {
+            <span class="absolute bottom-2 left-2 right-2 text-center text-xs font-semibold bg-white/90 text-gray-700 py-1.5 rounded-brand-sm">Sold out</span>
+        }
+        else if (Model.IsLowStock)
+        {
+            <span class="absolute top-2 right-2 badge badge-warning">Low stock</span>
+        }
+    </div>
+
+    <div class="mt-2 space-y-1">
+        @if (!string.IsNullOrEmpty(Model.BrandName))
+        {
+            <div class="text-xs uppercase tracking-wide text-brand-text-muted font-medium">@Model.BrandName</div>
+        }
+        <h3 class="text-sm font-medium text-brand-text-primary line-clamp-2 leading-snug">@Model.Name</h3>
+
+        <div class="inline-flex items-baseline gap-1.5 flex-wrap">
+            <span class="price-current">$@Model.Price.ToString("N2")</span>
+            @if (Model.CompareAtPrice.HasValue && Model.CompareAtPrice.Value > Model.Price)
+            {
+                <span class="price-original">$@Model.CompareAtPrice.Value.ToString("N2")</span>
+            }
+        </div>
+
+        @if (Model.Colours.Count > 0)
+        {
+            <div class="flex items-center gap-1.5 pt-0.5" aria-label="Available colours">
+                @foreach (var colour in Model.Colours)
+                {
+                    <span class="inline-block w-3.5 h-3.5 rounded-full border border-brand-border"
+                          style="background-color: @(colour.HexColour ?? "#e5e7eb");"
+                          title="@colour.Name"></span>
+                }
+            </div>
+        }
+    </div>
+</a>

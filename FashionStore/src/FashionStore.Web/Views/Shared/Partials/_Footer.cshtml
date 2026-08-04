@@ -1,23 +1,30 @@
+@{
+    var showNewsletter = ViewData["ShowNewsletter"] as bool? ?? true;
+}
+
 <footer class="bg-gray-900 text-white mt-auto">
     @* Newsletter Section *@
-    <div class="border-b border-gray-800">
-        <div class="container mx-auto px-4 py-8">
-            <div class="max-w-2xl mx-auto text-center">
-                <h3 class="text-xl font-bold mb-2">Subscribe to Our Newsletter</h3>
-                <p class="text-gray-400 mb-4">Get the latest fashion trends and exclusive offers delivered to your inbox.</p>
-                <form class="flex flex-col sm:flex-row gap-3">
-                    <input type="email"
-                           placeholder="Enter your email"
-                           class="flex-1 px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                           required />
-                    <button type="submit" class="px-6 py-3 bg-brand-primary text-white font-medium rounded-lg hover:bg-brand-primary/90 transition-colors whitespace-nowrap">
-                        Subscribe
-                    </button>
-                </form>
-                <p class="text-xs text-gray-500 mt-2">By subscribing, you agree to our Privacy Policy. Unsubscribe anytime.</p>
+    @if (showNewsletter)
+    {
+        <div class="border-b border-gray-800">
+            <div class="container mx-auto px-4 py-8">
+                <div class="max-w-2xl mx-auto text-center">
+                    <h3 class="text-xl font-bold mb-2">Subscribe to Our Newsletter</h3>
+                    <p class="text-gray-400 mb-4">Get the latest fashion trends and exclusive offers delivered to your inbox.</p>
+                    <form class="flex flex-col sm:flex-row gap-3">
+                        <input type="email"
+                               placeholder="Enter your email"
+                               class="flex-1 px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                               required />
+                        <button type="submit" class="px-6 py-3 bg-brand-primary text-white font-medium rounded-lg hover:bg-brand-primary/90 transition-colors whitespace-nowrap">
+                            Subscribe
+                        </button>
+                    </form>
+                    <p class="text-xs text-gray-500 mt-2">By subscribing, you agree to our Privacy Policy. Unsubscribe anytime.</p>
+                </div>
             </div>
         </div>
-    </div>
+    }
 
     @* Footer Links *@
     <div class="py-12">

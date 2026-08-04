@@ -197,7 +197,11 @@ public class BrandService : IBrandService
         await _context.Set<Product>().CountAsync(p => p.BrandId == brandId, ct);
 
     private string GenerateSlug(string name) => name.ToLowerInvariant().Replace(" ", "-").Replace("--", "-").Trim('-');
-    private async Task InvalidateCacheAsync(CancellationToken ct) => await _cache.RemoveAsync("brands:active", ct);
+    private async Task InvalidateCacheAsync(CancellationToken ct)
+    {
+        await _cache.RemoveAsync("brands:active", ct);
+        await _cache.RemoveAsync(Application.Common.CacheKeys.HomePage, ct);
+    }
     private DistributedCacheEntryOptions GetCacheOptions() => new() { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_cacheSettings.AbsoluteExpirationMinutes) };
 }
 
@@ -376,6 +380,10 @@ public class CollectionService : ICollectionService
 
     private Task<int> CountProducts(Guid id, CancellationToken ct) => _context.Set<Product>().CountAsync(p => p.CollectionId == id, ct);
     private string GenerateSlug(string name) => name.ToLowerInvariant().Replace(" ", "-").Replace("--", "-").Trim('-');
-    private async Task InvalidateCacheAsync(CancellationToken ct) => await _cache.RemoveAsync("collections:active", ct);
+    private async Task InvalidateCacheAsync(CancellationToken ct)
+    {
+        await _cache.RemoveAsync("collections:active", ct);
+        await _cache.RemoveAsync(Application.Common.CacheKeys.HomePage, ct);
+    }
     private DistributedCacheEntryOptions GetCacheOptions() => new() { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_cacheSettings.AbsoluteExpirationMinutes) };
 }

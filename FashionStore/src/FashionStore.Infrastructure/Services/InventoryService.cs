@@ -766,6 +766,7 @@ public sealed class InventoryService : IInventoryService
         try
         {
             await _cache.RemoveAsync($"product:{productId}:variations", cancellationToken);
+            await _cache.RemoveAsync(Application.Common.CacheKeys.HomePage, cancellationToken);
         }
         catch (Exception ex)
         {

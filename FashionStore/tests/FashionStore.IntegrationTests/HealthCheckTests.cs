@@ -4,11 +4,11 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace FashionStore.IntegrationTests;
 
-public class HealthCheckTests : IClassFixture<WebApplicationFactory<Program>>
+public class HealthCheckTests : IClassFixture<TestWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> _factory;
 
-    public HealthCheckTests(WebApplicationFactory<Program> factory)
+    public HealthCheckTests(TestWebApplicationFactory factory)
     {
         _factory = factory;
     }

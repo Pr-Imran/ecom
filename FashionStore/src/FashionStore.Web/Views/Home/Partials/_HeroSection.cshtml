@@ -1,0 +1,38 @@
+@model HeroBannerDto
+
+<section class="relative overflow-hidden bg-brand-primary text-white">
+    @if (!string.IsNullOrEmpty(Model.ImageUrl))
+    {
+        <img src="@Model.ImageUrl"
+             alt=""
+             class="absolute inset-0 w-full h-full object-cover opacity-30"
+             loading="eager"
+             width="1280"
+             height="720" />
+        <div class="absolute inset-0 bg-gradient-to-r from-brand-primary via-brand-primary/70 to-transparent"></div>
+    }
+
+    <div class="relative container mx-auto px-4 py-12 md:py-20">
+        <div class="max-w-xl">
+            <h1 class="text-3xl md:text-5xl font-bold leading-tight tracking-tight">
+                @Model.Title
+            </h1>
+            @if (!string.IsNullOrEmpty(Model.Subtitle))
+            {
+                <p class="mt-4 text-white/85 text-base md:text-lg max-w-md">
+                    @Model.Subtitle
+                </p>
+            }
+            @if (!string.IsNullOrEmpty(Model.CtaText))
+            {
+                <a href="@Model.CtaUrl"
+                   class="mt-8 inline-flex items-center justify-center px-7 py-3.5 bg-white text-brand-primary font-semibold rounded-brand hover:bg-gray-100 transition-colors min-h-[48px]">
+                    @Model.CtaText
+                    <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                    </svg>
+                </a>
+            }
+        </div>
+    </div>
+</section>

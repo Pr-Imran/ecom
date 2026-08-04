@@ -1,21 +1,28 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using FashionStore.Web.Models;
+using FashionStore.Application.DTOs.Home;
+using FashionStore.Application.Interfaces;
 
 namespace FashionStore.Web.Controllers;
 
 public class HomeController : Controller
 {
+    private readonly IHomePageService _homePageService;
     private readonly ILogger<HomeController> _logger;
 
-    public HomeController(ILogger<HomeController> logger)
+    public HomeController(
+        IHomePageService homePageService,
+        ILogger<HomeController> logger)
     {
+        _homePageService = homePageService;
         _logger = logger;
     }
 
-    public IActionResult Index()
+    public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        return View();
+        var model = await _homePageService.GetHomePageAsync(cancellationToken);
+        return View(model);
     }
 
     public IActionResult Privacy()

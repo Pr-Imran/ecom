@@ -1,0 +1,33 @@
+@model (string Title, string Subtitle, string ViewAllUrl, IReadOnlyList<HomeProductCardDto> Products)
+
+@if (Model.Products.Count == 0)
+{
+    return;
+}
+
+<section class="mt-8 md:mt-12">
+    <div class="container mx-auto px-4">
+        <div class="flex items-end justify-between mb-4">
+            <div>
+                <h2 class="text-xl md:text-2xl font-bold text-gray-900">@Model.Title</h2>
+                @if (!string.IsNullOrEmpty(Model.Subtitle))
+                {
+                    <p class="text-sm text-brand-text-muted mt-0.5">@Model.Subtitle</p>
+                }
+            </div>
+            @if (!string.IsNullOrEmpty(Model.ViewAllUrl))
+            {
+                <a href="@Model.ViewAllUrl" class="text-sm font-medium text-brand-primary hover:underline whitespace-nowrap">View all</a>
+            }
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
+            @foreach (var product in Model.Products)
+            {
+                <partial name="Partials/_HomeProductCard" model="product" />
+            }
+        </div>
+    </div>
+</section>

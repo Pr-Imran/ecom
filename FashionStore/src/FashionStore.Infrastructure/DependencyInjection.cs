@@ -50,11 +50,16 @@ public static class DependencyInjection
             .GetSection(InventorySettings.SectionName)
             .Get<InventorySettings>() ?? new InventorySettings();
 
+        var homePageSettings = configuration
+            .GetSection(HomePageSettings.SectionName)
+            .Get<HomePageSettings>() ?? new HomePageSettings();
+
         services.AddSingleton(cacheSettings);
         services.AddSingleton(fileStorageSettings);
         services.AddSingleton(imageSettings);
         services.AddSingleton(backgroundJobSettings);
         services.AddSingleton(inventorySettings);
+        services.AddSingleton(homePageSettings);
         services.AddDistributedMemoryCache();
 
         services.AddDbContext<AppDbContext>(options =>
@@ -112,6 +117,7 @@ public static class DependencyInjection
         services.AddScoped<IProductService, ProductService>();
         services.AddScoped<IProductVariationService, ProductVariationService>();
         services.AddScoped<IInventoryService, InventoryService>();
+        services.AddScoped<IHomePageService, HomePageService>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
         services.AddScoped<IImageValidationService, ImageValidationService>();
         services.AddScoped<IImageProcessingService, ImageProcessingService>();

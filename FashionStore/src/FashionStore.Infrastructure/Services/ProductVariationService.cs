@@ -73,6 +73,7 @@ public class ProductVariationService : IProductVariationService
 
         _context.ProductAttributes.Add(attribute);
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
 
         _logger.LogInformation("Created attribute {AttributeId} - {Name}", attribute.Id, attribute.Name);
         return ToDto(attribute);
@@ -95,6 +96,7 @@ public class ProductVariationService : IProductVariationService
         attribute.Description = request.Description;
 
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
 
         _logger.LogInformation("Updated attribute {AttributeId}", request.Id);
         return ToDto(attribute);
@@ -113,6 +115,7 @@ public class ProductVariationService : IProductVariationService
 
         _context.ProductAttributes.Remove(attribute);
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
 
         _logger.LogInformation("Deleted attribute {AttributeId}", id);
         return true;
@@ -146,6 +149,7 @@ public class ProductVariationService : IProductVariationService
 
         _context.ProductAttributeValues.Add(value);
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
 
         _logger.LogInformation("Created attribute value {ValueId} - {Name} for attribute {AttributeId}", value.Id, value.Name, request.ProductAttributeId);
         return ToDto(value);
@@ -167,6 +171,7 @@ public class ProductVariationService : IProductVariationService
         value.DisplayOrder = request.DisplayOrder;
 
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
 
         _logger.LogInformation("Updated attribute value {ValueId}", request.Id);
         return ToDto(value);
@@ -185,6 +190,7 @@ public class ProductVariationService : IProductVariationService
 
         _context.ProductAttributeValues.Remove(value);
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
 
         _logger.LogInformation("Deleted attribute value {ValueId}", id);
         return true;
@@ -264,6 +270,7 @@ public class ProductVariationService : IProductVariationService
         }
 
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
 
         _logger.LogInformation("Created variant {VariantId} - {Sku} for product {ProductId}", variant.Id, variant.Sku, request.ProductId);
         return ToDto(variant);
@@ -310,6 +317,7 @@ public class ProductVariationService : IProductVariationService
         }
 
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
 
         _logger.LogInformation("Updated variant {VariantId}", request.Id);
         return ToDto(variant);
@@ -322,6 +330,7 @@ public class ProductVariationService : IProductVariationService
 
         _context.ProductVariants.Remove(variant);
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
 
         _logger.LogInformation("Deleted variant {VariantId}", id);
         return true;
@@ -432,6 +441,7 @@ public class ProductVariationService : IProductVariationService
         }
 
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
         _logger.LogInformation("Bulk updated {Count} variants", variants.Count);
     }
 
@@ -752,6 +762,11 @@ public class ProductVariationService : IProductVariationService
     {
         AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_cacheSettings.AbsoluteExpirationMinutes)
     };
+
+    private async Task InvalidateHomePageCacheAsync(CancellationToken cancellationToken = default)
+    {
+        await _cache.RemoveAsync(Application.Common.CacheKeys.HomePage, cancellationToken);
+    }
 }
 
 public static class EnumerableExtensions

@@ -6,6 +6,7 @@ using FashionStore.Domain.Entities;
 using FashionStore.Infrastructure.Data;
 using FashionStore.Infrastructure.Services.Images;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
@@ -67,6 +68,10 @@ public class ImageServiceTests
         Mock<IImageProcessingService> processing,
         IImageProcessingDispatcher? dispatcher = null)
     {
+        var cache = new Mock<IDistributedCache>();
+        cache.Setup(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
         return new ImageService(
             context,
             storage.Object,
@@ -74,6 +79,7 @@ public class ImageServiceTests
             processing.Object,
             dispatcher ?? CreateDispatcher(),
             Settings,
+            cache.Object,
             NullLogger<ImageService>.Instance);
     }
 
@@ -327,6 +333,9 @@ public class ImageServiceTests
         var limited = new ImageSettings { MaxImageCountPerProduct = 2 };
         var storage = CreateStorageMock();
         var validation = CreateValidationMock();
+        var cache = new Mock<IDistributedCache>();
+        cache.Setup(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
         var service = new ImageService(
             context,
             storage.Object,
@@ -334,6 +343,7 @@ public class ImageServiceTests
             CreateProcessingMock().Object,
             CreateDispatcher(),
             limited,
+            cache.Object,
             NullLogger<ImageService>.Instance);
 
         await service.UploadProductImageAsync(product.Id, CreateFile(), new ProductImageUploadRequest(null, null, null));

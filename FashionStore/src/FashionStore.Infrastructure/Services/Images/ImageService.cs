@@ -7,6 +7,7 @@ using FashionStore.Domain.Entities;
 using FashionStore.Infrastructure.Data;
 using FashionStore.Infrastructure.Services.Storage;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace FashionStore.Infrastructure.Services.Images;
 
@@ -18,6 +19,7 @@ public sealed class ImageService : IImageService
     private readonly IImageProcessingService _processing;
     private readonly IImageProcessingDispatcher _queue;
     private readonly ImageSettings _settings;
+    private readonly IDistributedCache _cache;
     private readonly ILogger<ImageService> _logger;
 
     public ImageService(
@@ -27,6 +29,7 @@ public sealed class ImageService : IImageService
         IImageProcessingService processing,
         IImageProcessingDispatcher queue,
         ImageSettings settings,
+        IDistributedCache cache,
         ILogger<ImageService> logger)
     {
         _context = context;
@@ -35,6 +38,7 @@ public sealed class ImageService : IImageService
         _processing = processing;
         _queue = queue;
         _settings = settings;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -119,6 +123,7 @@ public sealed class ImageService : IImageService
 
         _context.ProductImages.Add(image);
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
 
         await _queue.EnqueueAsync(new ImageProcessingJob(image.Id, relativePath), cancellationToken);
 
@@ -228,6 +233,7 @@ public sealed class ImageService : IImageService
         image.AltText = altText;
         image.UpdatedAtUtc = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
 
         return ToDto(image);
     }
@@ -243,6 +249,7 @@ public sealed class ImageService : IImageService
         image.Caption = caption;
         image.UpdatedAtUtc = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
 
         return ToDto(image);
     }
@@ -260,6 +267,7 @@ public sealed class ImageService : IImageService
         image.IsMain = true;
         image.UpdatedAtUtc = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
 
         return ToDto(image);
     }
@@ -281,6 +289,7 @@ public sealed class ImageService : IImageService
         image.ProductVariantId = variantId;
         image.UpdatedAtUtc = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
 
         return ToDto(image);
     }
@@ -309,6 +318,7 @@ public sealed class ImageService : IImageService
         }
 
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
         _logger.LogInformation("Reordered {Count} images for product {ProductId}", orderedIds.Count, productId);
     }
 
@@ -341,6 +351,7 @@ public sealed class ImageService : IImageService
         image.ProcessingStatus = "Pending";
         image.UpdatedAtUtc = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
 
         await _queue.EnqueueAsync(new ImageProcessingJob(image.Id, newPath), cancellationToken);
 
@@ -361,6 +372,7 @@ public sealed class ImageService : IImageService
 
         _context.ProductImages.Remove(image);
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
 
         await _processing.DeleteDerivativesAsync(image.FileName, cancellationToken);
         await _storage.DeleteAsync(image.FileName, cancellationToken);
@@ -396,6 +408,7 @@ public sealed class ImageService : IImageService
         category.ImageUrl = null;
         category.UpdatedAtUtc = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
 
         return true;
     }
@@ -412,6 +425,7 @@ public sealed class ImageService : IImageService
         brand.LogoUrl = null;
         brand.UpdatedAtUtc = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
 
         return true;
     }
@@ -428,6 +442,7 @@ public sealed class ImageService : IImageService
         collection.BannerImageUrl = null;
         collection.UpdatedAtUtc = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
 
         return true;
     }
@@ -452,6 +467,7 @@ public sealed class ImageService : IImageService
         var url = _storage.ResolveUrl(relativePath);
         await apply(url);
         await _context.SaveChangesAsync(cancellationToken);
+        await InvalidateHomePageCacheAsync(cancellationToken);
 
         await _queue.EnqueueAsync(new ImageProcessingJob(Guid.Empty, relativePath), cancellationToken);
 
@@ -520,6 +536,18 @@ public sealed class ImageService : IImageService
             image.ProcessingStatus,
             image.CreatedAtUtc
         );
+    }
+
+    private async Task InvalidateHomePageCacheAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _cache.RemoveAsync(FashionStore.Application.Common.CacheKeys.HomePage, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to invalidate homepage cache after image change");
+        }
     }
 
     private static string GetExtension(string format) => format.ToLowerInvariant() switch

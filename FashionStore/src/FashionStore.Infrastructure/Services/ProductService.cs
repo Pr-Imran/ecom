@@ -581,6 +581,7 @@ public class ProductService : IProductService
     private async Task InvalidateCacheAsync(CancellationToken cancellationToken = default)
     {
         await _cache.RemoveAsync("products:featured", cancellationToken);
+        await _cache.RemoveAsync(Application.Common.CacheKeys.HomePage, cancellationToken);
     }
 
     private DistributedCacheEntryOptions GetCacheOptions() => new()

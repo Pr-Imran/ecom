@@ -1,0 +1,42 @@
+@model IReadOnlyList<HomeCategoryDto>
+
+@if (Model.Count == 0)
+{
+    return;
+}
+
+<section class="mt-8 md:mt-12">
+    <div class="container mx-auto px-4">
+        <div class="flex items-end justify-between mb-4">
+            <h2 class="text-xl md:text-2xl font-bold text-gray-900">Shop by Category</h2>
+            <a href="/categories" class="text-sm font-medium text-brand-primary hover:underline">View all</a>
+        </div>
+    </div>
+
+    <div class="container mx-auto">
+        <div class="flex gap-3 overflow-x-auto pb-2 px-4 snap-x snap-mandatory scrollbar-hide">
+            @foreach (var category in Model)
+            {
+                <a href="/categories/@category.Slug"
+                   class="flex flex-col items-center gap-2 min-w-[88px] snap-start group">
+                    <span class="w-20 h-20 md:w-24 md:h-24 rounded-full bg-brand-surface border border-brand-border flex items-center justify-center overflow-hidden group-hover:border-brand-primary transition-colors">
+                        @if (!string.IsNullOrEmpty(category.ImageUrl))
+                        {
+                            <img src="@category.ImageUrl" alt="@category.Name" class="w-full h-full object-cover" loading="lazy" width="96" height="96" />
+                        }
+                        else if (!string.IsNullOrEmpty(category.IconUrl))
+                        {
+                            <img src="@category.IconUrl" alt="" class="w-10 h-10 object-contain" loading="lazy" width="40" height="40" />
+                        }
+                        else
+                        {
+                            <span class="text-brand-primary text-2xl font-semibold">@(string.IsNullOrEmpty(category.Name) ? "?" : category.Name[..1])</span>
+                        }
+                    </span>
+                    <span class="text-xs font-medium text-gray-700 text-center leading-tight">@category.Name</span>
+                    <span class="text-[10px] text-gray-400">@category.ProductCount items</span>
+                </a>
+            }
+        </div>
+    </div>
+</section>

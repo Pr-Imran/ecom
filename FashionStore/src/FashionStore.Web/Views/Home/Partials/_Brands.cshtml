@@ -1,0 +1,32 @@
+@model IReadOnlyList<HomeBrandDto>
+
+@if (Model.Count == 0)
+{
+    return;
+}
+
+<section class="mt-8 md:mt-12 bg-brand-surface">
+    <div class="container mx-auto px-4 py-8">
+        <h2 class="text-xl md:text-2xl font-bold text-gray-900 mb-1 text-center">Shop by Brand</h2>
+        <p class="text-sm text-brand-text-muted mb-6 text-center">The labels you love, all in one place</p>
+
+        <div class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            @foreach (var brand in Model)
+            {
+                <a href="/brands/@brand.Slug"
+                   class="flex items-center justify-center h-16 px-3 bg-white border border-brand-border rounded-brand-sm hover:border-brand-primary transition-colors"
+                   title="@brand.Name">
+                    @if (!string.IsNullOrEmpty(brand.LogoUrl))
+                    {
+                        <img src="@brand.LogoUrl" alt="@brand.Name" class="max-h-8 max-w-full object-contain" loading="lazy" width="80" height="32" onerror="this.onerror=null;this.style.display='none';" />
+                        <span class="sr-only">@brand.Name</span>
+                    }
+                    else
+                    {
+                        <span class="text-sm font-semibold text-brand-text-primary text-center leading-tight">@brand.Name</span>
+                    }
+                </a>
+            }
+        </div>
+    </div>
+</section>

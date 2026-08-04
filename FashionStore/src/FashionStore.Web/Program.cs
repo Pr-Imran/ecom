@@ -48,6 +48,8 @@ builder.Services.Configure<SecuritySettings>(
     builder.Configuration.GetSection(SecuritySettings.SectionName));
 builder.Services.Configure<BackgroundJobSettings>(
     builder.Configuration.GetSection(BackgroundJobSettings.SectionName));
+builder.Services.Configure<HomePageSettings>(
+    builder.Configuration.GetSection(HomePageSettings.SectionName));
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
