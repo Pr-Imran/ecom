@@ -1,16 +1,19 @@
 namespace FashionStore.Web.Models;
 
 /// <summary>
-/// Lightweight, cookie-backed recently-viewed history used by the product details
-/// page. Stores at most <see cref="MaxItems"/> product ids ordered most-recent first.
-/// A dedicated tracking implementation replaces this in the wishlist phase; this
-/// helper keeps the details page functional without a database write per view.
+/// Cookie-backed recently-viewed history. Stores at most <see cref="MaxItems"/>
+/// product ids ordered most-recent first with a per-entry last-viewed timestamp.
+/// Entries older than <see cref="ExpirationDays"/> are dropped on read so the list
+/// never grows unbounded. Being cookie based, no database write occurs on product
+/// views, which keeps repeated page refreshes cheap and privacy-friendly.
 /// </summary>
 public static class RecentlyViewedCookie
 {
     public const string CookieName = "fashionstore_recently_viewed";
     private const int MaxItems = 12;
-    private static readonly TimeSpan Lifetime = TimeSpan.FromDays(30);
+    private const int ExpirationDays = 30;
+    private const string EntrySeparator = ",";
+    private const string ValueSeparator = ":";
 
     public static IReadOnlyList<Guid> Read(HttpContext httpContext)
     {
@@ -19,30 +22,63 @@ public static class RecentlyViewedCookie
             return Array.Empty<Guid>();
         }
 
-        return raw
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(part => Guid.TryParse(part, out var id) ? (Guid?)id : null)
-            .Where(id => id.HasValue)
-            .Select(id => id!.Value)
-            .Distinct()
-            .ToList();
+        var cutoff = DateTimeOffset.UtcNow.AddDays(-ExpirationDays);
+        var ids = new List<Guid>();
+
+        foreach (var part in raw.Split(EntrySeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var value = part;
+            var timestamp = DateTimeOffset.MinValue;
+
+            var separatorIndex = part.IndexOf(ValueSeparator, StringComparison.Ordinal);
+            if (separatorIndex > 0)
+            {
+                value = part[..separatorIndex];
+                if (long.TryParse(part[(separatorIndex + 1)..], out var unixSeconds))
+                {
+                    timestamp = DateTimeOffset.FromUnixTimeSeconds(unixSeconds);
+                }
+            }
+
+            if (timestamp < cutoff)
+            {
+                continue;
+            }
+
+            if (Guid.TryParse(value, out var id) && !ids.Contains(id))
+            {
+                ids.Add(id);
+            }
+        }
+
+        return ids;
     }
 
     public static void Append(HttpContext httpContext, Guid productId)
     {
+        var existing = Read(httpContext).Where(id => id != productId).ToList();
         var ids = new List<Guid> { productId };
-        ids.AddRange(Read(httpContext).Where(id => id != productId));
+        ids.AddRange(existing);
         ids = ids.Take(MaxItems).ToList();
+
+        var now = DateTimeOffset.UtcNow;
+        var entries = ids.Select(id => $"{id}{ValueSeparator}{now.ToUnixTimeSeconds()}");
+        var raw = string.Join(EntrySeparator, entries);
 
         var options = new CookieOptions
         {
             HttpOnly = true,
             SameSite = SameSiteMode.Lax,
             IsEssential = true,
-            Expires = DateTimeOffset.UtcNow.Add(Lifetime),
+            Expires = DateTimeOffset.UtcNow.AddDays(ExpirationDays),
             Path = "/"
         };
 
-        httpContext.Response.Cookies.Append(CookieName, string.Join(",", ids), options);
+        httpContext.Response.Cookies.Append(CookieName, raw, options);
+    }
+
+    public static void Clear(HttpContext httpContext)
+    {
+        httpContext.Response.Cookies.Delete(CookieName);
     }
 }

@@ -1,7 +1,9 @@
 using System.Security.Claims;
 using FashionStore.Application.DTOs.Auth;
+using FashionStore.Application.Interfaces;
 using FashionStore.Infrastructure.Data;
 using FashionStore.Infrastructure.Services;
+using FashionStore.Web.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -13,17 +15,20 @@ namespace FashionStore.Web.Controllers;
 public class AccountController : Controller
 {
     private readonly IAuthService _authService;
+    private readonly IWishlistService _wishlistService;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<AccountController> _logger;
 
     public AccountController(
         IAuthService authService,
+        IWishlistService wishlistService,
         SignInManager<ApplicationUser> signInManager,
         UserManager<ApplicationUser> userManager,
         ILogger<AccountController> logger)
     {
         _authService = authService;
+        _wishlistService = wishlistService;
         _signInManager = signInManager;
         _userManager = userManager;
         _logger = logger;
@@ -47,7 +52,12 @@ public class AccountController : Controller
 
         try
         {
-            await _authService.LoginAsync(model, cancellationToken);
+            var loginResponse = await _authService.LoginAsync(model, cancellationToken);
+
+            if (!loginResponse.RequiresTwoFactor)
+            {
+                await MergeAnonymousWishlistAsync(loginResponse.UserId, cancellationToken);
+            }
 
             if (Url.IsLocalUrl(returnUrl))
             {
@@ -251,11 +261,33 @@ public class AccountController : Controller
     {
         return View();
     }
-
     [HttpGet]
     [AllowAnonymous]
     public IActionResult LockedOut()
     {
         return View();
+    }
+
+    private async Task MergeAnonymousWishlistAsync(string userId, CancellationToken cancellationToken)
+    {
+        var anonymousEntries = AnonymousWishlistCookie.Read(HttpContext);
+        if (anonymousEntries.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var merged = await _wishlistService.MergeAsync(userId, anonymousEntries, cancellationToken);
+            if (merged > 0)
+            {
+                _logger.LogInformation("Merged {Count} anonymous wishlist entries for user {UserId}", merged, userId);
+            }
+            AnonymousWishlistCookie.Clear(HttpContext);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to merge anonymous wishlist for user {UserId}", userId);
+        }
     }
 }

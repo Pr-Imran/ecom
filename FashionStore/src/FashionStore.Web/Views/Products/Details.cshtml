@@ -341,7 +341,12 @@
     @if (Model.RecentlyViewed.Count > 0)
     {
         <section class="mt-10" aria-labelledby="recently-heading">
-            <h2 id="recently-heading" class="text-lg font-bold text-brand-text-primary mb-4">Recently Viewed</h2>
+            <div class="flex items-center justify-between mb-4">
+                <h2 id="recently-heading" class="text-lg font-bold text-brand-text-primary">Recently Viewed</h2>
+                <a asp-controller="Products" asp-action="RecentlyViewed" class="text-sm text-brand-primary font-medium hover:underline">
+                    View all
+                </a>
+            </div>
             <div class="flex overflow-x-auto gap-4 pb-2 -mx-4 px-4 scrollbar-hide lg:grid lg:grid-cols-4 lg:overflow-visible lg:gap-6 lg:mx-0 lg:px-0">
                 @foreach (var product in Model.RecentlyViewed)
                 {

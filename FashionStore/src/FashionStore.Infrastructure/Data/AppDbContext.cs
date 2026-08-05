@@ -31,6 +31,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<InventoryTransaction> InventoryTransactions => Set<InventoryTransaction>();
     public DbSet<StockReservation> StockReservations => Set<StockReservation>();
     public DbSet<ProductReview> ProductReviews => Set<ProductReview>();
+    public DbSet<WishlistItem> WishlistItems => Set<WishlistItem>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -296,6 +297,19 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             entity.HasIndex(e => e.ProductVariantId);
             entity.HasOne(e => e.Variant).WithMany().HasForeignKey(e => e.ProductVariantId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.Warehouse).WithMany(w => w.Reservations).HasForeignKey(e => e.WarehouseId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<WishlistItem>(entity =>
+        {
+            entity.ToTable("WishlistItems");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.HasIndex(e => new { e.UserId, e.ProductId, e.ProductVariantId }).IsUnique();
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.ProductId);
+            entity.HasIndex(e => e.CreatedAtUtc);
+            entity.HasOne(e => e.Product).WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Variant).WithMany().HasForeignKey(e => e.ProductVariantId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // Apply soft delete filter

@@ -1,0 +1,106 @@
+@model FashionStore.Application.DTOs.Products.WishlistViewData
+@{
+    ViewData["Title"] = "My Wishlist";
+    ViewData["HideMobileHeader"] = true;
+}
+
+@section Styles {
+    <style>
+        .wishlist-appbar { position: sticky; top: 0; z-index: 30; background: rgba(255,255,255,0.92); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-bottom: 1px solid var(--color-brand-border, #e5e7eb); }
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+    </style>
+}
+
+<!-- App-like header -->
+<header class="wishlist-appbar lg:hidden" role="banner">
+    <div class="flex items-center justify-between gap-2 px-3 py-2">
+        <div class="flex items-center gap-1">
+            <button type="button" class="btn-icon -ml-2" onclick="history.back()" aria-label="Go back">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <span class="text-base font-bold text-brand-text-primary">My Wishlist</span>
+            @if (Model.ItemCount > 0)
+            {
+                <span class="text-sm text-brand-text-muted" data-wishlist-count>(@Model.ItemCount)</span>
+            }
+        </div>
+        <a asp-controller="Home" asp-action="Index" class="text-sm font-bold text-brand-primary tracking-tight">
+            FashionStore
+        </a>
+    </div>
+</header>
+
+<!-- Desktop heading -->
+<div class="hidden lg:block container mx-auto px-4 pt-6">
+    <h1 class="text-2xl font-bold text-brand-text-primary">My Wishlist</h1>
+</div>
+
+<div class="container mx-auto px-4 pt-3 pb-10 safe-bottom lg:pt-6">
+    <div class="hidden lg:flex items-center justify-between mb-6">
+        <p class="text-sm text-brand-text-muted">@Model.ItemCount item(s) saved</p>
+        @if (Model.ItemCount > 0)
+        {
+            <a asp-controller="Home" asp-action="Index" class="text-sm text-brand-primary font-medium hover:underline">Continue shopping</a>
+        }
+    </div>
+
+    @if (Model.ItemCount == 0)
+    {
+        <!-- Empty state -->
+        <div class="empty-state py-16 text-center">
+            <div class="empty-state-icon mx-auto mb-4 w-24 h-24 text-brand-text-muted">
+                <svg class="w-24 h-24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                </svg>
+            </div>
+            <h2 class="empty-state-title text-lg font-bold text-brand-text-primary">Your wishlist is empty</h2>
+            <p class="empty-state-description text-sm text-brand-text-muted mt-2 max-w-sm mx-auto">
+                Save items you love by tapping the heart on any product. They'll be waiting for you here.
+            </p>
+            <a asp-controller="Home" asp-action="Index" class="btn-primary mt-6 inline-flex">Start shopping</a>
+        </div>
+    }
+    else
+    {
+        <ul class="divide-y divide-brand-border lg:grid lg:grid-cols-2 lg:gap-6 lg:divide-y-0">
+            @foreach (var item in Model.Items)
+            {
+                <li class="py-4 lg:py-0" data-wishlist-item="@item.WishlistItemId">
+                    <partial name="Partials/_WishlistCard" model="item" />
+                </li>
+            }
+        </ul>
+    }
+
+    @if (Model.ItemCount > 0 && !Model.IsAuthenticated)
+    {
+        <div class="mt-8 rounded-brand-sm bg-brand-surface border border-brand-border p-4 text-center">
+            <p class="text-sm text-brand-text-primary font-medium">Keep your wishlist across devices</p>
+            <p class="text-sm text-brand-text-muted mt-1">Sign in to save this list to your account. It will be merged automatically.</p>
+            <a asp-controller="Account" asp-action="Login" class="btn-primary mt-4 inline-flex">Sign in</a>
+        </div>
+    }
+
+    @if (Model.RecentlyViewed.Count > 0)
+    {
+        <section class="mt-12" aria-labelledby="recently-heading">
+            <h2 id="recently-heading" class="text-lg font-bold text-brand-text-primary mb-4">Recently Viewed</h2>
+            <div class="flex overflow-x-auto gap-4 pb-2 -mx-4 px-4 scrollbar-hide lg:grid lg:grid-cols-4 lg:overflow-visible lg:gap-6 lg:mx-0 lg:px-0">
+                @foreach (var product in Model.RecentlyViewed)
+                {
+                    <div class="w-40 lg:w-auto flex-shrink-0 lg:flex-shrink lg:shrink-0">
+                        <partial name="Products/Partials/_ProductCard" model="product" />
+                    </div>
+                }
+            </div>
+        </section>
+    }
+</div>
+
+<form id="wishlist-antiforgery" class="hidden" method="post">@Html.AntiForgeryToken()</form>
+
+@section Scripts {
+    <script src="~/js/wishlist.js" asp-append-version="true"></script>
+}

@@ -313,16 +313,61 @@
 
     // ---- Wishlist toggle ----
 
+    function getWishlistState(btn) {
+        return btn.getAttribute('aria-pressed') === 'true';
+    }
+
+    function setWishlistState(btn, active) {
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        btn.querySelectorAll('[data-wishlist-icon]').forEach(function (icon) {
+            icon.classList.toggle('fill-current', active);
+            icon.classList.toggle('text-brand-danger', active);
+        });
+    }
+
     function initWishlist() {
         document.querySelectorAll('[data-wishlist]').forEach(function (btn) {
             btn.addEventListener('click', function () {
-                var active = btn.getAttribute('aria-pressed') === 'true';
-                btn.setAttribute('aria-pressed', active ? 'false' : 'true');
-                btn.querySelectorAll('[data-wishlist-icon]').forEach(function (icon) {
-                    icon.classList.toggle('fill-current', !active);
-                    icon.classList.toggle('text-brand-danger', !active);
-                });
-                window.showToast(active ? 'Removed from wishlist' : 'Added to wishlist', active ? 'info' : 'success');
+                var active = getWishlistState(btn);
+                var variantId = null;
+                if (currentCombo && currentCombo.variantId) {
+                    variantId = currentCombo.variantId;
+                }
+
+                btn.disabled = true;
+                fetch(active ? '/wishlist/remove' : '/wishlist/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': getToken()
+                    },
+                    body: JSON.stringify({
+                        productId: data.productId,
+                        variantId: variantId
+                    })
+                })
+                    .then(function (res) {
+                        if (!res.ok) throw new Error('bad-request');
+                        return res.json();
+                    })
+                    .then(function (result) {
+                        if (result && result.success) {
+                            setWishlistState(btn, !active);
+                            window.showToast(
+                                active ? 'Removed from wishlist' : 'Added to wishlist',
+                                active ? 'info' : 'success');
+                        } else {
+                            window.showToast(
+                                (result && result.message) || 'Could not update wishlist',
+                                'danger');
+                        }
+                    })
+                    .catch(function () {
+                        window.showToast('Could not update wishlist', 'danger');
+                    })
+                    .finally(function () {
+                        btn.disabled = false;
+                    });
             });
         });
     }

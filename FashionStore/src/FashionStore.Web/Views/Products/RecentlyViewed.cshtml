@@ -1,0 +1,68 @@
+@model IReadOnlyList<FashionStore.Application.DTOs.Catalog.ProductListItemDto>
+@{
+    ViewData["Title"] = "Recently Viewed";
+    ViewData["HideMobileHeader"] = true;
+}
+
+@section Styles {
+    <style>
+        .wishlist-appbar { position: sticky; top: 0; z-index: 30; background: rgba(255,255,255,0.92); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-bottom: 1px solid var(--color-brand-border, #e5e7eb); }
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+    </style>
+}
+
+<!-- App-like header -->
+<header class="wishlist-appbar lg:hidden" role="banner">
+    <div class="flex items-center justify-between gap-2 px-3 py-2">
+        <div class="flex items-center gap-1">
+            <button type="button" class="btn-icon -ml-2" onclick="history.back()" aria-label="Go back">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <span class="text-base font-bold text-brand-text-primary">Recently Viewed</span>
+        </div>
+        <a asp-controller="Home" asp-action="Index" class="text-sm font-bold text-brand-primary tracking-tight">
+            FashionStore
+        </a>
+    </div>
+</header>
+
+<div class="container mx-auto px-4 pt-3 pb-10 safe-bottom lg:pt-8">
+    @if (Model.Count == 0)
+    {
+        <div class="empty-state py-16 text-center">
+            <div class="empty-state-icon mx-auto mb-4 w-24 h-24 text-brand-text-muted">
+                <svg class="w-24 h-24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <h2 class="empty-state-title text-lg font-bold text-brand-text-primary">Nothing viewed yet</h2>
+            <p class="empty-state-description text-sm text-brand-text-muted mt-2 max-w-sm mx-auto">
+                Products you look at will appear here so you can quickly find them again.
+            </p>
+            <a asp-controller="Home" asp-action="Index" class="btn-primary mt-6 inline-flex">Start shopping</a>
+        </div>
+    }
+    else
+    {
+        <div class="flex items-center justify-between mb-4">
+            <h1 class="text-lg font-bold text-brand-text-primary">Recently Viewed</h1>
+            <form asp-action="ClearRecentlyViewed" method="post" class="m-0">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="text-sm text-brand-danger font-medium hover:underline" data-clear-history>
+                    Clear history
+                </button>
+            </form>
+        </div>
+
+        <div class="flex overflow-x-auto gap-4 pb-2 -mx-4 px-4 scrollbar-hide lg:grid lg:grid-cols-4 lg:overflow-visible lg:gap-6 lg:mx-0 lg:px-0">
+            @foreach (var product in Model)
+            {
+                <div class="w-40 lg:w-auto flex-shrink-0 lg:flex-shrink lg:shrink-0">
+                    <partial name="Partials/_ProductCard" model="product" />
+                </div>
+            }
+        </div>
+    }
+</div>

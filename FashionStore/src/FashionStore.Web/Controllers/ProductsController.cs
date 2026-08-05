@@ -178,6 +178,23 @@ public class ProductsController : Controller
         return View(data);
     }
 
+    [HttpGet("recently-viewed")]
+    public async Task<IActionResult> RecentlyViewed(CancellationToken cancellationToken)
+    {
+        var recentlyViewedIds = RecentlyViewedCookie.Read(HttpContext);
+        var products = await _catalogService.GetProductCardsByIdsAsync(recentlyViewedIds, cancellationToken);
+        ViewData["HideMobileHeader"] = true;
+        return View(products);
+    }
+
+    [HttpPost("recently-viewed/clear")]
+    [ValidateAntiForgeryToken]
+    public IActionResult ClearRecentlyViewed()
+    {
+        RecentlyViewedCookie.Clear(HttpContext);
+        return RedirectToAction("RecentlyViewed");
+    }
+
     [HttpPost("add-to-cart")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddToCart([FromBody] AddToCartRequest? request, CancellationToken cancellationToken)

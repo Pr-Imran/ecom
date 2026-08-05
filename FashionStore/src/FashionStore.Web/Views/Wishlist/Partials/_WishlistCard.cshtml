@@ -1,0 +1,103 @@
+@model FashionStore.Application.DTOs.Products.WishlistItemDto
+@{
+    var currency = "$";
+    var imageUrl = Model.ImageCardUrl ?? Model.ImageUrl ?? "/images/placeholder.svg";
+}
+
+<div class="group flex gap-4">
+    <a href="/products/@Model.Slug" class="relative w-28 sm:w-32 aspect-[4/5] rounded-brand-sm overflow-hidden bg-brand-surface border border-brand-border flex-shrink-0" aria-label="@Model.ProductName">
+        <img src="@imageUrl"
+             alt="@(Model.ImageAltText ?? Model.ProductName)"
+             class="w-full h-full object-cover transition-transform duration-brand group-hover:scale-105"
+             loading="lazy"
+             width="128"
+             height="160"
+             onerror="this.onerror=null;this.src='/images/placeholder.svg';" />
+        @if (Model.DiscountPercent.HasValue && Model.DiscountPercent.Value > 0)
+        {
+            <span class="absolute top-2 left-2 badge badge-danger">-@Model.DiscountPercent%</span>
+        }
+        @if (!Model.IsActive)
+        {
+            <span class="absolute bottom-2 left-2 right-2 text-center text-xs font-semibold bg-white/90 text-gray-700 py-1.5 rounded-brand-sm">Unavailable</span>
+        }
+        else if (!Model.IsInStock)
+        {
+            <span class="absolute bottom-2 left-2 right-2 text-center text-xs font-semibold bg-white/90 text-gray-700 py-1.5 rounded-brand-sm">Sold out</span>
+        }
+    </a>
+
+    <div class="flex flex-col justify-between min-w-0 flex-1 py-0.5">
+        <div class="min-w-0">
+            @if (!string.IsNullOrEmpty(Model.BrandName))
+            {
+                <div class="text-xs uppercase tracking-wide text-brand-text-muted font-medium">@Model.BrandName</div>
+            }
+            <a href="/products/@Model.Slug" class="text-sm font-medium text-brand-text-primary line-clamp-2 leading-snug hover:text-brand-primary">
+                @Model.ProductName
+            </a>
+
+            @if (!string.IsNullOrEmpty(Model.ColourName) || !string.IsNullOrEmpty(Model.SizeName))
+            {
+                <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-brand-text-muted">
+                    @if (!string.IsNullOrEmpty(Model.ColourName))
+                    {
+                        <span class="inline-flex items-center gap-1 rounded-brand-sm bg-brand-surface border border-brand-border px-2 py-0.5">
+                            <span class="w-2.5 h-2.5 rounded-full border border-brand-border" aria-hidden="true"></span>
+                            @Model.ColourName
+                        </span>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.SizeName))
+                    {
+                        <span class="inline-flex items-center rounded-brand-sm bg-brand-surface border border-brand-border px-2 py-0.5">
+                            Size @Model.SizeName
+                        </span>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.Sku))
+                    {
+                        <span class="text-brand-text-muted">@Model.Sku</span>
+                    }
+                </div>
+            }
+
+            <div class="mt-2 inline-flex items-baseline gap-1.5 flex-wrap">
+                <span class="price-current">@currency@Model.Price.ToString("N2")</span>
+                @if (Model.CompareAtPrice.HasValue && Model.CompareAtPrice.Value > Model.Price)
+                {
+                    <span class="price-original">@currency@Model.CompareAtPrice.Value.ToString("N2")</span>
+                }
+            </div>
+        </div>
+
+        <div class="mt-3 flex items-center gap-2">
+            @if (Model.RequiresVariation)
+            {
+                <a href="/products/@Model.Slug" class="btn-outline flex-1 py-2.5 text-sm" data-select-variation>
+                    Select Variation
+                </a>
+            }
+            else
+            {
+                <button type="button"
+                        class="btn-primary flex-1 py-2.5 text-sm"
+                        data-wishlist-move
+                        data-wishlist-item-id="@Model.WishlistItemId"
+                        @(Model.IsActive && Model.IsInStock ? "" : "disabled")
+                        aria-disabled="@(Model.IsActive && Model.IsInStock ? "false" : "true")">
+                    Move to Cart
+                </button>
+            }
+            <button type="button"
+                    class="btn-outline inline-flex items-center justify-center w-11 h-11 flex-shrink-0"
+                    data-wishlist-remove
+                    data-wishlist-item-id="@Model.WishlistItemId"
+                    data-wishlist-product-id="@Model.ProductId"
+                    data-wishlist-variant-id="@(Model.VariantId?.ToString() ?? "")"
+                    aria-label="Remove @Model.ProductName from wishlist">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
