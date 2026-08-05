@@ -108,6 +108,19 @@ public sealed class CatalogService : ICatalogService
         };
     }
 
+    public async Task<IReadOnlyList<ProductListItemDto>> GetProductCardsByIdsAsync(
+        IReadOnlyList<Guid> productIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (productIds.Count == 0)
+        {
+            return Array.Empty<ProductListItemDto>();
+        }
+
+        var uniqueIds = productIds.Distinct().ToList();
+        return await BuildItemsAsync(uniqueIds, DateTime.UtcNow, cancellationToken);
+    }
+
     private IQueryable<Product> BuildBaseQuery()
     {
         var now = DateTime.UtcNow;

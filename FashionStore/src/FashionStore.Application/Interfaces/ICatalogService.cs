@@ -16,4 +16,13 @@ public interface ICatalogService
     /// by slug, or returns null when the entity is unknown or inactive.
     /// </summary>
     Task<string?> ResolveEntityNameAsync(CatalogEntityKind kind, string slug, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns storefront product cards for the given product ids preserving the
+    /// supplied order. Unknown, unpublished or inactive products are omitted.
+    /// Used by related-product and recently-viewed rails on the details page.
+    /// </summary>
+    Task<IReadOnlyList<ProductListItemDto>> GetProductCardsByIdsAsync(
+        IReadOnlyList<Guid> productIds,
+        CancellationToken cancellationToken = default);
 }

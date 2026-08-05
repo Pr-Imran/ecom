@@ -1,0 +1,104 @@
+@model ProductDetailsData
+@{
+    var mainImage = Model.Images.FirstOrDefault(i => i.IsMain) ?? Model.Images.FirstOrDefault();
+    var imageCount = Model.Images.Count;
+    var index = 0;
+}
+
+<div class="product-gallery" data-gallery>
+    <!-- Mobile swipeable gallery -->
+    <div class="lg:hidden -mx-4 relative" data-mobile-gallery>
+        <div class="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide" data-gallery-track aria-label="Product images">
+            @foreach (var image in Model.Images)
+            {
+                <div class="snap-center shrink-0 w-full aspect-[4/5] bg-brand-surface relative" data-gallery-slide data-image-src="@(image.ProductDetailUrl ?? image.Url)" data-index="@index">
+                    <img src="@(image.ProductDetailUrl ?? image.Url)"
+                         alt="@(image.AltText ?? Model.Name)"
+                         class="w-full h-full object-cover"
+                         loading="eager"
+                         width="800"
+                         height="1000"
+                         onerror="this.onerror=null;this.src='/images/placeholder.svg';" />
+                    @if (Model.DiscountPercent.HasValue && Model.DiscountPercent.Value > 0)
+                    {
+                        <span class="absolute top-3 left-3 badge badge-danger">-@Model.DiscountPercent%</span>
+                    }
+                </div>
+                index++;
+            }
+            @if (Model.HasVideo)
+            {
+                <div class="snap-center shrink-0 w-full aspect-[4/5] bg-gray-900 relative flex items-center justify-center" data-video-slide>
+                    <a href="@(Model.VideoUrl ?? "#")" class="flex flex-col items-center gap-2 text-white" aria-label="Watch product video">
+                        <svg class="w-14 h-14" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5.14v13.72L19 12 8 5.14z"/>
+                        </svg>
+                        <span class="text-sm font-medium">Watch video</span>
+                    </a>
+                </div>
+            }
+        </div>
+
+        @if (imageCount > 1)
+        {
+            <div class="flex justify-center gap-1.5 py-3" data-gallery-dots aria-hidden="true">
+                @for (var i = 0; i < imageCount; i++)
+                {
+                    <span class="gallery-dot @(i == 0 ? "gallery-dot-active" : "")" data-gallery-dot="@i"></span>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Desktop gallery -->
+    <div class="hidden lg:flex gap-4">
+        @if (imageCount > 1)
+        {
+            <div class="flex flex-col gap-2 w-24" data-thumb-col aria-label="Image thumbnails">
+                @for (var i = 0; i < Model.Images.Count; i++)
+                {
+                    var image = Model.Images[i];
+                    <button type="button"
+                            class="gallery-thumb @(i == 0 ? "gallery-thumb-active" : "")"
+                            data-thumb
+                            data-index="@i"
+                            data-src="@(image.ProductDetailUrl ?? image.Url)"
+                            aria-label="View image @(i + 1)">
+                        <img src="@(image.ThumbnailUrl ?? image.Url)"
+                             alt="@(image.AltText ?? Model.Name)"
+                             class="w-full h-full object-cover"
+                             loading="lazy"
+                             onerror="this.onerror=null;this.src='/images/placeholder.svg';" />
+                    </button>
+                }
+            </div>
+        }
+
+        <div class="flex-1">
+            <div class="relative aspect-[4/5] bg-brand-surface rounded-brand overflow-hidden border border-brand-border">
+                <img id="product-main-image"
+                     src="@(mainImage?.ProductDetailUrl ?? mainImage?.Url ?? "/images/placeholder.svg")"
+                     alt="@(mainImage?.AltText ?? Model.Name)"
+                     class="w-full h-full object-cover"
+                     loading="eager"
+                     width="800"
+                     height="1000"
+                     onerror="this.onerror=null;this.src='/images/placeholder.svg';" />
+
+                @if (Model.DiscountPercent.HasValue && Model.DiscountPercent.Value > 0)
+                {
+                    <span class="absolute top-3 left-3 badge badge-danger">-@Model.DiscountPercent%</span>
+                }
+                @if (Model.HasVideo)
+                {
+                    <a href="@(Model.VideoUrl ?? "#")" class="absolute bottom-3 right-3 inline-flex items-center gap-1.5 bg-black/60 text-white text-xs font-medium px-3 py-2 rounded-full" aria-label="Watch product video">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5.14v13.72L19 12 8 5.14z"/>
+                        </svg>
+                        Watch
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</div>

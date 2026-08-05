@@ -1,5 +1,7 @@
 using FashionStore.Application.DTOs.Catalog;
+using FashionStore.Application.DTOs.Products;
 using FashionStore.Application.Interfaces;
+using FashionStore.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FashionStore.Web.Controllers;
@@ -8,13 +10,19 @@ namespace FashionStore.Web.Controllers;
 public class ProductsController : Controller
 {
     private readonly ICatalogService _catalogService;
+    private readonly IProductDetailsService _productDetailsService;
+    private readonly IAddToCartService _addToCartService;
     private readonly ILogger<ProductsController> _logger;
 
     public ProductsController(
         ICatalogService catalogService,
+        IProductDetailsService productDetailsService,
+        IAddToCartService addToCartService,
         ILogger<ProductsController> logger)
     {
         _catalogService = catalogService;
+        _productDetailsService = productDetailsService;
+        _addToCartService = addToCartService;
         _logger = logger;
     }
 
@@ -151,5 +159,35 @@ public class ProductsController : Controller
 
         var data = await _catalogService.GetProductsAsync(query, cancellationToken);
         return View("Index", data);
+    }
+
+    [HttpGet("{slug}")]
+    public async Task<IActionResult> Details(string slug, CancellationToken cancellationToken)
+    {
+        var recentlyViewedIds = RecentlyViewedCookie.Read(HttpContext);
+        var data = await _productDetailsService.GetDetailsAsync(slug, recentlyViewedIds, cancellationToken);
+
+        if (data is null)
+        {
+            return NotFound();
+        }
+
+        RecentlyViewedCookie.Append(HttpContext, data.Id);
+
+        ViewData["CanonicalUrl"] = $"{Request.Scheme}://{Request.Host}{Request.Path}";
+        return View(data);
+    }
+
+    [HttpPost("add-to-cart")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddToCart([FromBody] AddToCartRequest? request, CancellationToken cancellationToken)
+    {
+        if (request is null || request.ProductId == Guid.Empty || request.VariantId == Guid.Empty)
+        {
+            return BadRequest(new { success = false, error = "Invalid add-to-cart request." });
+        }
+
+        var result = await _addToCartService.ValidateAsync(request, cancellationToken);
+        return Ok(new { success = result.Success, error = result.ErrorMessage, item = result.Item });
     }
 }

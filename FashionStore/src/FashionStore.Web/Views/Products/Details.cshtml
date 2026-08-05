@@ -1,0 +1,471 @@
+@model ProductDetailsData
+@{
+    ViewData["Title"] = Model.SeoTitle ?? Model.Name;
+    ViewData["HideMobileHeader"] = true;
+    ViewData["HideBottomNav"] = true;
+
+    var canonical = ViewData["CanonicalUrl"] as string ?? $"{Context.Request.Scheme}://{Context.Request.Host}/products/{Model.Slug}";
+    var currency = "$";
+    var defaultVariant = Model.Variations.Variants.FirstOrDefault(v => v.IsDefault) ?? Model.Variations.Variants.FirstOrDefault();
+    var hasVariations = Model.Variations.AvailableOptions.Count > 0;
+    var mainImage = Model.Images.FirstOrDefault(i => i.IsMain) ?? Model.Images.FirstOrDefault();
+    var metaDescription = Model.SeoDescription ?? Model.ShortDescription ?? string.Empty;
+    var structuredData = System.Text.Json.JsonSerializer.Serialize(new
+    {
+        context = "https://schema.org",
+        type = "Product",
+        name = Model.Name,
+        image = Model.Images.Select(i => i.ProductDetailUrl ?? i.Url).ToList(),
+        description = metaDescription,
+        sku = Model.BaseSku,
+        brand = string.IsNullOrEmpty(Model.BrandName) ? null : new { type = "Brand", name = Model.BrandName },
+        offers = new
+        {
+            type = "Offer",
+            url = canonical,
+            priceCurrency = "USD",
+            price = Model.Price,
+            availability = Model.IsInStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+        }
+    });
+    var breadcrumbData = System.Text.Json.JsonSerializer.Serialize(new
+    {
+        context = "https://schema.org",
+        type = "BreadcrumbList",
+        itemListElement = new object[]
+        {
+            new { type = "ListItem", position = 1, name = "Home", item = $"{Context.Request.Scheme}://{Context.Request.Host}/" },
+            new { type = "ListItem", position = 2, name = Model.Name, item = canonical }
+        }
+    });
+
+    string FormatPrice(decimal value) => currency + value.ToString("N2", CultureInfo.InvariantCulture);
+}
+
+@section Styles {
+    <link rel="canonical" href="@canonical" />
+    <meta name="description" content="@metaDescription" />
+    <meta property="og:type" content="product" />
+    <meta property="og:title" content="@(Model.SeoTitle ?? Model.Name)" />
+    <meta property="og:description" content="@metaDescription" />
+    <meta property="og:url" content="@canonical" />
+    @if (mainImage != null)
+    {
+        <meta property="og:image" content="@(mainImage.ProductDetailUrl ?? mainImage.Url)" />
+    }
+    <meta property="og:site_name" content="FashionStore" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json">@Html.Raw(structuredData)</script>
+    <script type="application/ld+json">@Html.Raw(breadcrumbData)</script>
+}
+
+<!-- Mobile compact app bar -->
+<header class="product-appbar lg:hidden" role="banner">
+    <div class="flex items-center justify-between gap-2 px-3 py-2">
+        <div class="flex items-center gap-1">
+            <button type="button" class="btn-icon -ml-2" onclick="history.back()" aria-label="Go back">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <a asp-controller="Home" asp-action="Index" class="text-base font-bold text-brand-primary tracking-tight">
+                FashionStore
+            </a>
+        </div>
+        <div class="flex items-center gap-1">
+            <button type="button" class="btn-icon" data-wishlist aria-label="Add to wishlist">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" data-wishlist-icon>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                </svg>
+            </button>
+            <button type="button" class="btn-icon relative" aria-label="Cart">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                </svg>
+                <span class="absolute -top-0.5 -right-0.5 bg-brand-accent text-white text-2xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold">0</span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<div class="container mx-auto px-4 pt-3 pb-28 lg:pb-12">
+    <!-- Desktop breadcrumb -->
+    <nav aria-label="Breadcrumb" class="hidden lg:block text-xs text-brand-text-muted mb-4">
+        <a href="/" class="hover:text-brand-primary">Home</a>
+        <span class="mx-1">/</span>
+        @if (!string.IsNullOrEmpty(Model.CategorySlug))
+        {
+            <a href="/categories/@Model.CategorySlug" class="hover:text-brand-primary">@Model.CategoryName</a>
+            <span class="mx-1">/</span>
+        }
+        <span class="text-brand-text-primary">@Model.Name</span>
+    </nav>
+
+    <div class="lg:grid lg:grid-cols-2 lg:gap-10 lg:items-start">
+        <!-- Gallery -->
+        <div class="lg:sticky lg:top-6">
+            <partial name="Partials/_ProductGallery" model="Model" />
+        </div>
+
+        <!-- Info column -->
+        <div class="lg:sticky lg:top-6 lg:self-start mt-4 lg:mt-0">
+            <div class="lg:bg-white lg:border lg:border-brand-border lg:rounded-brand lg:p-6">
+                @if (!string.IsNullOrEmpty(Model.BrandName) || !string.IsNullOrEmpty(Model.CategoryName))
+                {
+                    <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-brand-text-muted font-medium mb-1">
+                        @if (!string.IsNullOrEmpty(Model.BrandName))
+                        {
+                            <span>@Model.BrandName</span>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.BrandName) && !string.IsNullOrEmpty(Model.CategoryName))
+                        {
+                            <span aria-hidden="true">·</span>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.CategorySlug))
+                        {
+                            <a href="/categories/@Model.CategorySlug" class="text-brand-primary hover:underline">@Model.CategoryName</a>
+                        }
+                    </div>
+                }
+
+                <h1 class="text-xl lg:text-2xl font-bold text-brand-text-primary leading-snug">@Model.Name</h1>
+
+                @if (Model.ReviewCount > 0)
+                {
+                    <div class="flex items-center gap-1 mt-2 text-sm text-brand-text-muted" aria-label="Rating @Model.AverageRating.ToString("0.0") out of 5">
+                        <svg class="w-4 h-4 text-brand-accent" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.958a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.448a1 1 0 00-.363 1.118l1.287 3.958c.3.922-.755 1.688-1.539 1.118l-3.368-2.448a1 1 0 00-1.175 0l-3.368 2.448c-.783.57-1.838-.196-1.538-1.118l1.286-3.958a1 1 0 00-.363-1.118L2.235 9.385c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.951-.69l1.286-3.958z"/>
+                        </svg>
+                        <span class="font-medium text-brand-text-primary">@Model.AverageRating.ToString("0.0")</span>
+                        <span>(@Model.ReviewCount)</span>
+                    </div>
+                }
+
+                <div class="mt-3 flex items-baseline gap-2 flex-wrap" data-price-block>
+                    <span class="price-current text-2xl" data-price>@FormatPrice(Model.Price)</span>
+                    <span class="price-original text-base @(Model.CompareAtPrice.HasValue && Model.CompareAtPrice.Value > Model.Price ? "" : "hidden")" data-compare-price>@(Model.CompareAtPrice.HasValue ? FormatPrice(Model.CompareAtPrice.Value) : "")</span>
+                    <span class="price-discount text-sm @(Model.DiscountPercent.HasValue && Model.DiscountPercent.Value > 0 ? "" : "hidden")" data-discount>@(Model.DiscountPercent.HasValue ? $"Save {Model.DiscountPercent}%" : "")</span>
+                </div>
+
+                <div class="mt-2 flex items-center gap-3 text-xs">
+                    <span class="text-brand-text-muted">
+                        SKU: <span data-sku>@(defaultVariant?.Sku ?? Model.BaseSku)</span>
+                    </span>
+                    <span class="text-brand-text-muted" data-stock-text>
+                        @if (Model.IsInStock)
+                        {
+                            <span class="text-brand-success font-medium">In stock</span>
+                        }
+                        else
+                        {
+                            <span class="text-brand-danger font-medium">Sold out</span>
+                        }
+                    </span>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.ShortDescription))
+                {
+                    <p class="mt-4 text-sm text-brand-text-muted leading-relaxed">@Model.ShortDescription</p>
+                }
+
+                <!-- Variation selector: desktop -->
+                <div class="mt-5 hidden lg:block" data-desktop-variations>
+                    @if (hasVariations)
+                    {
+                        <partial name="Partials/_VariationSelector" model="Model" />
+                    }
+                    else
+                    {
+                        <div class="text-sm text-brand-text-muted">One configuration</div>
+                    }
+
+                    <div class="flex items-center gap-3 mt-5">
+                        <div class="flex-shrink-0">
+                            <partial name="Components/_Quantity" model="null"
+                                     view-data='new ViewDataDictionary(ViewData) { { "name", "qty-desktop" }, { "value", 1 }, { "min", 1 }, { "max", 99 } }' />
+                        </div>
+                        <button type="button" class="btn-primary flex-1 py-3 text-base" data-add-to-cart data-qty-input="#qty-desktop">
+                            Add to Cart
+                        </button>
+                        <button type="button" class="btn-outline inline-flex items-center justify-center w-12 h-12" data-wishlist aria-label="Add to wishlist">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" data-wishlist-icon>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Accordions -->
+            <div class="mt-4 lg:mt-6 bg-white border border-brand-border rounded-brand divide-y divide-brand-border">
+                @if (!string.IsNullOrEmpty(Model.FullDescription))
+                {
+                    <div class="accordion-item">
+                        <button class="accordion-trigger" onclick="toggleAccordion('acc-desc')" aria-expanded="false" aria-controls="acc-desc">
+                            <span>Description</span>
+                            <svg class="w-5 h-5 transition-transform duration-brand" id="acc-desc-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div id="acc-desc" class="accordion-content hidden">
+                            <div class="prose-sm text-sm text-brand-text-muted leading-relaxed whitespace-pre-line">@Model.FullDescription</div>
+                        </div>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(Model.Material) || !string.IsNullOrEmpty(Model.Fabric) || !string.IsNullOrEmpty(Model.CareInstructions))
+                {
+                    <div class="accordion-item">
+                        <button class="accordion-trigger" onclick="toggleAccordion('acc-material')" aria-expanded="false" aria-controls="acc-material">
+                            <span>Material & Care</span>
+                            <svg class="w-5 h-5 transition-transform duration-brand" id="acc-material-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div id="acc-material" class="accordion-content hidden">
+                            <dl class="space-y-2 text-sm">
+                                @if (!string.IsNullOrEmpty(Model.Material))
+                                {
+                                    <div class="flex gap-2">
+                                        <dt class="text-brand-text-muted w-24 flex-shrink-0">Material</dt>
+                                        <dd class="text-brand-text-primary">@Model.Material</dd>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.Fabric))
+                                {
+                                    <div class="flex gap-2">
+                                        <dt class="text-brand-text-muted w-24 flex-shrink-0">Fabric</dt>
+                                        <dd class="text-brand-text-primary">@Model.Fabric</dd>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.CareInstructions))
+                                {
+                                    <div class="flex gap-2">
+                                        <dt class="text-brand-text-muted w-24 flex-shrink-0">Care</dt>
+                                        <dd class="text-brand-text-primary">@Model.CareInstructions</dd>
+                                    </div>
+                                }
+                            </dl>
+                        </div>
+                    </div>
+                }
+                @if (hasVariations)
+                {
+                    <div class="accordion-item">
+                        <button class="accordion-trigger" onclick="toggleAccordion('acc-size')" aria-expanded="false" aria-controls="acc-size">
+                            <span>Size Guide</span>
+                            <svg class="w-5 h-5 transition-transform duration-brand" id="acc-size-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div id="acc-size" class="accordion-content hidden">
+                            <button type="button" class="text-sm text-brand-primary font-medium hover:underline" onclick="openModal('size-guide-modal')">
+                                View size guide
+                            </button>
+                        </div>
+                    </div>
+                }
+                <div class="accordion-item">
+                    <button class="accordion-trigger" onclick="toggleAccordion('acc-delivery')" aria-expanded="false" aria-controls="acc-delivery">
+                        <span>Delivery & Returns</span>
+                        <svg class="w-5 h-5 transition-transform duration-brand" id="acc-delivery-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    <div id="acc-delivery" class="accordion-content hidden">
+                        <div class="space-y-3 text-sm text-brand-text-muted">
+                            <div class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
+                                </svg>
+                                <div>
+                                    <p class="font-medium text-brand-text-primary">Delivery</p>
+                                    <p class="mt-0.5">Free standard delivery on orders over $50. Express options available at checkout.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h2m4 0h4M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                </svg>
+                                <div>
+                                    <p class="font-medium text-brand-text-primary">Returns</p>
+                                    <p class="mt-0.5">Free returns within 30 days of delivery. Items must be unworn with original tags attached.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reviews placeholder -->
+    @if (Model.AllowReviews)
+    {
+        <section class="mt-10 bg-white border border-brand-border rounded-brand p-6" aria-labelledby="reviews-heading">
+            <div class="flex items-center justify-between">
+                <h2 id="reviews-heading" class="text-lg font-bold text-brand-text-primary">Reviews</h2>
+                @if (Model.ReviewCount > 0)
+                {
+                    <div class="flex items-center gap-1 text-sm text-brand-text-muted">
+                        <svg class="w-4 h-4 text-brand-accent" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.958a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.448a1 1 0 00-.363 1.118l1.287 3.958c.3.922-.755 1.688-1.539 1.118l-3.368-2.448a1 1 0 00-1.175 0l-3.368 2.448c-.783.57-1.838-.196-1.538-1.118l1.286-3.958a1 1 0 00-.363-1.118L2.235 9.385c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.951-.69l1.286-3.958z"/>
+                        </svg>
+                        <span class="font-medium text-brand-text-primary">@Model.AverageRating.ToString("0.0")</span>
+                        <span>(@Model.ReviewCount)</span>
+                    </div>
+                }
+            </div>
+            <div class="mt-3 rounded-brand-sm bg-brand-surface border border-brand-border p-6 text-center">
+                <p class="text-sm text-brand-text-muted">Customer reviews are coming soon.</p>
+            </div>
+        </section>
+    }
+
+    <!-- Related products -->
+    @if (Model.RelatedProducts.Count > 0)
+    {
+        <section class="mt-10" aria-labelledby="related-heading">
+            <h2 id="related-heading" class="text-lg font-bold text-brand-text-primary mb-4">You May Also Like</h2>
+            <div class="flex overflow-x-auto gap-4 pb-2 -mx-4 px-4 scrollbar-hide lg:grid lg:grid-cols-4 lg:overflow-visible lg:gap-6 lg:mx-0 lg:px-0">
+                @foreach (var product in Model.RelatedProducts)
+                {
+                    <div class="w-40 lg:w-auto flex-shrink-0 lg:flex-shrink lg:shrink-0">
+                        <partial name="Partials/_ProductCard" model="product" />
+                    </div>
+                }
+            </div>
+        </section>
+    }
+
+    <!-- Recently viewed -->
+    @if (Model.RecentlyViewed.Count > 0)
+    {
+        <section class="mt-10" aria-labelledby="recently-heading">
+            <h2 id="recently-heading" class="text-lg font-bold text-brand-text-primary mb-4">Recently Viewed</h2>
+            <div class="flex overflow-x-auto gap-4 pb-2 -mx-4 px-4 scrollbar-hide lg:grid lg:grid-cols-4 lg:overflow-visible lg:gap-6 lg:mx-0 lg:px-0">
+                @foreach (var product in Model.RecentlyViewed)
+                {
+                    <div class="w-40 lg:w-auto flex-shrink-0 lg:flex-shrink lg:shrink-0">
+                        <partial name="Partials/_ProductCard" model="product" />
+                    </div>
+                }
+            </div>
+        </section>
+    }
+</div>
+
+<!-- Mobile bottom purchase bar -->
+<div class="purchase-bar lg:hidden">
+    <div class="purchase-bar-inner">
+        <div class="flex-shrink-0">
+            <div class="price-current text-lg" data-price>@FormatPrice(Model.Price)</div>
+            <div class="price-original @(Model.CompareAtPrice.HasValue && Model.CompareAtPrice.Value > Model.Price ? "" : "hidden")" data-compare-price>@(Model.CompareAtPrice.HasValue ? FormatPrice(Model.CompareAtPrice.Value) : "")</div>
+            <div class="price-discount @(Model.DiscountPercent.HasValue && Model.DiscountPercent.Value > 0 ? "" : "hidden")" data-discount>@(Model.DiscountPercent.HasValue ? $"Save {Model.DiscountPercent}%" : "")</div>
+        </div>
+        <button type="button"
+                class="btn-primary flex-1 py-3 text-base"
+                data-purchase-bar-cta
+                aria-haspopup="@(hasVariations ? "dialog" : "false")">
+            @(hasVariations ? "Select Options" : "Add to Cart")
+        </button>
+    </div>
+</div>
+
+<!-- Mobile variation bottom sheet -->
+<div id="variation-sheet" class="bottomsheet-backdrop hidden lg:hidden">
+    <div class="bottomsheet" role="dialog" aria-modal="true" aria-label="Choose options">
+        <div class="bottomsheet-handle"></div>
+        <div class="px-4 pt-2 pb-4">
+            <div class="flex gap-3 mb-4">
+                <img src="@(mainImage?.ProductDetailUrl ?? mainImage?.Url ?? "/images/placeholder.svg")"
+                     alt="@Model.Name"
+                     class="w-20 h-24 object-cover rounded-brand-sm"
+                     data-sheet-image />
+                <div class="flex flex-col justify-center min-w-0">
+                    <h3 class="text-sm font-semibold text-brand-text-primary line-clamp-2">@Model.Name</h3>
+                    <div class="mt-1 price-current" data-price>@FormatPrice(Model.Price)</div>
+                    <div class="text-xs text-brand-text-muted">
+                        SKU: <span data-sku>@(defaultVariant?.Sku ?? Model.BaseSku)</span>
+                    </div>
+                </div>
+            </div>
+
+            @if (hasVariations)
+            {
+                <partial name="Partials/_VariationSelector" model="Model" />
+            }
+
+            <div class="flex items-center gap-3 mt-5">
+                <div class="flex-shrink-0">
+                    <partial name="Components/_Quantity" model="null"
+                             view-data='new ViewDataDictionary(ViewData) { { "name", "qty-sheet" }, { "value", 1 }, { "min", 1 }, { "max", 99 } }' />
+                </div>
+                <button type="button" class="btn-primary flex-1 py-3 text-base" data-add-to-cart data-qty-input="#qty-sheet">
+                    Add to Cart
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<partial name="Partials/_SizeGuideModal" model="Model" />
+
+<form id="antiforgery-form" class="hidden" method="post">
+    @Html.AntiForgeryToken()
+</form>
+
+<script type="application/json" id="product-details-data">
+    @Html.Raw(System.Text.Json.JsonSerializer.Serialize(new
+    {
+        productId = Model.Id,
+        currency,
+        hasVariations,
+        options = Model.Variations.AvailableOptions.Select(o => new
+        {
+            name = o.AttributeName,
+            slug = o.AttributeSlug,
+            values = o.Values.Select(v => new
+            {
+                id = v.Id,
+                name = v.Name,
+                slug = v.Slug,
+                hexColour = v.HexColour,
+                imageUrl = v.ImageUrl,
+                isAvailable = v.IsAvailable
+            }).ToList()
+        }).ToList(),
+        variants = Model.Variations.Variants.Select(v => new
+        {
+            id = v.Id,
+            sku = v.Sku,
+            price = v.Price,
+            compareAtPrice = v.CompareAtPrice,
+            isInStock = v.IsInStock,
+            stockQuantity = v.StockQuantity,
+            imageUrl = v.ImageUrl,
+            attributeValueIds = v.AttributeValueIds,
+            isDefault = v.IsDefault
+        }).ToList(),
+        combinations = Model.Variations.AvailableCombinations.Select(c => new
+        {
+            attributeSlugs = c.AttributeSlugs,
+            valueSlugs = c.ValueSlugs,
+            variantId = c.VariantId,
+            isAvailable = c.IsAvailable,
+            isInStock = c.IsInStock,
+            price = c.Price,
+            imageUrl = c.ImageUrl
+        }).ToList(),
+        defaultIds = Model.DefaultVariantAttributeValueIds ?? Array.Empty<Guid>(),
+        images = Model.Images.Select(i => i.ProductDetailUrl ?? i.Url).ToList(),
+        baseSku = Model.BaseSku,
+        basePrice = Model.Price,
+        baseCompareAtPrice = Model.CompareAtPrice,
+        baseInStock = Model.IsInStock,
+        defaultImage = mainImage?.ProductDetailUrl ?? mainImage?.Url ?? "/images/placeholder.svg"
+    }))
+</script>
+
+@section Scripts {
+    <script src="~/js/product-details.js" asp-append-version="true"></script>
+}

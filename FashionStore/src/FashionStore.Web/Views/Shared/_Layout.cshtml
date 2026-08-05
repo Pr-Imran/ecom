@@ -11,39 +11,44 @@
 <body class="min-h-screen flex flex-col">
 
     <!-- Mobile Header -->
-    <header class="mobile-header" role="banner">
-        <div class="mobile-header-content">
-            <button class="btn-icon" aria-label="Open menu">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                </svg>
-            </button>
-            <a asp-controller="Home" asp-action="Index" class="text-lg font-bold text-brand-primary tracking-tight">
-                FashionStore
-            </a>
-            <div class="flex items-center gap-1">
-                <button class="btn-icon" aria-label="Search">
+    @if (ViewData["HideMobileHeader"] is not true)
+    {
+        <header class="mobile-header" role="banner">
+            <div class="mobile-header-content">
+                <button class="btn-icon" aria-label="Open menu">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
                 </button>
-                <button class="btn-icon relative" aria-label="Cart">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                    </svg>
-                    <span class="absolute -top-0.5 -right-0.5 bg-brand-accent text-white text-2xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold">0</span>
-                </button>
+                <a asp-controller="Home" asp-action="Index" class="text-lg font-bold text-brand-primary tracking-tight">
+                    FashionStore
+                </a>
+                <div class="flex items-center gap-1">
+                    <button class="btn-icon" aria-label="Search">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </button>
+                    <button class="btn-icon relative" aria-label="Cart">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                        </svg>
+                        <span class="absolute -top-0.5 -right-0.5 bg-brand-accent text-white text-2xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold">0</span>
+                    </button>
+                </div>
             </div>
-        </div>
-    </header>
+        </header>
+    }
 
     <!-- Main Content -->
-    <main role="main" class="flex-1 pb-20">
+    <main role="main" class="flex-1 @(ViewData["HideBottomNav"] is true ? "pb-0" : "pb-20")">
         @RenderBody()
     </main>
 
     <!-- Mobile Bottom Navigation -->
-    <nav class="bottom-nav md:hidden" role="navigation" aria-label="Main navigation">
+    @if (ViewData["HideBottomNav"] is not true)
+    {
+        <nav class="bottom-nav md:hidden" role="navigation" aria-label="Main navigation">
         <div class="bottom-nav-inner">
             <a asp-controller="Home" asp-action="Index" class="bottom-nav-item bottom-nav-item-active">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,8 +81,9 @@
                 <span>Account</span>
             </a>
         </div>
-    </nav>
-
+        </nav>
+    }
+    
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container" aria-live="polite"></div>
 

@@ -16,6 +16,7 @@ namespace FashionStore.IntegrationTests;
 public class TestWebApplicationFactory : WebApplicationFactory<Program>
 {
     private static readonly InMemoryDatabaseRoot SharedRoot = new();
+    private static readonly object SeedLock = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -36,10 +37,13 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
                 options.UseInMemoryDatabase("fashionstore-integration", SharedRoot));
 
             var serviceProvider = services.BuildServiceProvider();
-            using var scope = serviceProvider.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Database.EnsureCreated();
-            SeedData(db);
+            lock (SeedLock)
+            {
+                using var scope = serviceProvider.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                db.Database.EnsureCreated();
+                SeedData(db);
+            }
         });
     }
 
@@ -144,13 +148,31 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             CreatedAtUtc = now.AddDays(-2)
         };
 
+        var scarf = new Product
+        {
+            Name = "Merino Wool Scarf",
+            Slug = "merino-wool-scarf",
+            CategoryId = category.Id,
+            BrandId = brand.Id,
+            BaseSku = "AC-2001",
+            BasePrice = 45.00m,
+            CompareAtPrice = 60.00m,
+            Material = "Wool",
+            Gender = "Women",
+            IsActive = true,
+            IsFeatured = true,
+            DisplayOrder = 3,
+            PublishedAtUtc = now.AddDays(-3),
+            CreatedAtUtc = now.AddDays(-3)
+        };
+
         db.Categories.AddRange(category, footwear);
         db.Brands.Add(brand);
         db.Collections.Add(collection);
         db.ProductTags.Add(cashmereTag);
         db.ProductAttributes.AddRange(colour, size);
         db.ProductAttributeValues.AddRange(heatherGrey, sizeM);
-        db.Products.AddRange(product, shoe);
+        db.Products.AddRange(product, shoe, scarf);
         db.SaveChanges();
 
         db.ProductVariants.AddRange(

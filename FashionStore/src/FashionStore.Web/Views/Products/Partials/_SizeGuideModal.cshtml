@@ -1,0 +1,62 @@
+@model ProductDetailsData
+@{
+    var sizes = new[] { "XS", "S", "M", "L", "XL", "XXL" };
+    var rows = new[]
+    {
+        (Label: "Chest (in)", Values: new[] { "32-34", "35-37", "38-40", "41-43", "44-46", "47-49" }),
+        (Label: "Waist (in)", Values: new[] { "26-28", "29-31", "32-34", "35-37", "38-41", "42-45" }),
+        (Label: "Hips (in)", Values: new[] { "34-36", "37-39", "40-42", "43-45", "46-49", "50-53" }),
+        (Label: "Shoulder (in)", Values: new[] { "15-16", "16-17", "17-18", "18-19", "19-20", "20-21" })
+    };
+}
+
+<div id="size-guide-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="size-guide-title">
+    <div class="modal-backdrop" onclick="closeModal('size-guide-modal')"></div>
+    <div class="modal-content max-w-lg max-h-[92vh]">
+        <div class="modal-header">
+            <h2 id="size-guide-title" class="text-base font-semibold text-brand-text-primary">Size Guide</h2>
+            <button type="button" class="btn-icon" onclick="closeModal('size-guide-modal')" aria-label="Close size guide">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p class="text-sm text-brand-text-muted mb-4">
+                Measurements are in inches. Use the table below to find your best fit. If you are between sizes,
+                we recommend sizing up for a relaxed fit or sizing down for a fitted look.
+            </p>
+            <div class="overflow-x-auto">
+                <table class="size-guide-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Size</th>
+                            @foreach (var size in sizes)
+                            {
+                                <th scope="col">@size</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in rows)
+                        {
+                            <tr>
+                                <th scope="row" class="font-medium">@row.Label</th>
+                                @foreach (var value in row.Values)
+                                {
+                                    <td>@value</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-4 flex items-start gap-2 text-xs text-brand-text-muted">
+                <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p>Fit may vary by style and fabric. Check the product description for specific fit notes.</p>
+            </div>
+        </div>
+    </div>
+</div>

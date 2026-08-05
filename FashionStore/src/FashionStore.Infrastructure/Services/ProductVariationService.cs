@@ -271,6 +271,7 @@ public class ProductVariationService : IProductVariationService
 
         await _context.SaveChangesAsync(cancellationToken);
         await InvalidateHomePageCacheAsync(cancellationToken);
+        await InvalidateVariationsCacheAsync(variant.ProductId, cancellationToken);
 
         _logger.LogInformation("Created variant {VariantId} - {Sku} for product {ProductId}", variant.Id, variant.Sku, request.ProductId);
         return ToDto(variant);
@@ -318,6 +319,7 @@ public class ProductVariationService : IProductVariationService
 
         await _context.SaveChangesAsync(cancellationToken);
         await InvalidateHomePageCacheAsync(cancellationToken);
+        await InvalidateVariationsCacheAsync(variant.ProductId, cancellationToken);
 
         _logger.LogInformation("Updated variant {VariantId}", request.Id);
         return ToDto(variant);
@@ -328,9 +330,11 @@ public class ProductVariationService : IProductVariationService
         var variant = await _context.ProductVariants.FindAsync(new object[] { id }, cancellationToken);
         if (variant == null) return false;
 
+        var productId = variant.ProductId;
         _context.ProductVariants.Remove(variant);
         await _context.SaveChangesAsync(cancellationToken);
         await InvalidateHomePageCacheAsync(cancellationToken);
+        await InvalidateVariationsCacheAsync(productId, cancellationToken);
 
         _logger.LogInformation("Deleted variant {VariantId}", id);
         return true;
@@ -442,6 +446,7 @@ public class ProductVariationService : IProductVariationService
 
         await _context.SaveChangesAsync(cancellationToken);
         await InvalidateHomePageCacheAsync(cancellationToken);
+        await InvalidateVariationsCacheAsync(variants.Select(v => v.ProductId).Distinct().ToList(), cancellationToken);
         _logger.LogInformation("Bulk updated {Count} variants", variants.Count);
     }
 
@@ -479,6 +484,7 @@ public class ProductVariationService : IProductVariationService
                 g.Select(v => new StorefrontVariationOptionValueDto(
                     v.Id,
                     v.Name,
+                    v.Slug,
                     v.DisplayValue,
                     v.HexColour,
                     v.ImageUrl,
@@ -499,14 +505,16 @@ public class ProductVariationService : IProductVariationService
                     vav => vav.AttributeValue?.ProductAttribute?.Slug ?? string.Empty,
                     vav => (string?)vav.ProductAttributeValueId.ToString()
                 );
-                
+
+                var availableStock = Math.Max(0, (v.StockQuantity ?? 0) - (v.ReservedStock ?? 0));
+
                 return new StorefrontVariantDto(
                     v.Id,
                     v.Sku,
                     v.Price,
                     v.CompareAtPrice,
-                    v.StockQuantity > 0,
-                    v.StockQuantity,
+                    availableStock > 0,
+                    availableStock,
                     v.ImageUrl,
                     attrNames,
                     attrSlugs,
@@ -529,12 +537,14 @@ public class ProductVariationService : IProductVariationService
                     .Select(vav => vav.AttributeValue?.Slug ?? string.Empty)
                     .ToList();
 
+                var availableStock = Math.Max(0, (v.StockQuantity ?? 0) - (v.ReservedStock ?? 0));
+
                 return new VariantCombinationAvailabilityDto(
                     attrSlugs,
                     valueSlugs,
                     v.Id,
                     true,
-                    v.StockQuantity > 0,
+                    availableStock > 0,
                     v.Price,
                     v.ImageUrl
                 );
@@ -766,6 +776,19 @@ public class ProductVariationService : IProductVariationService
     private async Task InvalidateHomePageCacheAsync(CancellationToken cancellationToken = default)
     {
         await _cache.RemoveAsync(Application.Common.CacheKeys.HomePage, cancellationToken);
+    }
+
+    private async Task InvalidateVariationsCacheAsync(Guid productId, CancellationToken cancellationToken = default)
+    {
+        await _cache.RemoveAsync($"product:{productId}:variations", cancellationToken);
+    }
+
+    private async Task InvalidateVariationsCacheAsync(IEnumerable<Guid> productIds, CancellationToken cancellationToken = default)
+    {
+        foreach (var productId in productIds.Distinct())
+        {
+            await _cache.RemoveAsync($"product:{productId}:variations", cancellationToken);
+        }
     }
 }
 

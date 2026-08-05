@@ -643,6 +643,133 @@ body {
   font-size: 0.75rem;
 }
 
+/* Product Details */
+.product-appbar {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  background-color: #ffffff;
+  border-bottom: 1px solid #E5E7EB;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.purchase-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 300;
+  background-color: #ffffff;
+  border-top: 1px solid #E5E7EB;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.purchase-bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+}
+
+.gallery-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background-color: #D1D5DB;
+  transition: background-color 0.2s, width 0.2s;
+}
+
+.gallery-dot-active {
+  background-color: #8B4513;
+  width: 1rem;
+}
+
+.option-swatch {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 0 0 1px #E5E7EB;
+  transition: box-shadow 0.15s, transform 0.15s, opacity 0.15s;
+  cursor: pointer;
+}
+
+.option-swatch:hover {
+  transform: scale(1.05);
+}
+
+.option-swatch-selected {
+  box-shadow: 0 0 0 2px #8B4513;
+}
+
+.option-swatch-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.option-chip {
+  min-width: 3rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid #D1D5DB;
+  background-color: #ffffff;
+  color: #1F2937;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.option-chip:hover {
+  border-color: #8B4513;
+}
+
+.option-chip-selected {
+  background-color: #8B4513;
+  border-color: #8B4513;
+  color: #ffffff;
+}
+
+.option-chip-disabled {
+  opacity: 0.35;
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+
+.gallery-thumb {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  background-color: #F3F4F6;
+}
+
+.gallery-thumb-active {
+  border-color: #8B4513;
+}
+
+.size-guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.size-guide-table th,
+.size-guide-table td {
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid #E5E7EB;
+  text-align: left;
+}
+
+.size-guide-table th {
+  font-weight: 600;
+  color: #374151;
+  background-color: #F9F7F5;
+}
+
 /* Animation */
 @keyframes spin {
   from { transform: rotate(0deg); }

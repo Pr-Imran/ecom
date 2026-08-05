@@ -175,6 +175,7 @@ public sealed record StorefrontVariationOptionDto(
 public sealed record StorefrontVariationOptionValueDto(
     Guid Id,
     string Name,
+    string Slug,
     string? DisplayValue,
     string? HexColour,
     string? ImageUrl,
