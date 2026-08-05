@@ -118,6 +118,7 @@ public static class DependencyInjection
         services.AddScoped<IProductVariationService, ProductVariationService>();
         services.AddScoped<IInventoryService, InventoryService>();
         services.AddScoped<IHomePageService, HomePageService>();
+        services.AddScoped<ICatalogService, CatalogService>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
         services.AddScoped<IImageValidationService, ImageValidationService>();
         services.AddScoped<IImageProcessingService, ImageProcessingService>();

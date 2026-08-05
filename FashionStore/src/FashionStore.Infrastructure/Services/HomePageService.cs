@@ -3,7 +3,6 @@ using System.Text.Json;
 using FashionStore.Application.Common;
 using FashionStore.Application.Configuration;
 using FashionStore.Application.DTOs.Home;
-using FashionStore.Application.DTOs.Images;
 using FashionStore.Application.DTOs.Navigation;
 using FashionStore.Application.Interfaces;
 using FashionStore.Application.Services;
@@ -22,9 +21,6 @@ namespace FashionStore.Infrastructure.Services;
 /// </summary>
 public sealed class HomePageService : IHomePageService
 {
-    private const string ColourAttributeName = "Colour";
-    private const int LowStockThreshold = 5;
-
     private readonly AppDbContext _context;
     private readonly IDistributedCache _cache;
     private readonly IFileStorageService _storage;
@@ -251,8 +247,8 @@ public sealed class HomePageService : IHomePageService
         }
 
         var productIds = products.Select(p => p.Id).ToList();
-        var colourMap = await GetColourMapAsync(productIds, cancellationToken);
-        var stockMap = await GetStockMapAsync(productIds, cancellationToken);
+        var colourMap = await CatalogQueryHelpers.GetColourMapAsync(_context, productIds, cancellationToken);
+        var stockMap = await CatalogQueryHelpers.GetStockMapAsync(_context, productIds, cancellationToken);
         var nowUtc = DateTime.UtcNow;
 
         return products.Select(p =>
@@ -261,86 +257,24 @@ public sealed class HomePageService : IHomePageService
                 ? productColours
                 : new List<HomeColourDto>();
             var stock = stockMap.TryGetValue(p.Id, out var available) ? available : (int?)null;
-            var isNew = p.IsNewArrival || (nowUtc - p.CreatedAtUtc).TotalDays <= 30;
+            var isNew = CatalogQueryHelpers.IsRecentlyCreated(p.CreatedAtUtc, p.IsNewArrival, nowUtc);
 
             return new HomeProductCardDto(
                 p.Id,
                 p.Name,
                 p.Slug,
                 p.BrandName,
-                ResolveImageUrl(p.ImageFileName),
-                ResolveCardImageUrl(p.ImageFileName),
+                CatalogQueryHelpers.ResolveImageUrl(_storage, p.ImageFileName),
+                CatalogQueryHelpers.ResolveCardImageUrl(_storage, p.ImageFileName),
                 p.ImageAltText,
                 p.BasePrice,
                 p.CompareAtPrice,
-                CalculateDiscountPercent(p.BasePrice, p.CompareAtPrice),
+                CatalogQueryHelpers.CalculateDiscountPercent(p.BasePrice, p.CompareAtPrice),
                 isNew,
                 stock.HasValue && stock.Value > 0,
-                stock.HasValue && stock.Value > 0 && stock.Value <= LowStockThreshold,
+                stock.HasValue && stock.Value > 0 && CatalogQueryHelpers.IsLowStock(stock.Value),
                 colours);
         }).ToList();
-    }
-
-    private async Task<Dictionary<Guid, int>> GetStockMapAsync(List<Guid> productIds, CancellationToken cancellationToken)
-    {
-        var rows = await _context.ProductVariants
-            .AsNoTracking()
-            .Where(v => v.IsActive && productIds.Contains(v.ProductId))
-            .GroupBy(v => v.ProductId)
-            .Select(g => new
-            {
-                ProductId = g.Key,
-                MaxAvailable = g.Max(v => (v.StockQuantity ?? 0) - (v.ReservedStock ?? 0))
-            })
-            .ToListAsync(cancellationToken);
-
-        return rows.ToDictionary(r => r.ProductId, r => r.MaxAvailable);
-    }
-
-    private async Task<Dictionary<Guid, List<HomeColourDto>>> GetColourMapAsync(List<Guid> productIds, CancellationToken cancellationToken)
-    {
-        var values = await _context.ProductVariantAttributeValues
-            .AsNoTracking()
-            .Include(vav => vav.Variant)
-            .Include(vav => vav.AttributeValue)
-                .ThenInclude(av => av!.ProductAttribute)
-            .Where(vav => productIds.Contains(vav.Variant!.ProductId))
-            .ToListAsync(cancellationToken);
-
-        var map = new Dictionary<Guid, List<HomeColourDto>>();
-
-        foreach (var mapping in values)
-        {
-            var attributeValue = mapping.AttributeValue;
-            var attribute = attributeValue?.ProductAttribute;
-
-            if (attributeValue == null || attribute == null)
-            {
-                continue;
-            }
-
-            var isColour = string.Equals(attribute.Name, ColourAttributeName, StringComparison.OrdinalIgnoreCase)
-                           || !string.IsNullOrWhiteSpace(attributeValue.HexColour);
-
-            if (!isColour)
-            {
-                continue;
-            }
-
-            if (!map.TryGetValue(mapping.Variant!.ProductId, out var colours))
-            {
-                colours = new List<HomeColourDto>();
-                map[mapping.Variant!.ProductId] = colours;
-            }
-
-            var colour = new HomeColourDto(attributeValue.Name, attributeValue.HexColour);
-            if (colours.All(c => !string.Equals(c.Name, colour.Name, StringComparison.OrdinalIgnoreCase)))
-            {
-                colours.Add(colour);
-            }
-        }
-
-        return map;
     }
 
     private async Task<List<HomeCollectionDto>> GetCollectionsAsync(CancellationToken cancellationToken)
@@ -392,37 +326,6 @@ public sealed class HomePageService : IHomePageService
                 b.Slug,
                 b.LogoUrl))
             .ToListAsync(cancellationToken);
-    }
-
-    private string? ResolveImageUrl(string? fileName)
-    {
-        return string.IsNullOrWhiteSpace(fileName)
-            ? null
-            : _storage.ResolveUrl(fileName);
-    }
-
-    private string? ResolveCardImageUrl(string? fileName)
-    {
-        if (string.IsNullOrWhiteSpace(fileName))
-        {
-            return null;
-        }
-
-        var cardPath = ImageDerivatives.BuildDerivativePath(
-            fileName,
-            ImageDerivatives.All[ImageDerivativeKind.ProductCard]);
-
-        return _storage.ResolveUrl(cardPath);
-    }
-
-    private static int? CalculateDiscountPercent(decimal price, decimal? compareAtPrice)
-    {
-        if (!compareAtPrice.HasValue || compareAtPrice.Value <= price || price <= 0)
-        {
-            return null;
-        }
-
-        return (int)Math.Round((compareAtPrice.Value - price) / compareAtPrice.Value * 100);
     }
 
     private DistributedCacheEntryOptions GetCacheOptions() => new()

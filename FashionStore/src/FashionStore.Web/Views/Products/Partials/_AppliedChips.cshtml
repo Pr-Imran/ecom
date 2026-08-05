@@ -1,0 +1,103 @@
+@model CatalogPageData
+@{
+    var query = Model.Query;
+
+    // Look up human-readable labels for selected facet values from the current facets.
+    var labels = new Dictionary<string, string>();
+    foreach (var group in Model.Facets)
+    {
+        foreach (var value in group.Values)
+        {
+            if (value.Selected)
+            {
+                labels[$"{group.Key}:{value.Value}"] = value.Label.Trim();
+            }
+        }
+    }
+
+    string? Label(string key, string value) =>
+        labels.TryGetValue($"{key}:{value}", out var label) ? label : value;
+
+    var contextKey = CatalogUrlBuilder.ContextFilterKey(query);
+    bool IsContext(string? key) => contextKey != null && key == contextKey;
+
+    var chips = new List<(string Label, string Href)>();
+
+    if (!string.IsNullOrWhiteSpace(query.Q))
+    {
+        chips.Add(($"Search: {query.Q.Trim()}", CatalogUrlBuilder.Remove(query, "q")));
+    }
+    if (!string.IsNullOrEmpty(query.Category) && !IsContext("category"))
+    {
+        chips.Add((Label("category", query.Category), CatalogUrlBuilder.Remove(query, "category")));
+    }
+    if (!string.IsNullOrEmpty(query.Brand) && !IsContext("brand"))
+    {
+        chips.Add((Label("brand", query.Brand), CatalogUrlBuilder.Remove(query, "brand")));
+    }
+    if (!string.IsNullOrEmpty(query.Collection) && !IsContext("collection"))
+    {
+        chips.Add((Label("collection", query.Collection), CatalogUrlBuilder.Remove(query, "collection")));
+    }
+    if (!string.IsNullOrEmpty(query.Gender))
+    {
+        chips.Add((Label("gender", query.Gender), CatalogUrlBuilder.Remove(query, "gender")));
+    }
+    foreach (var value in query.Colour)
+    {
+        chips.Add((Label("colour", value), CatalogUrlBuilder.Remove(query, "colour")));
+    }
+    foreach (var value in query.Size)
+    {
+        chips.Add((Label("size", value), CatalogUrlBuilder.Remove(query, "size")));
+    }
+    foreach (var value in query.Material)
+    {
+        chips.Add((Label("material", value), CatalogUrlBuilder.Remove(query, "material")));
+    }
+    foreach (var value in query.Tag)
+    {
+        chips.Add((Label("tag", value), CatalogUrlBuilder.Remove(query, "tag")));
+    }
+    if (query.MinRating.HasValue)
+    {
+        chips.Add(($"{query.MinRating.Value}★ & up", CatalogUrlBuilder.Remove(query, "minrating")));
+    }
+    if (query.MinPrice.HasValue || query.MaxPrice.HasValue)
+    {
+        var min = query.MinPrice?.ToString("N0") ?? "0";
+        var max = query.MaxPrice?.ToString("N0") ?? "∞";
+        chips.Add(($"${min} - ${max}", CatalogUrlBuilder.Href(query, q => { q.MinPrice = null; q.MaxPrice = null; q.Page = 1; })));
+    }
+    if (query.InStock)
+    {
+        chips.Add(("In stock", CatalogUrlBuilder.Remove(query, "instock")));
+    }
+    if (query.OnSale)
+    {
+        chips.Add(("On sale", CatalogUrlBuilder.Remove(query, "onsale")));
+    }
+}
+
+@if (chips.Count > 0)
+{
+    <div class="flex flex-wrap items-center gap-2 my-3">
+        @foreach (var chip in chips)
+        {
+            <a href="@chip.Href"
+               class="chip chip-active"
+               data-catalog-link
+               aria-label="Remove filter @chip.Label">
+                @chip.Label
+                <span class="chip-remove">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </span>
+            </a>
+        }
+        <a href="@CatalogUrlBuilder.ClearFilters(query)"
+           class="text-xs text-brand-primary hover:underline"
+           data-catalog-link>Clear all</a>
+    </div>
+}

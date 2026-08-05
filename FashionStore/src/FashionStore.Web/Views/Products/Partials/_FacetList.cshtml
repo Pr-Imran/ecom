@@ -1,0 +1,120 @@
+@model CatalogPageData
+@{
+    var query = Model.Query;
+    var contextKey = query.ListingType switch
+    {
+        "category" => "category",
+        "brand" => "brand",
+        "collection" => "collection",
+        _ => null
+    };
+    var facets = Model.Facets.Where(f => f.Key != contextKey).ToList();
+}
+
+<div class="space-y-0 divide-y divide-brand-border">
+    <!-- Availability -->
+    <div class="facet-group py-4">
+        <h3 class="text-sm font-semibold text-brand-text-primary mb-2">Availability</h3>
+        <div class="space-y-1">
+            <a href="@CatalogUrlBuilder.ToggleBool(query, "instock")"
+               class="facet-option @(query.InStock ? "facet-option-selected" : "")"
+               data-catalog-link>
+                <span>In stock</span>
+                @if (query.InStock)
+                {
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                }
+            </a>
+            <a href="@CatalogUrlBuilder.ToggleBool(query, "onsale")"
+               class="facet-option @(query.OnSale ? "facet-option-selected" : "")"
+               data-catalog-link>
+                <span>On sale</span>
+                @if (query.OnSale)
+                {
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                }
+            </a>
+        </div>
+    </div>
+
+    <!-- Price range -->
+    <div class="facet-group py-4">
+        <h3 class="text-sm font-semibold text-brand-text-primary mb-2">Price</h3>
+        <form method="get" action="@CatalogUrlBuilder.PriceRange(query)" class="space-y-2">
+            <input type="hidden" name="q" value="@query.Q" />
+            @if (query.Category != null)
+            {
+                <input type="hidden" name="category" value="@query.Category" />
+            }
+            @if (query.Brand != null)
+            {
+                <input type="hidden" name="brand" value="@query.Brand" />
+            }
+            @if (query.Collection != null)
+            {
+                <input type="hidden" name="collection" value="@query.Collection" />
+            }
+            @if (query.Gender != null)
+            {
+                <input type="hidden" name="gender" value="@query.Gender" />
+            }
+            @foreach (var v in query.Colour)
+            {
+                <input type="hidden" name="colour" value="@v" />
+            }
+            @foreach (var v in query.Size)
+            {
+                <input type="hidden" name="size" value="@v" />
+            }
+            @foreach (var v in query.Material)
+            {
+                <input type="hidden" name="material" value="@v" />
+            }
+            @foreach (var v in query.Tag)
+            {
+                <input type="hidden" name="tag" value="@v" />
+            }
+            @if (query.MinRating.HasValue)
+            {
+                <input type="hidden" name="minrating" value="@query.MinRating" />
+            }
+            @if (query.InStock)
+            {
+                <input type="hidden" name="instock" value="true" />
+            }
+            @if (query.OnSale)
+            {
+                <input type="hidden" name="onsale" value="true" />
+            }
+            @if (!string.Equals(query.Sort, "relevance", StringComparison.OrdinalIgnoreCase))
+            {
+                <input type="hidden" name="sort" value="@query.Sort" />
+            }
+            @if (!string.Equals(query.View, "grid", StringComparison.OrdinalIgnoreCase))
+            {
+                <input type="hidden" name="view" value="@query.View" />
+            }
+
+            <div class="flex items-center gap-2">
+                <input type="number" name="minprice" value="@query.MinPrice"
+                       min="0" step="0.01" placeholder="@(Model.MinAvailablePrice?.ToString("N0") ?? "Min")"
+                       class="form-input text-sm" aria-label="Minimum price" />
+                <span class="text-brand-text-muted">-</span>
+                <input type="number" name="maxprice" value="@query.MaxPrice"
+                       min="0" step="0.01" placeholder="@(Model.MaxAvailablePrice?.ToString("N0") ?? "Max")"
+                       class="form-input text-sm" aria-label="Maximum price" />
+            </div>
+            <button type="submit" class="btn-outline w-full text-sm" data-catalog-link>Apply</button>
+        </form>
+    </div>
+
+    @foreach (var group in facets)
+    {
+        var groupViewData = new ViewDataDictionary(ViewData) { ["Query"] = query };
+        <partial name="Partials/_FacetGroup" model="group" view-data="groupViewData" />
+    }
+</div>

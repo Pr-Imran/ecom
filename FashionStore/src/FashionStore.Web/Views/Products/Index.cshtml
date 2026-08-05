@@ -1,0 +1,234 @@
+@model CatalogPageData
+@{
+    ViewData["Title"] = Model.ListingTitle ?? "Products";
+    var query = Model.Query;
+    var results = Model.Results;
+    var isList = string.Equals(query.View, "list", StringComparison.OrdinalIgnoreCase);
+    var sortLabel = ProductSortOptions.All.FirstOrDefault(o => o.Value == query.Sort).Label ?? "Relevance";
+    var canonical = $"{Context.Request.Scheme}://{Context.Request.Host}{CatalogUrlBuilder.Canonical(query)}";
+}
+
+@section Styles {
+    <link rel="canonical" href="@canonical" />
+}
+
+<!-- Page header -->
+<section class="listing-header bg-white border-b border-brand-border">
+    <div class="container mx-auto px-4 py-4 md:py-8">
+        <nav aria-label="Breadcrumb" class="text-xs text-brand-text-muted mb-1">
+            <a href="/" class="hover:text-brand-primary">Home</a>
+            <span class="mx-1">/</span>
+            <span class="text-brand-text-primary">@Model.ListingTitle</span>
+        </nav>
+        <h1 class="text-2xl md:text-3xl font-bold text-brand-text-primary">@Model.ListingTitle</h1>
+        @if (!string.IsNullOrEmpty(Model.ListingSubtitle))
+        {
+            <p class="text-sm text-brand-text-muted mt-1">@Model.ListingSubtitle</p>
+        }
+    </div>
+</section>
+
+<!-- Mobile sticky results bar -->
+<div class="results-bar md:hidden bg-white border-b border-brand-border">
+    <div class="flex items-center justify-between px-4 py-3">
+        <span class="text-sm font-medium text-brand-text-primary">@results.TotalCount product@(results.TotalCount == 1 ? "" : "s")</span>
+        <div class="flex items-center gap-2">
+            <button type="button" class="btn-outline inline-flex items-center gap-1.5" onclick="openFilterSheet('filter-sheet')" aria-haspopup="true">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+                </svg>
+                Filter
+            </button>
+            <button type="button" class="btn-outline inline-flex items-center gap-1.5" onclick="openBottomSheet('sort-sheet')" aria-haspopup="true">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h9m-9 4h13m5-7v8m0-8l-3-3m3 3l3-3"/>
+                </svg>
+                Sort
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="container mx-auto px-4 pb-24 md:pb-12 pt-3">
+    <div class="md:grid md:grid-cols-[16rem_minmax(0,1fr)] md:gap-8 md:items-start">
+        <!-- Desktop sidebar filters -->
+        <aside class="hidden md:block md:sticky md:top-24 bg-white border border-brand-border rounded-brand p-4">
+            <div class="flex items-center justify-between mb-1">
+                <h2 class="text-sm font-semibold text-brand-text-primary">Filters</h2>
+                @if (CatalogUrlBuilder.HasAppliedFilters(query))
+                {
+                    <a href="@CatalogUrlBuilder.ClearFilters(query)" class="text-xs text-brand-primary hover:underline" data-catalog-link>Clear all</a>
+                }
+            </div>
+            <partial name="Partials/_FacetList" model="Model" />
+        </aside>
+
+        <!-- Results column -->
+        <div class="min-w-0">
+            <!-- Desktop toolbar -->
+            <div class="hidden md:flex items-center justify-between mb-4">
+                <span class="text-sm text-brand-text-muted">@results.TotalCount product@(results.TotalCount == 1 ? "" : "s")</span>
+                <div class="flex items-center gap-3">
+                    <!-- Sort dropdown -->
+                    <div class="relative">
+                        <button type="button" class="btn-outline inline-flex items-center gap-1.5" onclick="toggleDropdown('sort-dropdown')" aria-expanded="false">
+                            Sort: @sortLabel
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div id="sort-dropdown" class="dropdown hidden">
+                            @foreach (var option in ProductSortOptions.All)
+                            {
+                                <a href="@CatalogUrlBuilder.Sort(query, option.Value)"
+                                   class="@(option.Value == query.Sort ? "text-brand-primary font-semibold" : "")"
+                                   data-catalog-link>@option.Label</a>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Grid/list toggle -->
+                    <div class="inline-flex border border-brand-border rounded-brand overflow-hidden">
+                        <a href="@CatalogUrlBuilder.View(query, "grid")"
+                           class="p-2 @(!isList ? "bg-brand-primary text-white" : "text-brand-text-muted hover:bg-brand-surface")"
+                           title="Grid view"
+                           aria-label="Grid view"
+                           data-catalog-link>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5h5v5H4V5zm11 0h5v5h-5V5zM4 16h5v5H4v-5zm11 0h5v5h-5v-5z"/>
+                            </svg>
+                        </a>
+                        <a href="@CatalogUrlBuilder.View(query, "list")"
+                           class="p-2 @(isList ? "bg-brand-primary text-white" : "text-brand-text-muted hover:bg-brand-surface")"
+                           title="List view"
+                           aria-label="List view"
+                           data-catalog-link>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Applied filter chips -->
+            <partial name="Partials/_AppliedChips" model="Model" />
+
+            <!-- Product grid / list -->
+            @if (results.Items.Count == 0)
+            {
+                <div class="empty-state text-center py-16">
+                    <svg class="w-12 h-12 mx-auto text-brand-text-muted mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    <h2 class="text-lg font-semibold text-brand-text-primary mb-1">No products found</h2>
+                    <p class="text-sm text-brand-text-muted mb-4">Try adjusting your filters or search term.</p>
+                    @if (CatalogUrlBuilder.HasAppliedFilters(query))
+                    {
+                        <a href="@CatalogUrlBuilder.ClearFilters(query)" class="btn-primary" data-catalog-link>Clear all filters</a>
+                    }
+                </div>
+            }
+            else if (isList)
+            {
+                var listViewData = new ViewDataDictionary(ViewData) { ["ListMode"] = true };
+                <div class="flex flex-col gap-4">
+                    @foreach (var product in results.Items)
+                    {
+                        <partial name="Partials/_ProductCard" model="product" view-data="listViewData" />
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
+                    @foreach (var product in results.Items)
+                    {
+                        <partial name="Partials/_ProductCard" model="product" />
+                    }
+                </div>
+            }
+
+            <!-- Pagination -->
+            @if (results.TotalPages > 1)
+            {
+                var pageViewData = new ViewDataDictionary(ViewData)
+                {
+                    ["page"] = results.Page,
+                    ["totalPages"] = results.TotalPages,
+                    ["baseUrl"] = CatalogUrlBuilder.PageBase(query)
+                };
+                <partial name="~/Views/Shared/Components/_Pagination.cshtml" view-data="pageViewData" />
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Mobile full-screen filter sheet -->
+<div id="filter-sheet" class="filter-sheet hidden md:hidden" role="dialog" aria-modal="true" aria-labelledby="filter-sheet-title">
+    <div class="filter-sheet-header">
+        <h2 id="filter-sheet-title" class="text-lg font-semibold text-brand-text-primary">Filters</h2>
+        <button type="button" class="btn-icon" onclick="closeFilterSheet('filter-sheet')" aria-label="Close filters">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+    </div>
+    <div class="filter-sheet-body">
+        <partial name="Partials/_FacetList" model="Model" />
+    </div>
+    <div class="filter-sheet-footer safe-area-bottom">
+        <a href="@CatalogUrlBuilder.Href(query)" class="btn-primary w-full text-center" data-catalog-link>
+            Show @results.TotalCount product@(results.TotalCount == 1 ? "" : "s")
+        </a>
+    </div>
+</div>
+
+<!-- Mobile sort bottom sheet -->
+<div id="sort-sheet" class="bottomsheet-backdrop hidden md:hidden" onclick="closeBottomSheet('sort-sheet')">
+    <div class="bottomsheet animate-slide-up" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="sort-sheet-title">
+        <div class="bottomsheet-handle"></div>
+        <div class="flex items-center justify-between px-4 py-3">
+            <h2 id="sort-sheet-title" class="text-lg font-semibold">Sort by</h2>
+            <button type="button" class="btn-icon" onclick="closeBottomSheet('sort-sheet')" aria-label="Close">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="px-4 pb-6">
+            <div class="flex flex-col">
+                @foreach (var option in ProductSortOptions.All)
+                {
+                    <a href="@CatalogUrlBuilder.Sort(query, option.Value)"
+                       class="flex items-center justify-between py-3 px-2 rounded-brand @(option.Value == query.Sort ? "text-brand-primary font-semibold" : "text-brand-text-primary")"
+                       data-catalog-link>
+                        @option.Label
+                        @if (option.Value == query.Sort)
+                        {
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                        }
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading skeleton overlay -->
+<div id="catalog-loading" class="hidden fixed inset-0 z-[600] bg-white/95" aria-hidden="true">
+    <div class="max-w-4xl mx-auto px-4 py-6">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
+            @for (int i = 0; i < 8; i++)
+            {
+                <div class="space-y-2">
+                    <div class="skeleton-image"></div>
+                    <div class="skeleton-text w-3/4"></div>
+                    <div class="skeleton-text w-1/2"></div>
+                </div>
+            }
+        </div>
+    </div>
+</div>

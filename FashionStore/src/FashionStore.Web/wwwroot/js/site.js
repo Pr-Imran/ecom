@@ -37,6 +37,31 @@
         document.body.style.overflow = '';
     };
 
+    window.openFilterSheet = function (id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        document.addEventListener('keydown', function escapeHandler(e) {
+            if (e.key === 'Escape') { closeFilterSheet(id); document.removeEventListener('keydown', escapeHandler); }
+        });
+    };
+
+    window.closeFilterSheet = function (id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.classList.add('hidden');
+        document.body.style.overflow = '';
+    };
+
+    window.showCatalogLoading = function () {
+        var overlay = document.getElementById('catalog-loading');
+        if (overlay) {
+            overlay.classList.remove('hidden');
+            overlay.setAttribute('aria-hidden', 'false');
+        }
+    };
+
     window.openDrawer = function (id) {
         var el = document.getElementById(id);
         if (!el) return;
@@ -159,6 +184,12 @@
     document.addEventListener('click', function (e) {
         if (!e.target.closest('.dropdown') && !e.target.closest('[onclick*="toggleDropdown"]')) {
             document.querySelectorAll('.dropdown').forEach(function (d) { d.classList.add('hidden'); });
+        }
+    });
+
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('[data-catalog-link]')) {
+            showCatalogLoading();
         }
     });
 })();

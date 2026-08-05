@@ -30,6 +30,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<WarehouseStock> WarehouseStocks => Set<WarehouseStock>();
     public DbSet<InventoryTransaction> InventoryTransactions => Set<InventoryTransaction>();
     public DbSet<StockReservation> StockReservations => Set<StockReservation>();
+    public DbSet<ProductReview> ProductReviews => Set<ProductReview>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -201,7 +202,19 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             entity.HasIndex(e => e.Sku).IsUnique();
             entity.HasIndex(e => e.IsActive);
             entity.HasIndex(e => e.IsDefault);
-            entity.HasOne(e => e.Product).WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Product).WithMany(p => p.Variants).HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ProductReview>(entity =>
+        {
+            entity.ToTable("ProductReviews");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.DisplayName).HasMaxLength(200);
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.Body).HasMaxLength(4000);
+            entity.HasIndex(e => new { e.ProductId, e.IsApproved });
+            entity.HasIndex(e => e.Rating);
+            entity.HasOne(e => e.Product).WithMany(p => p.Reviews).HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ProductVariantAttributeValue>(entity =>

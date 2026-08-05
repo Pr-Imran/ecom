@@ -97,4 +97,6 @@ public class Product : AuditedEntity
     public virtual ICollection<ProductSpecification> Specifications { get; set; } = new List<ProductSpecification>();
     public virtual ICollection<ProductSizeGuideMapping> SizeGuideMappings { get; set; } = new List<ProductSizeGuideMapping>();
     public virtual ICollection<ProductImage> Images { get; set; } = new List<ProductImage>();
+    public virtual ICollection<ProductVariant> Variants { get; set; } = new List<ProductVariant>();
+    public virtual ICollection<ProductReview> Reviews { get; set; } = new List<ProductReview>();
 }
