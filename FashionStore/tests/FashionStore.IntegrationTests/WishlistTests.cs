@@ -45,6 +45,66 @@ public class WishlistTests : IClassFixture<TestWebApplicationFactory>
     }
 
     [Fact]
+    public async Task Wishlist_EmptyState_HasAppBarAndIllustrationAndSignInPrompt()
+    {
+        var client = CreateClient();
+        var html = await client.GetStringAsync("/wishlist");
+
+        Assert.Contains("wishlist-appbar", html);
+        Assert.Contains("role=\"banner\"", html);
+        Assert.Contains("empty-state-icon", html);
+        Assert.Contains("Your wishlist is empty", html);
+    }
+
+    [Fact]
+    public async Task Wishlist_Populated_HasCardActionsAndRecentlyViewedRail()
+    {
+        var client = CreateClient();
+        var html = await client.GetStringAsync("/wishlist");
+        var token = ExtractAntiforgeryToken(html);
+
+        var (productId, variantId) = GetIds("cashmere-crew-neck-sweater", "SW-1001-GREY-M");
+        var addPayload = JsonSerializer.Serialize(new { productId, variantId });
+        var addRequest = new HttpRequestMessage(HttpMethod.Post, "/wishlist/add")
+        {
+            Content = new StringContent(addPayload, Encoding.UTF8, "application/json")
+        };
+        addRequest.Headers.Add("RequestVerificationToken", token);
+        await client.SendAsync(addRequest);
+
+        await client.GetAsync("/products/cashmere-crew-neck-sweater");
+
+        var page = await client.GetStringAsync("/wishlist");
+
+        Assert.Contains("Cashmere Crew Neck Sweater", page);
+        Assert.Contains("data-wishlist-move", page);
+        Assert.Contains("Move to Cart", page);
+        Assert.Contains("data-wishlist-remove", page);
+        Assert.Contains("SW-1001-GREY-M", page);
+        Assert.Contains("Heather Grey", page);
+        Assert.Contains("aria-labelledby=\"recently-heading\"", page);
+        Assert.Contains("Recently Viewed", page);
+        Assert.Contains("Cashmere Crew Neck Sweater", page);
+        Assert.Contains("Keep your wishlist across devices", page);
+        Assert.Contains("/Account/Login", page);
+    }
+
+    [Fact]
+    public async Task RecentlyViewed_Page_HasAppBarCarouselAndClearHistory()
+    {
+        var client = CreateClient();
+        await client.GetAsync("/products/cashmere-crew-neck-sweater");
+        var html = await client.GetStringAsync("/products/recently-viewed");
+
+        Assert.Contains("wishlist-appbar", html);
+        Assert.Contains("Recently Viewed", html);
+        Assert.Contains("data-clear-history", html);
+        Assert.Contains("Clear history", html);
+        Assert.Contains("Cashmere Crew Neck Sweater", html);
+        Assert.Contains("aspect-[4/5]", html);
+    }
+
+    [Fact]
     public async Task Wishlist_Anonymous_AddAppendsCookieAndShowsItem()
     {
         var client = CreateClient();

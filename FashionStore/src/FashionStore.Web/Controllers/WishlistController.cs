@@ -40,7 +40,7 @@ public class WishlistController : Controller
         if (string.IsNullOrEmpty(userId))
         {
             var anonymous = AnonymousWishlistCookie.Read(HttpContext);
-            var data = await _wishlistService.ResolveAnonymousAsync(anonymous, cancellationToken);
+            var data = await _wishlistService.ResolveAnonymousAsync(anonymous, recentlyViewedIds, cancellationToken);
             return View(data);
         }
 

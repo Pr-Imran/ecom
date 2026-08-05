@@ -47,7 +47,7 @@ public class NavigationService : INavigationService
             new NavigationItem("home", "Home", "/", "home"),
             new NavigationItem("categories", "Categories", "/categories", "grid"),
             new NavigationItem("search", "Search", "/search", "search"),
-            new NavigationItem("wishlist", "Wishlist", userId != null ? "/account/wishlist" : "/wishlist", "heart"),
+            new NavigationItem("wishlist", "Wishlist", "/wishlist", "heart"),
             new NavigationItem("account", "Account", userId != null ? "/account" : "/account/login", "user")
         };
 
@@ -132,7 +132,7 @@ public class NavigationService : INavigationService
         {
             new NavigationItem("account-overview", "Overview", "/account", "user"),
             new NavigationItem("account-orders", "My Orders", "/account/orders", "shopping-bag"),
-            new NavigationItem("account-wishlist", "Wishlist", "/account/wishlist", "heart"),
+            new NavigationItem("account-wishlist", "Wishlist", "/wishlist", "heart"),
             new NavigationItem("account-addresses", "Addresses", "/account/addresses", "map-pin"),
             new NavigationItem("account-reviews", "My Reviews", "/account/reviews", "message-square"),
             new NavigationItem("account-security", "Security", "/account/security", "lock"),

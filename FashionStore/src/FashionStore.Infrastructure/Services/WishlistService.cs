@@ -343,11 +343,13 @@ public sealed class WishlistService : IWishlistService
 
     public async Task<WishlistViewData> ResolveAnonymousAsync(
         IReadOnlyList<WishlistMutationRequest> anonymousEntries,
+        IReadOnlyList<Guid>? recentlyViewedIds,
         CancellationToken cancellationToken = default)
     {
         if (anonymousEntries.Count == 0)
         {
-            return new WishlistViewData(Array.Empty<WishlistItemDto>(), 0, false, Array.Empty<ProductListItemDto>());
+            var emptyRecentlyViewed = await LoadRecentlyViewedAsync(recentlyViewedIds, cancellationToken);
+            return new WishlistViewData(Array.Empty<WishlistItemDto>(), 0, false, emptyRecentlyViewed);
         }
 
         var now = DateTime.UtcNow;
@@ -475,7 +477,8 @@ public sealed class WishlistService : IWishlistService
                 product.HasVariations && entry.VariantId == null));
         }
 
-        return new WishlistViewData(items, items.Count, false, Array.Empty<ProductListItemDto>());
+        var recentlyViewed = await LoadRecentlyViewedAsync(recentlyViewedIds, cancellationToken);
+        return new WishlistViewData(items, items.Count, false, recentlyViewed);
     }
 
     private sealed record VariantRow(

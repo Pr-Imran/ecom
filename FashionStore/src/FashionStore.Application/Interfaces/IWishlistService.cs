@@ -74,6 +74,7 @@ public interface IWishlistService
     /// </summary>
     Task<WishlistViewData> ResolveAnonymousAsync(
         IReadOnlyList<WishlistMutationRequest> anonymousEntries,
+        IReadOnlyList<Guid>? recentlyViewedIds,
         CancellationToken cancellationToken = default);
 
     /// <summary>

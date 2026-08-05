@@ -393,6 +393,7 @@ public class WishlistServiceTests
 
         var data = await service.ResolveAnonymousAsync(
             new[] { new WishlistMutationRequest(productId, variantId) },
+            null,
             CancellationToken.None);
 
         Assert.Single(data.Items);
@@ -410,6 +411,7 @@ public class WishlistServiceTests
 
         var data = await service.ResolveAnonymousAsync(
             new[] { new WishlistMutationRequest(productId, variantId) },
+            null,
             CancellationToken.None);
 
         Assert.Empty(data.Items);
