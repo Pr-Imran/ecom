@@ -1,0 +1,125 @@
+@model FashionStore.Application.DTOs.Products.CartViewData
+@{
+    ViewData["Title"] = "My Cart";
+    ViewData["HideMobileHeader"] = true;
+}
+
+@section Styles {
+    <style>
+        .cart-appbar { position: sticky; top: 0; z-index: 30; background: rgba(255,255,255,0.92); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-bottom: 1px solid var(--color-brand-border, #e5e7eb); }
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+        input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
+    </style>
+}
+
+<!-- App-like header -->
+<header class="cart-appbar lg:hidden" role="banner">
+    <div class="flex items-center justify-between gap-2 px-3 py-2">
+        <div class="flex items-center gap-1">
+            <button type="button" class="btn-icon -ml-2" onclick="history.back()" aria-label="Go back">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <span class="text-base font-bold text-brand-text-primary">My Cart</span>
+            @if (Model.ItemCount > 0)
+            {
+                <span class="text-sm text-brand-text-muted" data-cart-page-count>(@Model.ItemCount)</span>
+            }
+        </div>
+        <a asp-controller="Home" asp-action="Index" class="text-sm font-bold text-brand-primary tracking-tight">
+            FashionStore
+        </a>
+    </div>
+</header>
+
+<!-- Desktop heading -->
+<div class="hidden lg:block container mx-auto px-4 pt-6">
+    <h1 class="text-2xl font-bold text-brand-text-primary">My Cart</h1>
+    <div class="flex items-center justify-between mt-2">
+        <p class="text-sm text-brand-text-muted" data-cart-page-count-desktop>@Model.ItemCount item(s)</p>
+        @if (Model.ItemCount > 0)
+        {
+            <a asp-controller="Home" asp-action="Index" class="text-sm text-brand-primary font-medium hover:underline">Continue shopping</a>
+        }
+    </div>
+</div>
+
+<div class="container mx-auto px-4 pt-3 pb-10 safe-bottom lg:pt-6">
+
+    @if (Model.ItemCount == 0)
+    {
+        <!-- Empty state -->
+        <div class="py-16 text-center">
+            <div class="mx-auto mb-4 w-24 h-24 text-brand-text-muted">
+                <svg class="w-24 h-24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+            </div>
+            <h2 class="text-lg font-bold text-brand-text-primary">Your cart is empty</h2>
+            <p class="text-sm text-brand-text-muted mt-2 max-w-sm mx-auto">
+                Browse our collection and add something you love. Items you add will appear here.
+            </p>
+            <a asp-controller="Products" asp-action="Index" class="btn-primary mt-6 inline-flex">Start shopping</a>
+        </div>
+    }
+    else
+    {
+        <div class="lg:grid lg:grid-cols-3 lg:gap-8">
+            <!-- Items list -->
+            <div class="lg:col-span-2">
+                <ul class="divide-y divide-brand-border" data-cart-items>
+                    @foreach (var item in Model.Items)
+                    {
+                        <li class="py-4">
+                            <partial name="Partials/_CartItem" model="item" />
+                        </li>
+                    }
+                </ul>
+
+                @if (!Model.IsAuthenticated)
+                {
+                    <div class="mt-8 rounded-brand-sm bg-brand-surface border border-brand-border p-4 text-center">
+                        <p class="text-sm text-brand-text-primary font-medium">Keep your cart across devices</p>
+                        <p class="text-sm text-brand-text-muted mt-1">Sign in to save this cart to your account. It will be merged automatically.</p>
+                        <a asp-controller="Account" asp-action="Login" class="btn-primary mt-4 inline-flex">Sign in</a>
+                    </div>
+                }
+            </div>
+
+            <!-- Order summary (desktop sidebar) -->
+            <div class="hidden lg:block">
+                <div class="lg:sticky lg:top-6" data-cart-summary>
+                    <partial name="Partials/_OrderSummary" model="Model" />
+                    <a asp-controller="Home" asp-action="Index" class="block text-center text-sm text-brand-primary font-medium mt-4 hover:underline">Continue shopping</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sticky order summary (mobile) -->
+        <div class="fixed inset-x-0 bottom-0 z-40 lg:hidden" data-cart-mobile-bar>
+            <div class="bg-white border-t border-brand-border px-4 pt-3 safe-bottom shadow-md">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-xs text-brand-text-muted">Subtotal</div>
+                        <div class="text-lg font-bold text-brand-text-primary" data-cart-mobile-subtotal>@Model.FormattedSubtotal</div>
+                    </div>
+                    <button type="button"
+                            class="btn-primary py-3 px-6"
+                            data-cart-checkout
+                            @(Model.Items.Any(i => i.IsAvailable) ? "" : "disabled")
+                            aria-disabled="@(Model.Items.Any(i => i.IsAvailable) ? "false" : "true")">
+                        Checkout
+                    </button>
+                </div>
+                @if (Model.HasUnavailableItems)
+                {
+                    <p class="mt-1 text-xs text-brand-text-muted text-center">Unavailable items excluded from subtotal.</p>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<partial name="~/Views/Shared/Partials/_CartDrawer.cshtml" />

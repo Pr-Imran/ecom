@@ -1,4 +1,5 @@
 using FashionStore.Application.DTOs.Navigation;
+using FashionStore.Application.Interfaces;
 using FashionStore.Application.Services;
 using FashionStore.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
@@ -13,15 +14,18 @@ public class NavigationService : INavigationService
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<ApplicationRole> _roleManager;
+    private readonly ICartService _cartService;
     private readonly ILogger<NavigationService> _logger;
 
     public NavigationService(
         UserManager<ApplicationUser> userManager,
         RoleManager<ApplicationRole> roleManager,
+        ICartService cartService,
         ILogger<NavigationService> logger)
     {
         _userManager = userManager;
         _roleManager = roleManager;
+        _cartService = cartService;
         _logger = logger;
     }
 
@@ -184,16 +188,26 @@ public class NavigationService : INavigationService
         );
     }
 
-    public CartSummary GetCartSummary(string? userId = null)
+    public async Task<CartSummary> GetCartSummaryAsync(string? userId = null, CancellationToken cancellationToken = default)
     {
-        var itemCount = 0;
-        var totalAmount = 0m;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return new CartSummary(0, 0m, "$0.00");
+        }
 
-        return new CartSummary(
-            itemCount,
-            totalAmount,
-            totalAmount.ToString("C2", System.Globalization.CultureInfo.InvariantCulture)
-        );
+        try
+        {
+            var cart = await _cartService.GetCartAsync(userId, cancellationToken);
+            return new CartSummary(
+                cart.ItemCount,
+                cart.Subtotal,
+                cart.FormattedSubtotal);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load cart summary for user {UserId}", userId);
+            return new CartSummary(0, 0m, "$0.00");
+        }
     }
 
     public IEnumerable<Announcement> GetActiveAnnouncements()

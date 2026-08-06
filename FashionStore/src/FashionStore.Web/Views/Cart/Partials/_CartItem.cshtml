@@ -1,0 +1,129 @@
+@model FashionStore.Application.DTOs.Products.CartItemDto
+@{
+    var currency = "$";
+    var imageUrl = Model.ImageCardUrl ?? Model.ImageUrl ?? "/images/placeholder.svg";
+    var maxQuantity = Math.Max(Model.Quantity, Math.Min(99, Model.AvailableStock));
+    var isUnavailable = !Model.IsAvailable;
+    var canEditQuantity = Model.IsAvailable;
+}
+
+<div class="group flex gap-3 sm:gap-4 @(isUnavailable ? "opacity-80" : "")"
+     data-cart-item
+     data-product-id="@Model.ProductId"
+     data-variant-id="@Model.VariantId"
+     data-quantity="@Model.Quantity">
+    <a href="/products/@Model.Slug" class="relative w-24 sm:w-28 aspect-[4/5] rounded-brand-sm overflow-hidden bg-brand-surface border border-brand-border flex-shrink-0" aria-label="@Model.ProductName">
+        <img src="@imageUrl"
+             alt="@(Model.ImageAltText ?? Model.ProductName)"
+             class="w-full h-full object-cover"
+             loading="lazy"
+             width="112"
+             height="140"
+             onerror="this.onerror=null;this.src='/images/placeholder.svg';" />
+        @if (Model.DiscountPercent.HasValue && Model.DiscountPercent.Value > 0)
+        {
+            <span class="absolute top-2 left-2 badge badge-danger">-@Model.DiscountPercent%</span>
+        }
+    </a>
+
+    <div class="flex flex-col justify-between min-w-0 flex-1 py-0.5">
+        <div class="min-w-0">
+            @if (!string.IsNullOrEmpty(Model.BrandName))
+            {
+                <div class="text-xs uppercase tracking-wide text-brand-text-muted font-medium">@Model.BrandName</div>
+            }
+            <a href="/products/@Model.Slug" class="block text-sm font-medium text-brand-text-primary line-clamp-2 leading-snug hover:text-brand-primary">
+                @Model.ProductName
+            </a>
+
+            <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-brand-text-muted">
+                @if (!string.IsNullOrEmpty(Model.ColourName))
+                {
+                    <span class="inline-flex items-center gap-1 rounded-brand-sm bg-brand-surface border border-brand-border px-2 py-0.5">
+                        <span class="w-2.5 h-2.5 rounded-full border border-brand-border" aria-hidden="true"></span>
+                        @Model.ColourName
+                    </span>
+                }
+                @if (!string.IsNullOrEmpty(Model.SizeName))
+                {
+                    <span class="inline-flex items-center rounded-brand-sm bg-brand-surface border border-brand-border px-2 py-0.5">
+                        Size @Model.SizeName
+                    </span>
+                }
+                <span class="text-brand-text-muted">@Model.Sku</span>
+            </div>
+
+            <div class="mt-2 inline-flex items-baseline gap-1.5 flex-wrap">
+                <span class="price-current">@currency@Model.UnitPrice.ToString("N2")</span>
+                @if (Model.CompareAtPrice.HasValue && Model.CompareAtPrice.Value > Model.UnitPrice)
+                {
+                    <span class="price-original">@currency@Model.CompareAtPrice.Value.ToString("N2")</span>
+                }
+            </div>
+        </div>
+
+        @if (isUnavailable)
+        {
+            <div class="mt-3 rounded-brand-sm bg-brand-surface border border-brand-danger px-3 py-2" role="alert">
+                <div class="flex items-start gap-2">
+                    <svg class="w-4 h-4 text-brand-danger flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                    </svg>
+                    <div>
+                        <p class="text-sm font-medium text-brand-text-primary">This item is unavailable</p>
+                        <p class="text-xs text-brand-text-muted mt-0.5">@Model.UnavailableReason</p>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="mt-3 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+                <div class="inline-flex items-center rounded-lg border border-brand-border bg-white" @(canEditQuantity ? "" : "aria-hidden=\"true\"")>
+                    <button type="button"
+                            class="btn-icon w-9 h-9"
+                            data-cart-dec
+                            data-product-id="@Model.ProductId"
+                            data-variant-id="@Model.VariantId"
+                            @(canEditQuantity ? "" : "disabled tabindex=\"-1\"")
+                            aria-label="Decrease quantity of @Model.ProductName">−</button>
+                    <input type="number"
+                           class="w-10 h-9 text-center text-sm font-medium bg-transparent border-x border-brand-border focus:outline-none"
+                           value="@Model.Quantity"
+                           min="1"
+                           max="@maxQuantity"
+                           inputmode="numeric"
+                           data-cart-qty
+                           data-product-id="@Model.ProductId"
+                           data-variant-id="@Model.VariantId"
+                           @(canEditQuantity ? "" : "disabled tabindex=\"-1\"")
+                           aria-label="Quantity of @Model.ProductName" />
+                    <button type="button"
+                            class="btn-icon w-9 h-9"
+                            data-cart-inc
+                            data-product-id="@Model.ProductId"
+                            data-variant-id="@Model.VariantId"
+                            @(canEditQuantity ? "" : "disabled tabindex=\"-1\"")
+                            aria-label="Increase quantity of @Model.ProductName">+</button>
+                </div>
+                <button type="button"
+                        class="btn-icon text-brand-text-muted"
+                        data-cart-remove
+                        data-product-id="@Model.ProductId"
+                        data-variant-id="@Model.VariantId"
+                        aria-label="Remove @Model.ProductName from cart">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="text-right">
+                <div class="price-current text-base font-semibold" data-cart-line-total>@currency@Model.LineTotal.ToString("N2")</div>
+                @if (isUnavailable)
+                {
+                    <div class="text-xs text-brand-text-muted">Excluded from subtotal</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

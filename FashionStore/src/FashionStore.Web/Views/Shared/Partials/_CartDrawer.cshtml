@@ -1,0 +1,15 @@
+<div id="cart-drawer" class="drawer-backdrop hidden" onclick="closeDrawer('cart-drawer')">
+    <div class="drawer-right translate-x-full" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="cart-drawer-title">
+        <div class="flex items-center justify-between px-4 py-4 border-b border-brand-border">
+            <h2 id="cart-drawer-title" class="text-lg font-semibold text-brand-text-primary">
+                My Cart <span class="text-sm text-brand-text-muted font-normal" data-cart-drawer-count></span>
+            </h2>
+            <button class="btn-icon" onclick="closeDrawer('cart-drawer')" aria-label="Close cart drawer">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto px-4 pb-4" id="cart-drawer-body" aria-live="polite"></div>
+    </div>
+</div>

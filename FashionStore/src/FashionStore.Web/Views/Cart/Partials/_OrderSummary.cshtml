@@ -1,0 +1,65 @@
+@model FashionStore.Application.DTOs.Products.CartViewData
+@{
+    var availableCount = Model.Items.Count(i => i.IsAvailable);
+    var hasCheckoutItems = availableCount > 0;
+}
+
+<div class="rounded-brand-sm bg-white border border-brand-border p-4 sm:p-5">
+    <h2 class="text-base font-bold text-brand-text-primary">Order Summary</h2>
+
+    @if (Model.HasUnavailableItems)
+    {
+        <div class="mt-3 flex items-start gap-2 rounded-brand-sm bg-brand-surface border border-brand-danger px-3 py-2" role="alert">
+            <svg class="w-4 h-4 text-brand-danger flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+            </svg>
+            <p class="text-xs text-brand-text-muted">Unavailable items are shown but excluded from your subtotal.</p>
+        </div>
+    }
+
+    <div class="mt-4 flex items-center justify-between text-sm">
+        <span class="text-brand-text-muted">Subtotal (@availableCount item(s))</span>
+        <span class="font-semibold text-brand-text-primary" data-cart-subtotal>@Model.FormattedSubtotal</span>
+    </div>
+
+    <div class="mt-4 border-t border-brand-border pt-4">
+        <div class="flex items-center justify-between text-sm">
+            <span class="text-brand-text-muted">Coupon code</span>
+            <button type="button" class="text-sm font-medium text-brand-primary" data-cart-coupon-toggle>Apply coupon</button>
+        </div>
+        <form class="hidden mt-3" data-cart-coupon-form onsubmit="return false;">
+            <div class="flex gap-2">
+                <input type="text"
+                       name="coupon"
+                       class="flex-1 min-w-0 px-3 py-2 bg-brand-surface rounded-brand-sm border border-brand-border text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                       placeholder="Enter coupon code"
+                       aria-label="Coupon code" />
+                <button type="button" class="btn-primary py-2 px-4 text-sm" data-cart-coupon-apply disabled>Apply</button>
+            </div>
+            <p class="mt-2 text-xs text-brand-text-muted">Coupons will be available soon.</p>
+        </form>
+    </div>
+
+    <div class="mt-3 flex items-center justify-between text-sm">
+        <span class="text-brand-text-muted">Shipping</span>
+        <span class="text-brand-text-muted">Calculated at checkout</span>
+    </div>
+
+    <div class="mt-4 flex items-center justify-between border-t border-brand-border pt-4">
+        <span class="text-sm font-semibold text-brand-text-primary">Total</span>
+        <span class="text-lg font-bold text-brand-text-primary" data-cart-total>@Model.FormattedSubtotal</span>
+    </div>
+
+    <button type="button"
+            class="btn-primary w-full mt-4 py-3.5 text-base"
+            data-cart-checkout
+            @(hasCheckoutItems ? "" : "disabled")
+            aria-disabled="@(hasCheckoutItems ? "false" : "true")">
+        Proceed to Checkout
+    </button>
+
+    @if (!hasCheckoutItems)
+    {
+        <p class="mt-2 text-xs text-brand-text-muted text-center">Add available items to your cart to check out.</p>
+    }
+</div>

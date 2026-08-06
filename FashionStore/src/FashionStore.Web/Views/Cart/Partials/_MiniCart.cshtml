@@ -1,0 +1,91 @@
+@model FashionStore.Application.DTOs.Products.CartViewData
+@{
+    var availableItems = Model.Items.Where(i => i.IsAvailable).ToList();
+    var currency = "$";
+}
+
+@if (Model.ItemCount == 0)
+{
+    <div class="py-16 text-center">
+        <div class="mx-auto mb-4 w-20 h-20 text-brand-text-muted">
+            <svg class="w-20 h-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+        </div>
+        <h3 class="text-base font-bold text-brand-text-primary">Your cart is empty</h3>
+        <p class="text-sm text-brand-text-muted mt-1 max-w-xs mx-auto">
+            Add items you love and they will show up here.
+        </p>
+    </div>
+}
+else
+{
+    <ul class="divide-y divide-brand-border">
+        @foreach (var item in Model.Items)
+        {
+            <li class="py-3" data-mini-item
+                data-product-id="@item.ProductId"
+                data-variant-id="@item.VariantId"
+                data-line-total="@item.LineTotal"
+                data-quantity="@item.Quantity">
+                <div class="flex gap-3">
+                    <a href="/products/@item.Slug" class="relative w-16 h-20 rounded-brand-sm overflow-hidden bg-brand-surface border border-brand-border flex-shrink-0" aria-label="@item.ProductName">
+                        <img src="@(item.ImageCardUrl ?? item.ImageUrl ?? "/images/placeholder.svg")"
+                             alt="@(item.ImageAltText ?? item.ProductName)"
+                             class="w-full h-full object-cover"
+                             loading="lazy"
+                             width="64"
+                             height="80"
+                             onerror="this.onerror=null;this.src='/images/placeholder.svg';" />
+                    </a>
+                    <div class="flex flex-col justify-between min-w-0 flex-1">
+                        <div class="min-w-0">
+                            <a href="/products/@item.Slug" class="block text-sm font-medium text-brand-text-primary line-clamp-2 leading-snug hover:text-brand-primary">
+                                @item.ProductName
+                            </a>
+                            @if (!string.IsNullOrEmpty(item.ColourName) || !string.IsNullOrEmpty(item.SizeName))
+                            {
+                                <div class="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-brand-text-muted">
+                                    @if (!string.IsNullOrEmpty(item.ColourName))
+                                    {
+                                        <span class="inline-flex items-center gap-1">
+                                            <span class="w-2 h-2 rounded-full border border-brand-border" aria-hidden="true"></span>
+                                            @item.ColourName
+                                        </span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(item.SizeName))
+                                    {
+                                        <span>Size @item.SizeName</span>
+                                    }
+                                </div>
+                            }
+                            @if (!item.IsAvailable)
+                            {
+                                <span class="mt-1 inline-block text-xs font-medium text-brand-danger">@item.UnavailableReason</span>
+                            }
+                        </div>
+                        <div class="mt-1 flex items-center justify-between gap-2">
+                            <span class="text-sm text-brand-text-muted">Qty @item.Quantity</span>
+                            <span class="text-sm font-semibold text-brand-text-primary">@currency@item.LineTotal.ToString("N2")</span>
+                        </div>
+                    </div>
+                </div>
+            </li>
+        }
+    </ul>
+
+    <div class="border-t border-brand-border pt-3">
+        <div class="flex items-center justify-between text-sm">
+            <span class="text-brand-text-muted">Subtotal</span>
+            <span class="font-semibold text-brand-text-primary" data-mini-subtotal>@Model.FormattedSubtotal</span>
+        </div>
+        @if (Model.HasUnavailableItems)
+        {
+            <p class="mt-1 text-xs text-brand-text-muted">Unavailable items excluded from subtotal.</p>
+        }
+        <div class="mt-3 grid grid-cols-2 gap-2">
+            <a href="/cart" class="btn-outline text-center py-2.5 text-sm">View Cart</a>
+            <button type="button" class="btn-primary text-center py-2.5 text-sm" data-cart-checkout @(availableItems.Count > 0 ? "" : "disabled")>Checkout</button>
+        </div>
+    </div>
+}

@@ -10,6 +10,6 @@ public interface INavigationService
     Task<IEnumerable<NavigationItem>> GetAccountNavigationAsync(string userId, CancellationToken cancellationToken = default);
     IEnumerable<BreadcrumbItem> GenerateBreadcrumbs(IEnumerable<(string Label, string? Url)> segments, string? currentPage = null);
     Task<UserProfile?> GetUserProfileAsync(string userId, CancellationToken cancellationToken = default);
-    CartSummary GetCartSummary(string? userId = null);
+    Task<CartSummary> GetCartSummaryAsync(string? userId = null, CancellationToken cancellationToken = default);
     IEnumerable<Announcement> GetActiveAnnouncements();
 }

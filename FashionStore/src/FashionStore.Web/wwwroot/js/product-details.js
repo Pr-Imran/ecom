@@ -413,6 +413,7 @@
             .then(function (result) {
                 if (result && result.success) {
                     window.showToast('Added to cart', 'success');
+                    if (window.refreshCartCount) window.refreshCartCount();
                     if (window.closeBottomSheet) window.closeBottomSheet('variation-sheet');
                 } else {
                     window.showToast((result && result.error) || 'Could not add to cart', 'danger');

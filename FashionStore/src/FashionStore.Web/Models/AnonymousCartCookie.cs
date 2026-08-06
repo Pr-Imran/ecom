@@ -39,7 +39,7 @@ public static class AnonymousCartCookie
                 !Guid.TryParse(segments[1], out var variantId) ||
                 !int.TryParse(segments[2], out var quantity) ||
                 quantity < 1 ||
-                !entries.Any(e => e.ProductId == productId && e.VariantId == variantId))
+                entries.Any(e => e.ProductId == productId && e.VariantId == variantId))
             {
                 continue;
             }

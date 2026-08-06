@@ -33,12 +33,14 @@ public class WishlistServiceTests
     private static WishlistService CreateService(
         AppDbContext context,
         IAddToCartService? addToCartService = null,
-        ICatalogService? catalogService = null)
+        ICatalogService? catalogService = null,
+        ICartService? cartService = null)
     {
         var storage = CreateStorageStub();
         return new WishlistService(
             context,
             addToCartService ?? new AddToCartService(context, NullLogger<AddToCartService>.Instance),
+            cartService ?? new CartService(context, addToCartService ?? new AddToCartService(context, NullLogger<AddToCartService>.Instance), storage, NullLogger<CartService>.Instance),
             catalogService ?? new CatalogService(context, storage, NullLogger<CatalogService>.Instance),
             storage,
             NullLogger<WishlistService>.Instance);

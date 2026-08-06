@@ -284,9 +284,15 @@ public sealed class CartService : ICartService
 
     public async Task<CartMutationResult> ClearAsync(string userId, CancellationToken cancellationToken = default)
     {
-        await _context.CartItems
+        var lines = await _context.CartItems
             .Where(c => c.UserId == userId)
-            .ExecuteDeleteAsync(cancellationToken);
+            .ToListAsync(cancellationToken);
+
+        if (lines.Count > 0)
+        {
+            _context.CartItems.RemoveRange(lines);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
 
         _logger.LogInformation("Cleared cart for user {UserId}", userId);
         return new CartMutationResult(true, null, 0);
@@ -318,8 +324,11 @@ public sealed class CartService : ICartService
 
         foreach (var entry in anonymousEntries.DistinctBy(e => (e.ProductId, e.VariantId)))
         {
+            // Validate the item is currently purchasable at all (active product,
+            // active variant, in stock). The quantity is capped below, so we only
+            // ask for one unit here to determine availability.
             var validation = await _addToCartService.ValidateAsync(
-                new AddToCartRequest(entry.ProductId, entry.VariantId, entry.Quantity),
+                new AddToCartRequest(entry.ProductId, entry.VariantId, 1),
                 cancellationToken);
 
             if (!validation.Success)
