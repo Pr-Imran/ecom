@@ -122,6 +122,7 @@ public static class DependencyInjection
         services.AddScoped<IProductDetailsService, ProductDetailsService>();
         services.AddScoped<IAddToCartService, AddToCartService>();
         services.AddScoped<IWishlistService, WishlistService>();
+        services.AddScoped<ICartService, CartService>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
         services.AddScoped<IImageValidationService, ImageValidationService>();
         services.AddScoped<IImageProcessingService, ImageProcessingService>();

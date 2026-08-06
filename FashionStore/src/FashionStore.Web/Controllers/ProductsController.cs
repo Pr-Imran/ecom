@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using FashionStore.Application.DTOs.Catalog;
 using FashionStore.Application.DTOs.Products;
 using FashionStore.Application.Interfaces;
@@ -12,17 +13,20 @@ public class ProductsController : Controller
     private readonly ICatalogService _catalogService;
     private readonly IProductDetailsService _productDetailsService;
     private readonly IAddToCartService _addToCartService;
+    private readonly ICartService _cartService;
     private readonly ILogger<ProductsController> _logger;
 
     public ProductsController(
         ICatalogService catalogService,
         IProductDetailsService productDetailsService,
         IAddToCartService addToCartService,
+        ICartService cartService,
         ILogger<ProductsController> logger)
     {
         _catalogService = catalogService;
         _productDetailsService = productDetailsService;
         _addToCartService = addToCartService;
+        _cartService = cartService;
         _logger = logger;
     }
 
@@ -205,6 +209,35 @@ public class ProductsController : Controller
         }
 
         var result = await _addToCartService.ValidateAsync(request, cancellationToken);
-        return Ok(new { success = result.Success, error = result.ErrorMessage, item = result.Item });
+        if (!result.Success)
+        {
+            return Ok(new { success = result.Success, error = result.ErrorMessage, item = result.Item });
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var cartCount = 0;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            cartCount = AnonymousCartCookie.Add(HttpContext, request.ProductId, request.VariantId, request.Quantity);
+        }
+        else
+        {
+            var cartResult = await _cartService.AddAsync(userId, request.ProductId, request.VariantId, request.Quantity, cancellationToken);
+            if (!cartResult.Success)
+            {
+                return Ok(new { success = false, error = cartResult.ErrorMessage, item = result.Item });
+            }
+
+            cartCount = cartResult.ItemCount;
+        }
+
+        _logger.LogInformation(
+            "Added variant {VariantId} of product {ProductId} (quantity {Quantity}) to cart",
+            request.VariantId,
+            request.ProductId,
+            request.Quantity);
+
+        return Ok(new { success = true, error = (string?)null, item = result.Item, count = cartCount });
     }
 }

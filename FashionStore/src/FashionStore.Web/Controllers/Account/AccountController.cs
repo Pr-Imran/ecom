@@ -16,6 +16,7 @@ public class AccountController : Controller
 {
     private readonly IAuthService _authService;
     private readonly IWishlistService _wishlistService;
+    private readonly ICartService _cartService;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<AccountController> _logger;
@@ -23,12 +24,14 @@ public class AccountController : Controller
     public AccountController(
         IAuthService authService,
         IWishlistService wishlistService,
+        ICartService cartService,
         SignInManager<ApplicationUser> signInManager,
         UserManager<ApplicationUser> userManager,
         ILogger<AccountController> logger)
     {
         _authService = authService;
         _wishlistService = wishlistService;
+        _cartService = cartService;
         _signInManager = signInManager;
         _userManager = userManager;
         _logger = logger;
@@ -57,6 +60,7 @@ public class AccountController : Controller
             if (!loginResponse.RequiresTwoFactor)
             {
                 await MergeAnonymousWishlistAsync(loginResponse.UserId, cancellationToken);
+                await MergeAnonymousCartAsync(loginResponse.UserId, cancellationToken);
             }
 
             if (Url.IsLocalUrl(returnUrl))
@@ -288,6 +292,29 @@ public class AccountController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to merge anonymous wishlist for user {UserId}", userId);
+        }
+    }
+
+    private async Task MergeAnonymousCartAsync(string userId, CancellationToken cancellationToken)
+    {
+        var anonymousEntries = AnonymousCartCookie.Read(HttpContext);
+        if (anonymousEntries.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var merged = await _cartService.MergeAsync(userId, anonymousEntries, cancellationToken);
+            if (merged > 0)
+            {
+                _logger.LogInformation("Merged {Count} anonymous cart entries for user {UserId}", merged, userId);
+            }
+            AnonymousCartCookie.Clear(HttpContext);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to merge anonymous cart for user {UserId}", userId);
         }
     }
 }

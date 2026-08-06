@@ -22,6 +22,7 @@ public sealed class WishlistService : IWishlistService
 
     private readonly AppDbContext _context;
     private readonly IAddToCartService _addToCartService;
+    private readonly ICartService _cartService;
     private readonly ICatalogService _catalogService;
     private readonly IFileStorageService _storage;
     private readonly ILogger<WishlistService> _logger;
@@ -29,12 +30,14 @@ public sealed class WishlistService : IWishlistService
     public WishlistService(
         AppDbContext context,
         IAddToCartService addToCartService,
+        ICartService cartService,
         ICatalogService catalogService,
         IFileStorageService storage,
         ILogger<WishlistService> logger)
     {
         _context = context;
         _addToCartService = addToCartService;
+        _cartService = cartService;
         _catalogService = catalogService;
         _storage = storage;
         _logger = logger;
@@ -324,6 +327,13 @@ public sealed class WishlistService : IWishlistService
         {
             var count = await _context.WishlistItems.CountAsync(w => w.UserId == userId, cancellationToken);
             return new WishlistMutationResult(false, validation.ErrorMessage, count);
+        }
+
+        var cartResult = await _cartService.AddAsync(userId, item.ProductId, variantId.Value, quantity, cancellationToken);
+        if (!cartResult.Success)
+        {
+            var count = await _context.WishlistItems.CountAsync(w => w.UserId == userId, cancellationToken);
+            return new WishlistMutationResult(false, cartResult.ErrorMessage, count);
         }
 
         var entry = await _context.WishlistItems
