@@ -357,6 +357,14 @@ public class CartTests : IClassFixture<TestWebApplicationFactory>
         var pageHtml = await client.GetStringAsync("/cart");
         var token = ExtractAntiforgeryToken(pageHtml);
 
+        var addPayload = JsonSerializer.Serialize(new { productId, variantId, quantity = 1 });
+        var addRequest = new HttpRequestMessage(HttpMethod.Post, "/cart/add")
+        {
+            Content = new StringContent(addPayload, Encoding.UTF8, "application/json")
+        };
+        addRequest.Headers.Add("RequestVerificationToken", token);
+        await client.SendAsync(addRequest);
+
         // Stock is 10; ask for 12.
         var payload = JsonSerializer.Serialize(new { productId, variantId, quantity = 12 });
         var request = new HttpRequestMessage(HttpMethod.Post, "/cart/update")
@@ -376,11 +384,43 @@ public class CartTests : IClassFixture<TestWebApplicationFactory>
     public async Task Cart_Authenticated_InactiveVariantIsFlaggedOnRead()
     {
         var client = CreateClient();
-        var (productId, variantId) = GetIds("cashmere-crew-neck-sweater", "SW-1001-GREY-M");
+
+        Guid productId;
+        Guid variantId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var category = await db.Categories.FirstAsync();
+            var product = new Product
+            {
+                Name = "Inactive Test Tee",
+                Slug = $"inactive-test-tee-{Guid.NewGuid():N}",
+                CategoryId = category.Id,
+                BaseSku = "IT-9001",
+                BasePrice = 19.99m,
+                IsActive = true,
+                PublishedAtUtc = DateTime.UtcNow.AddDays(-1)
+            };
+            db.Products.Add(product);
+            await db.SaveChangesAsync();
+            var variant = new ProductVariant
+            {
+                ProductId = product.Id,
+                Sku = "IT-9001-M",
+                Price = 19.99m,
+                IsActive = true,
+                StockQuantity = 5,
+                ReservedStock = 0
+            };
+            db.ProductVariants.Add(variant);
+            await db.SaveChangesAsync();
+            productId = product.Id;
+            variantId = variant.Id;
+        }
 
         var email = $"cart-{Guid.NewGuid():N}@example.com";
         var password = "CartT3st!pass";
-        var userId = await CreateConfirmedUserAsync(email, password);
+        await CreateConfirmedUserAsync(email, password);
         await LoginAsync(client, email, password);
 
         var pageHtml = await client.GetStringAsync("/cart");
@@ -393,11 +433,13 @@ public class CartTests : IClassFixture<TestWebApplicationFactory>
         request.Headers.Add("RequestVerificationToken", token);
         await client.SendAsync(request);
 
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var variant = await db.ProductVariants.SingleAsync(v => v.Id == variantId);
-        variant.IsActive = false;
-        await db.SaveChangesAsync();
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var variant = await db.ProductVariants.SingleAsync(v => v.Id == variantId);
+            variant.IsActive = false;
+            await db.SaveChangesAsync();
+        }
 
         var html = await client.GetStringAsync("/cart");
         Assert.Contains("unavailable", html, StringComparison.OrdinalIgnoreCase);
