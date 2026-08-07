@@ -33,6 +33,14 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<ProductReview> ProductReviews => Set<ProductReview>();
     public DbSet<WishlistItem> WishlistItems => Set<WishlistItem>();
     public DbSet<CartItem> CartItems => Set<CartItem>();
+    public DbSet<CartCoupon> CartCoupons => Set<CartCoupon>();
+    public DbSet<Coupon> Coupons => Set<Coupon>();
+    public DbSet<Promotion> Promotions => Set<Promotion>();
+    public DbSet<CouponUsage> CouponUsages => Set<CouponUsage>();
+    public DbSet<CouponCategory> CouponCategories => Set<CouponCategory>();
+    public DbSet<CouponBrand> CouponBrands => Set<CouponBrand>();
+    public DbSet<CouponProduct> CouponProducts => Set<CouponProduct>();
+    public DbSet<CouponExcludedProduct> CouponExcludedProducts => Set<CouponExcludedProduct>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -325,6 +333,99 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             entity.HasIndex(e => e.UpdatedAtUtc);
             entity.HasOne(e => e.Product).WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.Variant).WithMany().HasForeignKey(e => e.ProductVariantId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CartCoupon>(entity =>
+        {
+            entity.ToTable("CartCoupons");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.HasIndex(e => e.UserId).IsUnique();
+            entity.HasIndex(e => e.CouponId);
+            entity.HasOne(e => e.Coupon).WithMany().HasForeignKey(e => e.CouponId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Coupon>(entity =>
+        {
+            entity.ToTable("Coupons");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.NormalizedCode).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.CustomerId).HasMaxLength(450);
+            entity.HasIndex(e => e.NormalizedCode).IsUnique();
+            entity.HasIndex(e => e.IsActive);
+            entity.HasIndex(e => e.EndAtUtc);
+        });
+
+        modelBuilder.Entity<Promotion>(entity =>
+        {
+            entity.ToTable("Promotions");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.HasIndex(e => e.IsActive);
+            entity.HasIndex(e => e.EndAtUtc);
+            entity.HasIndex(e => e.Priority);
+            entity.HasIndex(e => e.ProductId);
+            entity.HasIndex(e => e.CategoryId);
+            entity.HasIndex(e => e.BrandId);
+            entity.HasIndex(e => e.CollectionId);
+            entity.HasOne(e => e.Product).WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Category).WithMany().HasForeignKey(e => e.CategoryId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Brand).WithMany().HasForeignKey(e => e.BrandId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Collection).WithMany().HasForeignKey(e => e.CollectionId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CouponUsage>(entity =>
+        {
+            entity.ToTable("CouponUsages");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.OrderId).HasMaxLength(100);
+            entity.HasIndex(e => e.CouponId);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.UsedAtUtc);
+            entity.HasOne(e => e.Coupon).WithMany(c => c.CouponUsages).HasForeignKey(e => e.CouponId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CouponCategory>(entity =>
+        {
+            entity.ToTable("CouponCategories");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.CouponId, e.CategoryId }).IsUnique();
+            entity.HasIndex(e => e.CategoryId);
+            entity.HasOne(e => e.Coupon).WithMany(c => c.CouponCategories).HasForeignKey(e => e.CouponId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Category).WithMany().HasForeignKey(e => e.CategoryId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CouponBrand>(entity =>
+        {
+            entity.ToTable("CouponBrands");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.CouponId, e.BrandId }).IsUnique();
+            entity.HasIndex(e => e.BrandId);
+            entity.HasOne(e => e.Coupon).WithMany(c => c.CouponBrands).HasForeignKey(e => e.CouponId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Brand).WithMany().HasForeignKey(e => e.BrandId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CouponProduct>(entity =>
+        {
+            entity.ToTable("CouponProducts");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.CouponId, e.ProductId }).IsUnique();
+            entity.HasIndex(e => e.ProductId);
+            entity.HasOne(e => e.Coupon).WithMany(c => c.CouponProducts).HasForeignKey(e => e.CouponId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Product).WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CouponExcludedProduct>(entity =>
+        {
+            entity.ToTable("CouponExcludedProducts");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.CouponId, e.ProductId }).IsUnique();
+            entity.HasIndex(e => e.ProductId);
+            entity.HasOne(e => e.Coupon).WithMany(c => c.CouponExcludedProducts).HasForeignKey(e => e.CouponId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Product).WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // Apply soft delete filter

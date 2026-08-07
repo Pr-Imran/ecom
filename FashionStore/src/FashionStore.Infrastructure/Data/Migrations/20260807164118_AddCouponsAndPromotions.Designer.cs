@@ -4,16 +4,19 @@ using FashionStore.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace FashionStore.Infrastructure.Migrations
+namespace FashionStore.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260807164118_AddCouponsAndPromotions")]
+    partial class AddCouponsAndPromotions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -82,33 +85,6 @@ namespace FashionStore.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Brands", (string)null);
-                });
-
-            modelBuilder.Entity("FashionStore.Domain.Entities.CartCoupon", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("AppliedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("CouponId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CouponId");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("CartCoupons", (string)null);
                 });
 
             modelBuilder.Entity("FashionStore.Domain.Entities.CartItem", b =>
@@ -1837,17 +1813,6 @@ namespace FashionStore.Infrastructure.Migrations
                     b.HasIndex("RoleId");
 
                     b.ToTable("RoleClaims", (string)null);
-                });
-
-            modelBuilder.Entity("FashionStore.Domain.Entities.CartCoupon", b =>
-                {
-                    b.HasOne("FashionStore.Domain.Entities.Coupon", "Coupon")
-                        .WithMany()
-                        .HasForeignKey("CouponId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Coupon");
                 });
 
             modelBuilder.Entity("FashionStore.Domain.Entities.CartItem", b =>

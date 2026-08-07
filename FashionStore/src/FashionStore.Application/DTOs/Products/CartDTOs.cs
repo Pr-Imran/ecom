@@ -42,7 +42,8 @@ public sealed record CartViewData(
     decimal Subtotal,
     string FormattedSubtotal,
     bool IsAuthenticated,
-    bool HasUnavailableItems
+    bool HasUnavailableItems,
+    FashionStore.Application.DTOs.Promotions.CartPricingResult? Pricing = null
 );
 
 /// <summary>
@@ -75,4 +76,12 @@ public sealed record AnonymousCartEntry(
     Guid ProductId,
     Guid VariantId,
     int Quantity
+);
+
+/// <summary>
+/// Client-supplied coupon code for the cart. Only a code string is accepted; the
+/// server resolves the coupon, re-validates every rule and recomputes all totals.
+/// </summary>
+public sealed record CouponRequest(
+    string Code
 );

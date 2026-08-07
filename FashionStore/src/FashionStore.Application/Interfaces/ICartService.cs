@@ -1,4 +1,5 @@
 using FashionStore.Application.DTOs.Products;
+using FashionStore.Application.DTOs.Promotions;
 
 namespace FashionStore.Application.Interfaces;
 
@@ -24,10 +25,30 @@ public interface ICartService
     /// <summary>
     /// Hydrates a set of anonymous (cookie-based) cart references into display
     /// DTOs using live catalogue data. Unavailable entries are flagged the same way
-    /// as persisted cart lines.
+    /// as persisted cart lines. An optional coupon code (from the anonymous coupon
+    /// cookie) is evaluated against the cart and reflected in the pricing result.
     /// </summary>
     Task<CartViewData> ResolveAnonymousAsync(
         IReadOnlyList<AnonymousCartEntry> anonymousEntries,
+        string? couponCode = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Validates a coupon against the customer's cart and, when accepted, persists
+    /// it as the applied cart coupon so the discount survives reloads. Returns the
+    /// server-computed discount, breakdown and a human-readable message.
+    /// </summary>
+    Task<CouponApplyResult> ApplyCouponAsync(
+        string userId,
+        string code,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Removes the applied coupon from the customer's cart and returns the
+    /// re-computed (promotion-only) totals and breakdown.
+    /// </summary>
+    Task<CouponApplyResult> RemoveCouponAsync(
+        string userId,
         CancellationToken cancellationToken = default);
 
     /// <summary>

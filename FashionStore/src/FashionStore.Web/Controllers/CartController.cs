@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using FashionStore.Application.DTOs.Products;
+using FashionStore.Application.DTOs.Promotions;
 using FashionStore.Application.Interfaces;
 using FashionStore.Web.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -18,15 +19,18 @@ public class CartController : Controller
 {
     private readonly ICartService _cartService;
     private readonly IAddToCartService _addToCartService;
+    private readonly IDiscountService _discountService;
     private readonly ILogger<CartController> _logger;
 
     public CartController(
         ICartService cartService,
         IAddToCartService addToCartService,
+        IDiscountService discountService,
         ILogger<CartController> logger)
     {
         _cartService = cartService;
         _addToCartService = addToCartService;
+        _discountService = discountService;
         _logger = logger;
     }
 
@@ -38,7 +42,10 @@ public class CartController : Controller
         if (string.IsNullOrEmpty(userId))
         {
             var anonymous = AnonymousCartCookie.Read(HttpContext);
-            var data = await _cartService.ResolveAnonymousAsync(anonymous, cancellationToken);
+            var data = await _cartService.ResolveAnonymousAsync(
+                anonymous,
+                AnonymousCouponCookie.Read(HttpContext),
+                cancellationToken);
             return View(data);
         }
 
@@ -152,6 +159,67 @@ public class CartController : Controller
         return Ok(new { count });
     }
 
+    [HttpPost("coupon")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ApplyCoupon([FromBody] CouponRequest? request, CancellationToken cancellationToken)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.Code))
+        {
+            return BadRequest(new { success = false, message = "Enter a coupon code." });
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            var data = await _cartService.ResolveAnonymousAsync(
+                AnonymousCartCookie.Read(HttpContext),
+                null,
+                cancellationToken);
+
+            var result = await _discountService.ValidateCouponAsync(null, data.Items, request.Code, cancellationToken);
+            if (result.Success)
+            {
+                AnonymousCouponCookie.Set(HttpContext, result.AppliedCouponCode ?? request.Code.Trim());
+            }
+
+            return Ok(result);
+        }
+
+        var applied = await _cartService.ApplyCouponAsync(userId, request.Code, cancellationToken);
+        return Ok(applied);
+    }
+
+    [HttpPost("coupon/remove")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveCoupon(CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            AnonymousCouponCookie.Clear(HttpContext);
+
+            var data = await _cartService.ResolveAnonymousAsync(
+                AnonymousCartCookie.Read(HttpContext),
+                null,
+                cancellationToken);
+
+            var pricing = data.Pricing;
+            return Ok(new CouponApplyResult(
+                true,
+                "Coupon removed",
+                false,
+                null,
+                pricing?.PromotionsDiscount ?? 0m,
+                0m,
+                pricing?.Total ?? data.Subtotal,
+                pricing?.IsFreeShipping ?? false,
+                pricing?.Breakdown ?? Array.Empty<FashionStore.Application.DTOs.Promotions.DiscountBreakdownItem>()));
+        }
+
+        var removed = await _cartService.RemoveCouponAsync(userId, cancellationToken);
+        return Ok(removed);
+    }
+
     [HttpGet("mini")]
     public async Task<IActionResult> MiniCart(CancellationToken cancellationToken)
     {
@@ -160,7 +228,10 @@ public class CartController : Controller
         CartViewData data;
         if (string.IsNullOrEmpty(userId))
         {
-            data = await _cartService.ResolveAnonymousAsync(AnonymousCartCookie.Read(HttpContext), cancellationToken);
+            data = await _cartService.ResolveAnonymousAsync(
+                AnonymousCartCookie.Read(HttpContext),
+                AnonymousCouponCookie.Read(HttpContext),
+                cancellationToken);
         }
         else
         {
@@ -168,5 +239,26 @@ public class CartController : Controller
         }
 
         return PartialView("Partials/_MiniCart", data);
+    }
+
+    [HttpGet("summary")]
+    public async Task<IActionResult> Summary(CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        CartViewData data;
+        if (string.IsNullOrEmpty(userId))
+        {
+            data = await _cartService.ResolveAnonymousAsync(
+                AnonymousCartCookie.Read(HttpContext),
+                AnonymousCouponCookie.Read(HttpContext),
+                cancellationToken);
+        }
+        else
+        {
+            data = await _cartService.GetCartAsync(userId, cancellationToken);
+        }
+
+        return PartialView("Partials/_OrderSummary", data);
     }
 }

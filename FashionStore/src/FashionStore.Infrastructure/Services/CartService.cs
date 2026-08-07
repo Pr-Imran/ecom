@@ -1,4 +1,5 @@
 using FashionStore.Application.DTOs.Products;
+using FashionStore.Application.DTOs.Promotions;
 using FashionStore.Application.Interfaces;
 using FashionStore.Domain.Entities;
 using FashionStore.Infrastructure.Data;
@@ -24,17 +25,20 @@ public sealed class CartService : ICartService
     private readonly AppDbContext _context;
     private readonly IAddToCartService _addToCartService;
     private readonly IFileStorageService _storage;
+    private readonly IDiscountService _discountService;
     private readonly ILogger<CartService> _logger;
 
     public CartService(
         AppDbContext context,
         IAddToCartService addToCartService,
         IFileStorageService storage,
+        IDiscountService discountService,
         ILogger<CartService> logger)
     {
         _context = context;
         _addToCartService = addToCartService;
         _storage = storage;
+        _discountService = discountService;
         _logger = logger;
     }
 
@@ -49,16 +53,19 @@ public sealed class CartService : ICartService
             cancellationToken);
 
         var items = rows.Select(BuildItem).Where(i => i != null).Cast<CartItemDto>().ToList();
-        return BuildView(items, true);
+        var pricing = await ComputePricingAsync(userId, items, null, cancellationToken);
+        return BuildView(items, true, pricing);
     }
 
     public async Task<CartViewData> ResolveAnonymousAsync(
         IReadOnlyList<AnonymousCartEntry> anonymousEntries,
+        string? couponCode = null,
         CancellationToken cancellationToken = default)
     {
         if (anonymousEntries.Count == 0)
         {
-            return BuildView(new List<CartItemDto>(), false);
+            var emptyPricing = await _discountService.CalculateAsync(null, new List<CartItemDto>(), couponCode, cancellationToken);
+            return BuildView(new List<CartItemDto>(), false, emptyPricing);
         }
 
         var now = DateTime.UtcNow;
@@ -127,7 +134,8 @@ public sealed class CartService : ICartService
             }
         }
 
-        return BuildView(items, false);
+        var pricing = await _discountService.CalculateAsync(null, items, couponCode, cancellationToken);
+        return BuildView(items, false, pricing);
     }
 
     public async Task<CartMutationResult> AddAsync(
@@ -296,6 +304,85 @@ public sealed class CartService : ICartService
 
         _logger.LogInformation("Cleared cart for user {UserId}", userId);
         return new CartMutationResult(true, null, 0);
+    }
+
+    public async Task<CouponApplyResult> ApplyCouponAsync(
+        string userId,
+        string code,
+        CancellationToken cancellationToken = default)
+    {
+        var cart = await GetCartAsync(userId, cancellationToken);
+        var result = await _discountService.ValidateCouponAsync(userId, cart.Items, code, cancellationToken);
+
+        if (result.Success && !string.IsNullOrEmpty(result.AppliedCouponCode))
+        {
+            var coupon = await _context.Coupons.AsNoTracking()
+                .FirstOrDefaultAsync(
+                    c => c.NormalizedCode == DiscountService.NormalizeCode(result.AppliedCouponCode),
+                    cancellationToken);
+
+            if (coupon is not null)
+            {
+                var row = await _context.CartCoupons
+                    .FirstOrDefaultAsync(c => c.UserId == userId, cancellationToken);
+
+                if (row is null)
+                {
+                    _context.CartCoupons.Add(new CartCoupon
+                    {
+                        UserId = userId,
+                        CouponId = coupon.Id,
+                        AppliedAtUtc = DateTime.UtcNow
+                    });
+                }
+                else
+                {
+                    row.CouponId = coupon.Id;
+                    row.AppliedAtUtc = DateTime.UtcNow;
+                }
+
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+        }
+
+        _logger.LogInformation(
+            "{(Outcome)} coupon {Code} on cart for user {UserId}",
+            result.Success ? "Applied" : "Rejected",
+            code,
+            userId);
+
+        return result;
+    }
+
+    public async Task<CouponApplyResult> RemoveCouponAsync(
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        var row = await _context.CartCoupons
+            .FirstOrDefaultAsync(c => c.UserId == userId, cancellationToken);
+
+        if (row is not null)
+        {
+            _context.CartCoupons.Remove(row);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        var cart = await GetCartAsync(userId, cancellationToken);
+        var pricing = cart.Pricing ??
+            await _discountService.CalculateAsync(userId, cart.Items, null, cancellationToken);
+
+        _logger.LogInformation("Removed coupon from cart for user {UserId}", userId);
+
+        return new CouponApplyResult(
+            true,
+            "Coupon removed",
+            false,
+            null,
+            pricing.PromotionsDiscount,
+            0m,
+            pricing.Total,
+            pricing.IsFreeShipping,
+            pricing.Breakdown);
     }
 
     public async Task<int> GetCountAsync(string userId, CancellationToken cancellationToken = default)
@@ -629,7 +716,41 @@ public sealed class CartService : ICartService
             isAvailable ? null : "This item is unavailable.");
     }
 
-    private static CartViewData BuildView(IReadOnlyList<CartItemDto> items, bool isAuthenticated)
+    private async Task<CartPricingResult> ComputePricingAsync(
+        string userId,
+        IReadOnlyList<CartItemDto> items,
+        string? couponCode,
+        CancellationToken cancellationToken)
+    {
+        var appliedCode = couponCode;
+        if (appliedCode is null)
+        {
+            appliedCode = await _context.CartCoupons.AsNoTracking()
+                .Where(c => c.UserId == userId)
+                .Select(c => c.Coupon != null ? c.Coupon.NormalizedCode : null)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        var pricing = await _discountService.CalculateAsync(userId, items, appliedCode, cancellationToken);
+
+        // Drop a persisted coupon that no longer passes its rules (expired,
+        // deactivated, usage limit reached, etc.) so it never silently lingers.
+        if (!string.IsNullOrEmpty(appliedCode) && !pricing.CouponApplied)
+        {
+            var row = await _context.CartCoupons
+                .FirstOrDefaultAsync(c => c.UserId == userId, cancellationToken);
+
+            if (row is not null)
+            {
+                _context.CartCoupons.Remove(row);
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+        }
+
+        return pricing;
+    }
+
+    private static CartViewData BuildView(IReadOnlyList<CartItemDto> items, bool isAuthenticated, CartPricingResult pricing)
     {
         var availableItems = items.Where(i => i.IsAvailable).ToList();
         var subtotal = availableItems.Sum(i => i.LineTotal);
@@ -640,7 +761,8 @@ public sealed class CartService : ICartService
             subtotal,
             subtotal.ToString("C2", System.Globalization.CultureInfo.InvariantCulture),
             isAuthenticated,
-            items.Any(i => !i.IsAvailable));
+            items.Any(i => !i.IsAvailable),
+            pricing);
     }
 
     private static CartMutationResult Fail(string message)

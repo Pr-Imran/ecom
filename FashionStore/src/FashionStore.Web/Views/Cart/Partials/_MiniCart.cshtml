@@ -2,6 +2,8 @@
 @{
     var availableItems = Model.Items.Where(i => i.IsAvailable).ToList();
     var currency = "$";
+    var pricing = Model.Pricing;
+    var total = pricing?.Total ?? Model.Subtotal;
 }
 
 @if (Model.ItemCount == 0)
@@ -82,6 +84,29 @@ else
         @if (Model.HasUnavailableItems)
         {
             <p class="mt-1 text-xs text-brand-text-muted">Unavailable items excluded from subtotal.</p>
+        }
+        @if (pricing != null && (pricing.PromotionsDiscount > 0 || pricing.CouponDiscount > 0 || pricing.IsFreeShipping))
+        {
+            <div class="mt-2 space-y-1.5" data-mini-breakdown>
+                @foreach (var item in pricing.Breakdown)
+                {
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-brand-text-muted">@item.Label</span>
+                        <span class="font-medium text-brand-success">-$@item.Amount.ToString("N2")</span>
+                    </div>
+                }
+                @if (pricing.IsFreeShipping)
+                {
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-brand-text-muted">Free shipping</span>
+                        <span class="font-medium text-brand-success">Free</span>
+                    </div>
+                }
+            </div>
+            <div class="mt-2 flex items-center justify-between text-sm">
+                <span class="text-sm font-semibold text-brand-text-primary">Total</span>
+                <span class="font-semibold text-brand-text-primary" data-mini-total>$@total.ToString("N2")</span>
+            </div>
         }
         <div class="mt-3 grid grid-cols-2 gap-2">
             <a href="/cart" class="btn-outline text-center py-2.5 text-sm">View Cart</a>

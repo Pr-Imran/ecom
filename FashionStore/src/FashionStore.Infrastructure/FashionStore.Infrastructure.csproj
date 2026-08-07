@@ -1,11 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
+    <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>CA1311;CA1304;CA1873;CA1861;CA1725;CA1822;CA1848;CA1847</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="FashionStore.UnitTests" />
+  </ItemGroup>
+
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

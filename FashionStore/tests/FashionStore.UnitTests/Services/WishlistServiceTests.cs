@@ -40,7 +40,12 @@ public class WishlistServiceTests
         return new WishlistService(
             context,
             addToCartService ?? new AddToCartService(context, NullLogger<AddToCartService>.Instance),
-            cartService ?? new CartService(context, addToCartService ?? new AddToCartService(context, NullLogger<AddToCartService>.Instance), storage, NullLogger<CartService>.Instance),
+            cartService ?? new CartService(
+                context,
+                addToCartService ?? new AddToCartService(context, NullLogger<AddToCartService>.Instance),
+                storage,
+                new DiscountService(context, NullLogger<DiscountService>.Instance),
+                NullLogger<CartService>.Instance),
             catalogService ?? new CatalogService(context, storage, NullLogger<CatalogService>.Instance),
             storage,
             NullLogger<WishlistService>.Instance);

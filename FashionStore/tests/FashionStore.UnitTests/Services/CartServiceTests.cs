@@ -37,6 +37,7 @@ public class CartServiceTests
             context,
             new AddToCartService(context, NullLogger<AddToCartService>.Instance),
             storage,
+            new DiscountService(context, NullLogger<DiscountService>.Instance),
             NullLogger<CartService>.Instance);
     }
 
@@ -397,7 +398,7 @@ public class CartServiceTests
 
         var data = await service.ResolveAnonymousAsync(
             new[] { new AnonymousCartEntry(productId, variantId, 3) },
-            CancellationToken.None);
+            cancellationToken: CancellationToken.None);
 
         Assert.Single(data.Items);
         Assert.False(data.IsAuthenticated);
@@ -419,7 +420,7 @@ public class CartServiceTests
                 new AnonymousCartEntry(productId, variantId, 2),
                 new AnonymousCartEntry(productId, variantId, 3)
             },
-            CancellationToken.None);
+            cancellationToken: CancellationToken.None);
 
         Assert.Single(data.Items);
         Assert.Equal(2, data.ItemCount);
@@ -434,7 +435,7 @@ public class CartServiceTests
 
         var data = await service.ResolveAnonymousAsync(
             new[] { new AnonymousCartEntry(productId, variantId, 1) },
-            CancellationToken.None);
+            cancellationToken: CancellationToken.None);
 
         Assert.Single(data.Items);
         Assert.False(data.Items[0].IsAvailable);
@@ -447,7 +448,7 @@ public class CartServiceTests
         using var context = CreateContext();
         var service = CreateService(context);
 
-        var data = await service.ResolveAnonymousAsync(Array.Empty<AnonymousCartEntry>(), CancellationToken.None);
+        var data = await service.ResolveAnonymousAsync(Array.Empty<AnonymousCartEntry>(), cancellationToken: CancellationToken.None);
 
         Assert.Empty(data.Items);
         Assert.Equal(0, data.ItemCount);
