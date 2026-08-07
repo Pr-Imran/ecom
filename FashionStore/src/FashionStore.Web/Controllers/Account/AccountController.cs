@@ -1,6 +1,9 @@
 using System.Security.Claims;
+using FashionStore.Application.DTOs.Account;
 using FashionStore.Application.DTOs.Auth;
+using FashionStore.Application.DTOs.Images;
 using FashionStore.Application.Interfaces;
+using FashionStore.Application.Services;
 using FashionStore.Infrastructure.Data;
 using FashionStore.Infrastructure.Services;
 using FashionStore.Web.Models;
@@ -17,6 +20,8 @@ public class AccountController : Controller
     private readonly IAuthService _authService;
     private readonly IWishlistService _wishlistService;
     private readonly ICartService _cartService;
+    private readonly IProfileService _profileService;
+    private readonly INavigationService _navigationService;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<AccountController> _logger;
@@ -25,6 +30,8 @@ public class AccountController : Controller
         IAuthService authService,
         IWishlistService wishlistService,
         ICartService cartService,
+        IProfileService profileService,
+        INavigationService navigationService,
         SignInManager<ApplicationUser> signInManager,
         UserManager<ApplicationUser> userManager,
         ILogger<AccountController> logger)
@@ -32,6 +39,8 @@ public class AccountController : Controller
         _authService = authService;
         _wishlistService = wishlistService;
         _cartService = cartService;
+        _profileService = profileService;
+        _navigationService = navigationService;
         _signInManager = signInManager;
         _userManager = userManager;
         _logger = logger;
@@ -270,6 +279,200 @@ public class AccountController : Controller
     public IActionResult LockedOut()
     {
         return View();
+    }
+
+    [HttpGet]
+    [Authorize]
+    public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return RedirectToAction("Login");
+        }
+
+        var profile = await _profileService.GetProfileAsync(userId, cancellationToken);
+        if (profile == null)
+        {
+            return RedirectToAction("Login");
+        }
+
+        await PopulateAccountNavAsync(userId, cancellationToken);
+
+        ViewData["Title"] = "My Account";
+        return View(profile);
+    }
+
+    [HttpGet]
+    [Authorize]
+    public async Task<IActionResult> Profile(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return RedirectToAction("Login");
+        }
+
+        var profile = await _profileService.GetProfileAsync(userId, cancellationToken);
+        if (profile == null)
+        {
+            return RedirectToAction("Login");
+        }
+
+        await PopulateAccountNavAsync(userId, cancellationToken);
+
+        var model = new UpdateProfileRequest(
+            profile.FirstName,
+            profile.LastName,
+            profile.DisplayName,
+            profile.PhoneNumber,
+            profile.DateOfBirth);
+
+        ViewData["Title"] = "Profile";
+        ViewData["AvatarUrl"] = profile.ProfileImageUrl;
+        return View(model);
+    }
+
+    [HttpPost]
+    [Authorize]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Profile(UpdateProfileRequest model, CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return RedirectToAction("Login");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            await PopulateAccountNavAsync(userId, cancellationToken);
+            ViewData["Title"] = "Profile";
+            return View(model);
+        }
+
+        var result = await _profileService.UpdateProfileAsync(userId, model, cancellationToken);
+
+        if (result.Success)
+        {
+            TempData["SuccessMessage"] = "Profile updated.";
+            return RedirectToAction(nameof(Profile));
+        }
+
+        ModelState.AddModelError(string.Empty, result.ErrorMessage ?? "Unable to save your profile.");
+        await PopulateAccountNavAsync(userId, cancellationToken);
+        ViewData["Title"] = "Profile";
+        return View(model);
+    }
+
+    [HttpGet]
+    [Authorize]
+    public async Task<IActionResult> Settings(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return RedirectToAction("Login");
+        }
+
+        var profile = await _profileService.GetProfileAsync(userId, cancellationToken);
+        if (profile == null)
+        {
+            return RedirectToAction("Login");
+        }
+
+        await PopulateAccountNavAsync(userId, cancellationToken);
+
+        var model = new UpdatePreferencesRequest(
+            profile.MarketingOptIn,
+            profile.NotificationPreferences);
+
+        ViewData["Title"] = "Preferences";
+        ViewData["Profile"] = profile;
+        return View(model);
+    }
+
+    [HttpPost]
+    [Authorize]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Settings(UpdatePreferencesRequest model, CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return RedirectToAction("Login");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            await PopulateAccountNavAsync(userId, cancellationToken);
+            ViewData["Title"] = "Preferences";
+            return View(model);
+        }
+
+        var result = await _profileService.UpdatePreferencesAsync(userId, model, cancellationToken);
+
+        if (result.Success)
+        {
+            TempData["SuccessMessage"] = "Preferences updated.";
+            return RedirectToAction(nameof(Settings));
+        }
+
+        ModelState.AddModelError(string.Empty, result.ErrorMessage ?? "Unable to save your preferences.");
+        await PopulateAccountNavAsync(userId, cancellationToken);
+        ViewData["Title"] = "Preferences";
+        return View(model);
+    }
+
+    [HttpPost]
+    [Authorize]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RequestDeactivation([FromForm] string? reason = null, CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return RedirectToAction("Login");
+        }
+
+        var result = await _profileService.RequestDeactivationAsync(userId, new DeactivationRequest(reason), cancellationToken);
+
+        TempData[result.Success ? "SuccessMessage" : "ErrorMessage"] =
+            result.Success ? "Your deactivation request has been recorded." : (result.ErrorMessage ?? "Unable to record your request.");
+
+        return RedirectToAction(nameof(Settings));
+    }
+
+    [HttpPost]
+    [Authorize]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UploadAvatar(IFormFile? file, CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return RedirectToAction("Login");
+        }
+
+        if (file == null || file.Length == 0)
+        {
+            TempData["ErrorMessage"] = "No image was provided.";
+            return RedirectToAction(nameof(Profile));
+        }
+
+        await using var stream = file.OpenReadStream();
+        var input = new UploadedFileInput(stream, file.FileName, file.ContentType, file.Length);
+        var result = await _profileService.UploadProfileImageAsync(userId, input, cancellationToken);
+
+        TempData[result.Success ? "SuccessMessage" : "ErrorMessage"] =
+            result.Success ? "Profile image updated." : (result.ErrorMessage ?? "Unable to update your profile image.");
+
+        return RedirectToAction(nameof(Profile));
+    }
+
+    private async Task PopulateAccountNavAsync(string userId, CancellationToken cancellationToken)
+    {
+        ViewData["AccountNav"] = await _navigationService.GetAccountNavigationAsync(userId, cancellationToken);
     }
 
     private async Task MergeAnonymousWishlistAsync(string userId, CancellationToken cancellationToken)

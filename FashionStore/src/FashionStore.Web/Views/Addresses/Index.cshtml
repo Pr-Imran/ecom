@@ -1,0 +1,117 @@
+@model FashionStore.Application.DTOs.Account.AddressBookViewData
+@{
+    Layout = "_AccountLayout";
+    ViewData["Title"] = "Addresses";
+}
+
+<div class="max-w-3xl mx-auto space-y-6">
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert-success mb-4" role="alert">
+            <p class="text-sm">@TempData["SuccessMessage"]</p>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert-danger mb-4" role="alert">
+            <p class="text-sm">@TempData["ErrorMessage"]</p>
+        </div>
+    }
+
+    <div class="flex items-center justify-between">
+        <div>
+            <p class="text-sm text-brand-text-muted">@Model.Addresses.Count address(es) saved</p>
+        </div>
+        <a asp-action="New" class="btn-primary inline-flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Add address
+        </a>
+    </div>
+
+    @if (Model.Addresses.Count == 0)
+    {
+        <div class="py-16 text-center">
+            <div class="mx-auto mb-4 w-20 h-20 text-brand-text-muted">
+                <svg class="w-20 h-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+            </div>
+            <h2 class="text-lg font-bold text-brand-text-primary">No saved addresses</h2>
+            <p class="text-sm text-brand-text-muted mt-2 max-w-sm mx-auto">
+                Add a shipping or billing address to speed up checkout. Your first address becomes your default.
+            </p>
+            <a asp-action="New" class="btn-primary mt-6 inline-flex">Add your first address</a>
+        </div>
+    }
+    else
+    {
+        <ul class="space-y-4">
+            @foreach (var address in Model.Addresses)
+            {
+                <li class="card" data-address-id="@address.Id">
+                    <div class="card-body">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h3 class="font-bold text-brand-text-primary">@address.Label</h3>
+                                    @if (address.IsDefaultShipping)
+                                    {
+                                        <span class="text-xs font-medium bg-brand-primary text-white px-2 py-0.5 rounded-full">Default shipping</span>
+                                    }
+                                    @if (address.IsDefaultBilling)
+                                    {
+                                        <span class="text-xs font-medium bg-brand-primary text-white px-2 py-0.5 rounded-full">Default billing</span>
+                                    }
+                                </div>
+                                <p class="text-sm text-brand-text-muted mt-2 leading-relaxed">
+                                    @address.RecipientName<br />
+                                    @address.AddressLine1@(string.IsNullOrWhiteSpace(address.AddressLine2) ? "" : $", {address.AddressLine2}")<br />
+                                    @if (!string.IsNullOrWhiteSpace(address.Area)) { @address.Area<br /> }
+                                    @address.City@(string.IsNullOrWhiteSpace(address.Region) ? "" : $", {address.Region}") @address.PostalCode<br />
+                                    @address.CountryCode@(string.IsNullOrWhiteSpace(address.Phone) ? "" : $" • {address.Phone}")
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex flex-wrap items-center gap-2">
+                            <a asp-action="Edit" asp-route-id="@address.Id" class="btn-outline text-sm px-4 py-2">Edit</a>
+
+                            @if (!address.IsDefaultShipping)
+                            {
+                                <form asp-action="SetDefault" asp-route-id="@address.Id" method="post" class="inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="asShipping" value="true" />
+                                    <input type="hidden" name="asBilling" value="false" />
+                                    <button type="submit" class="text-sm font-medium text-brand-primary hover:underline px-3 py-2">Set as shipping</button>
+                                </form>
+                            }
+
+                            @if (!address.IsDefaultBilling)
+                            {
+                                <form asp-action="SetDefault" asp-route-id="@address.Id" method="post" class="inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="asShipping" value="false" />
+                                    <input type="hidden" name="asBilling" value="true" />
+                                    <button type="submit" class="text-sm font-medium text-brand-primary hover:underline px-3 py-2">Set as billing</button>
+                                </form>
+                            }
+
+                            <form asp-action="Delete" asp-route-id="@address.Id" method="post" class="inline ml-auto" data-confirm="Delete this address?">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="text-sm font-medium text-brand-danger hover:underline px-3 py-2">Remove</button>
+                            </form>
+                        </div>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@section Scripts {
+    <script src="~/js/account.js" asp-append-version="true"></script>
+}

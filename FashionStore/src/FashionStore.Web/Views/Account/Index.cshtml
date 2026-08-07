@@ -1,0 +1,68 @@
+@model FashionStore.Application.DTOs.Account.CustomerProfileDto
+@{
+    Layout = "_AccountLayout";
+    ViewData["Title"] = "My Account";
+}
+
+<div class="space-y-6">
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert-success mb-4" role="alert">
+            <p class="text-sm">@TempData["SuccessMessage"]</p>
+        </div>
+    }
+
+    <!-- Profile summary card -->
+    <div class="card">
+        <div class="card-body flex items-center gap-4">
+            <div class="w-16 h-16 rounded-full bg-brand-primary text-white flex items-center justify-center text-2xl font-bold overflow-hidden flex-shrink-0">
+                @if (!string.IsNullOrWhiteSpace(Model.ProfileImageUrl))
+                {
+                    <img src="@Model.ProfileImageUrl" alt="Profile" class="w-full h-full object-cover" />
+                }
+                else
+                {
+                    <span>@(Model.DisplayName?.FirstOrDefault().ToString().ToUpperInvariant() ?? "C")</span>
+                }
+            </div>
+            <div class="min-w-0">
+                <h2 class="text-lg font-bold text-brand-text-primary truncate">
+                    @(Model.DisplayName ?? $"{Model.FirstName} {Model.LastName}".Trim())
+                </h2>
+                <p class="text-sm text-brand-text-muted truncate">@Model.Email</p>
+                @if (Model.DeactivationRequestedAtUtc.HasValue)
+                {
+                    <span class="inline-block mt-1 text-xs font-medium text-brand-danger">Deactivation requested</span>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="grid grid-cols-2 gap-4">
+        <a asp-controller="Account" asp-action="Profile" class="card hover:border-brand-primary transition-colors">
+            <div class="card-body">
+                <h3 class="font-semibold text-brand-text-primary">Profile</h3>
+                <p class="text-sm text-brand-text-muted mt-1">Name, date of birth and photo</p>
+            </div>
+        </a>
+        <a asp-controller="Addresses" asp-action="Index" class="card hover:border-brand-primary transition-colors">
+            <div class="card-body">
+                <h3 class="font-semibold text-brand-text-primary">Addresses</h3>
+                <p class="text-sm text-brand-text-muted mt-1">Shipping and billing addresses</p>
+            </div>
+        </a>
+        <a asp-controller="Account" asp-action="Settings" class="card hover:border-brand-primary transition-colors">
+            <div class="card-body">
+                <h3 class="font-semibold text-brand-text-primary">Preferences</h3>
+                <p class="text-sm text-brand-text-muted mt-1">Marketing and notifications</p>
+            </div>
+        </a>
+        <a asp-controller="Account" asp-action="ChangePassword" class="card hover:border-brand-primary transition-colors">
+            <div class="card-body">
+                <h3 class="font-semibold text-brand-text-primary">Security</h3>
+                <p class="text-sm text-brand-text-muted mt-1">Password and sign-in</p>
+            </div>
+        </a>
+    </div>
+</div>

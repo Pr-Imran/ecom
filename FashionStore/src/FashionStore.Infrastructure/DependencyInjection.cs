@@ -126,6 +126,12 @@ public static class DependencyInjection
         services.AddScoped<IDiscountService, DiscountService>();
         services.AddScoped<ICouponService, CouponService>();
         services.AddScoped<IPromotionService, PromotionService>();
+        services.AddScoped<IProfileService, ProfileService>();
+        services.AddScoped<IAddressService, AddressService>();
+        services.AddScoped<IAddressValidationService, AddressValidationService>();
+        services.AddScoped<ICountryAddressValidator, DefaultCountryAddressValidator>();
+        services.AddScoped<ICountryAddressValidator, UnitedStatesAddressValidator>();
+        services.AddScoped<ICountryAddressValidator, UnitedKingdomAddressValidator>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
         services.AddScoped<IImageValidationService, ImageValidationService>();
         services.AddScoped<IImageProcessingService, ImageProcessingService>();

@@ -1,0 +1,127 @@
+@model FashionStore.Web.Controllers.AddressFormModel
+@{
+    Layout = "_AccountLayout";
+    var isEdit = Model.AddressId.HasValue;
+    var request = Model.Request ?? new FashionStore.Application.DTOs.Account.SaveAddressRequest(
+        Label: string.Empty,
+        RecipientName: string.Empty,
+        Phone: null,
+        AddressLine1: string.Empty,
+        AddressLine2: null,
+        Area: null,
+        City: string.Empty,
+        Region: null,
+        PostalCode: string.Empty,
+        CountryCode: "US",
+        DeliveryInstructions: null,
+        IsDefaultShipping: false,
+        IsDefaultBilling: false);
+}
+
+<div class="max-w-2xl mx-auto space-y-6">
+    @if (!ViewData.ModelState.IsValid && ViewData.ModelState.ContainsKey(string.Empty))
+    {
+        foreach (var error in ViewData.ModelState[string.Empty].Errors)
+        {
+            <div class="alert-danger mb-4" role="alert">
+                <p class="text-sm">@error.ErrorMessage</p>
+            </div>
+        }
+    }
+
+    <div class="flex items-center justify-between">
+        <h2 class="text-xl font-bold text-brand-text-primary">@(isEdit ? "Edit address" : "Add address")</h2>
+        <a asp-action="Index" class="text-sm text-brand-text-muted hover:text-brand-primary">← Back to addresses</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form asp-action="@(isEdit ? "Update" : "Create")" asp-route-id="@(isEdit ? Model.AddressId : null)" method="post" class="space-y-5">
+                @Html.AntiForgeryToken()
+
+                <div class="grid sm:grid-cols-2 gap-5">
+                    <div>
+                        <label for="Label" class="form-label">Label</label>
+                        <input id="Label" name="Label" class="form-input" value="@request.Label" placeholder="Home, Office" maxlength="50" />
+                    </div>
+                    <div>
+                        <label for="RecipientName" class="form-label">Recipient name *</label>
+                        <input id="RecipientName" name="RecipientName" class="form-input" value="@request.RecipientName" maxlength="200" />
+                    </div>
+                </div>
+
+                <div class="grid sm:grid-cols-2 gap-5">
+                    <div>
+                        <label for="AddressLine1" class="form-label">Address line 1 *</label>
+                        <input id="AddressLine1" name="AddressLine1" class="form-input" value="@request.AddressLine1" maxlength="200" />
+                    </div>
+                    <div>
+                        <label for="AddressLine2" class="form-label">Address line 2</label>
+                        <input id="AddressLine2" name="AddressLine2" class="form-input" value="@request.AddressLine2" maxlength="200" />
+                    </div>
+                </div>
+
+                <div class="grid sm:grid-cols-2 gap-5">
+                    <div>
+                        <label for="Area" class="form-label">Area / district</label>
+                        <input id="Area" name="Area" class="form-input" value="@request.Area" maxlength="100" />
+                    </div>
+                    <div>
+                        <label for="City" class="form-label">City *</label>
+                        <input id="City" name="City" class="form-input" value="@request.City" maxlength="100" />
+                    </div>
+                </div>
+
+                <div class="grid sm:grid-cols-3 gap-5">
+                    <div>
+                        <label for="Region" class="form-label">Region / state</label>
+                        <input id="Region" name="Region" class="form-input" value="@request.Region" maxlength="100" />
+                    </div>
+                    <div>
+                        <label for="PostalCode" class="form-label">Postal code *</label>
+                        <input id="PostalCode" name="PostalCode" class="form-input" value="@request.PostalCode" maxlength="20" />
+                    </div>
+                    <div>
+                        <label for="CountryCode" class="form-label">Country *</label>
+                        <select id="CountryCode" name="CountryCode" class="form-input">
+                            @foreach (var country in Model.Countries)
+                            {
+                                <option value="@country.Code" selected="@(request.CountryCode.Equals(country.Code, StringComparison.OrdinalIgnoreCase))">@country.Name</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="Phone" class="form-label">Phone</label>
+                    <input id="Phone" name="Phone" type="tel" class="form-input" value="@request.Phone" maxlength="30" />
+                </div>
+
+                <div>
+                    <label for="DeliveryInstructions" class="form-label">Delivery instructions</label>
+                    <textarea id="DeliveryInstructions" name="DeliveryInstructions" rows="3" class="form-input" maxlength="500">@request.DeliveryInstructions</textarea>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" name="IsDefaultShipping" value="true" class="form-checkbox" checked="@request.IsDefaultShipping" />
+                        <span class="text-sm font-medium text-brand-text-primary">Use as default shipping address</span>
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" name="IsDefaultBilling" value="true" class="form-checkbox" checked="@request.IsDefaultBilling" />
+                        <span class="text-sm font-medium text-brand-text-primary">Use as default billing address</span>
+                    </label>
+                </div>
+
+                <div class="pt-2 flex flex-col sm:flex-row gap-3">
+                    <button type="submit" class="btn-primary w-full sm:w-auto">@(isEdit ? "Save changes" : "Add address")</button>
+                    <a asp-action="Index" class="btn-outline w-full sm:w-auto inline-block text-center">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/account.js" asp-append-version="true"></script>
+}

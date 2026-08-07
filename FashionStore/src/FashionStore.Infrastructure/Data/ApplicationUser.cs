@@ -13,6 +13,21 @@ public class ApplicationUser : IdentityUser
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
 
+    /// <summary>Optional date of birth used for age-gated campaigns; never required.</summary>
+    public DateTime? DateOfBirth { get; set; }
+
+    /// <summary>Opt-in for marketing communications.</summary>
+    public bool MarketingOptIn { get; set; }
+
+    /// <summary>Comma-separated notification preference codes (e.g. "order_updates,offers").</summary>
+    public string? NotificationPreferences { get; set; }
+
+    /// <summary>Set when the customer requests account deactivation; the request is pending until an administrator acts.</summary>
+    public DateTime? DeactivationRequestedAtUtc { get; set; }
+
+    /// <summary>Optional reason supplied with a deactivation request.</summary>
+    public string? DeactivationReason { get; set; }
+
     public string? RefreshToken { get; set; }
     public DateTime? RefreshTokenExpiryTime { get; set; }
     public int FailedLoginAttempts { get; set; }

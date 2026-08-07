@@ -1,0 +1,110 @@
+@model FashionStore.Application.DTOs.Account.UpdatePreferencesRequest
+@{
+    Layout = "_AccountLayout";
+    ViewData["Title"] = "Preferences";
+    var profile = ViewData["Profile"] as FashionStore.Application.DTOs.Account.CustomerProfileDto;
+}
+
+<div class="max-w-2xl mx-auto space-y-6">
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert-success mb-4" role="alert">
+            <p class="text-sm">@TempData["SuccessMessage"]</p>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert-danger mb-4" role="alert">
+            <p class="text-sm">@TempData["ErrorMessage"]</p>
+        </div>
+    }
+
+    @if (!ViewData.ModelState.IsValid && ViewData.ModelState.ContainsKey(string.Empty))
+    {
+        foreach (var error in ViewData.ModelState[string.Empty].Errors)
+        {
+            <div class="alert-danger mb-4" role="alert">
+                <p class="text-sm">@error.ErrorMessage</p>
+            </div>
+        }
+    }
+
+    <!-- Preferences -->
+    <div class="card">
+        <div class="card-body">
+            <h2 class="text-lg font-bold text-brand-text-primary mb-4">Email preferences</h2>
+            <form asp-action="Settings" method="post" class="space-y-5">
+                @Html.AntiForgeryToken()
+
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input asp-for="MarketingOptIn" type="checkbox" class="form-checkbox mt-1" />
+                    <span>
+                        <span class="block font-medium text-brand-text-primary">Marketing emails</span>
+                        <span class="block text-sm text-brand-text-muted">News about new arrivals, exclusive offers and sales.</span>
+                    </span>
+                </label>
+
+                <div>
+                    <p class="font-medium text-brand-text-primary mb-2">Notifications</p>
+                    <label class="flex items-start gap-3 cursor-pointer py-1">
+                        <input type="checkbox" class="form-checkbox mt-1" name="NotificationPreferences" value="order_updates" checked="@(Model.NotificationPreferences?.Contains("order_updates", StringComparer.OrdinalIgnoreCase))" />
+                        <span>
+                            <span class="block font-medium text-brand-text-primary">Order updates</span>
+                            <span class="block text-sm text-brand-text-muted">Shipping and delivery status for your orders.</span>
+                        </span>
+                    </label>
+                    <label class="flex items-start gap-3 cursor-pointer py-1">
+                        <input type="checkbox" class="form-checkbox mt-1" name="NotificationPreferences" value="offers" checked="@(Model.NotificationPreferences?.Contains("offers", StringComparer.OrdinalIgnoreCase))" />
+                        <span>
+                            <span class="block font-medium text-brand-text-primary">Offers</span>
+                            <span class="block text-sm text-brand-text-muted">Deals and promotions tailored to your taste.</span>
+                        </span>
+                    </label>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="btn-primary w-full sm:w-auto">Save preferences</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Deactivation -->
+    <div class="card">
+        <div class="card-body">
+            <h2 class="text-lg font-bold text-brand-text-primary mb-1">Deactivate account</h2>
+            <p class="text-sm text-brand-text-muted mb-4">
+                Request deactivation of your account. The request is recorded for review; it is not immediate.
+            </p>
+
+            @if (profile?.DeactivationRequestedAtUtc != null)
+            {
+                <div class="alert-danger" role="alert">
+                    <p class="text-sm">
+                        A deactivation request was submitted on @profile.DeactivationRequestedAtUtc.Value.ToLocalTime().ToString("d MMM yyyy").
+                        @if (!string.IsNullOrWhiteSpace(profile.DeactivationReason))
+                        {
+                            <span class="block mt-1">Reason: @profile.DeactivationReason</span>
+                        }
+                    </p>
+                </div>
+            }
+            else
+            {
+                <form asp-action="RequestDeactivation" method="post" class="space-y-4" data-confirm="Request to deactivate this account? This cannot be undone without contacting support.">
+                    @Html.AntiForgeryToken()
+                    <div>
+                        <label for="reason" class="form-label">Reason (optional)</label>
+                        <textarea id="reason" name="reason" rows="3" class="form-input" placeholder="Tell us why you are leaving"></textarea>
+                    </div>
+                    <button type="submit" class="bg-brand-danger text-white px-5 py-2.5 rounded-lg font-medium hover:opacity-90 transition-opacity w-full sm:w-auto">Request deactivation</button>
+                </form>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/account.js" asp-append-version="true"></script>
+}

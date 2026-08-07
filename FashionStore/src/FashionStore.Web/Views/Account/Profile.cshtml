@@ -1,0 +1,104 @@
+@model FashionStore.Application.DTOs.Account.UpdateProfileRequest
+@{
+    Layout = "_AccountLayout";
+    ViewData["Title"] = "Profile";
+}
+
+<div class="max-w-2xl mx-auto space-y-6">
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert-success mb-4" role="alert">
+            <p class="text-sm">@TempData["SuccessMessage"]</p>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert-danger mb-4" role="alert">
+            <p class="text-sm">@TempData["ErrorMessage"]</p>
+        </div>
+    }
+
+    @if (!ViewData.ModelState.IsValid && ViewData.ModelState.ContainsKey(string.Empty))
+    {
+        foreach (var error in ViewData.ModelState[string.Empty].Errors)
+        {
+            <div class="alert-danger mb-4" role="alert">
+                <p class="text-sm">@error.ErrorMessage</p>
+            </div>
+        }
+    }
+
+    <!-- Avatar -->
+    <div class="card">
+        <div class="card-body flex items-center gap-4">
+            <div class="w-16 h-16 rounded-full bg-brand-primary text-white flex items-center justify-center text-2xl font-bold overflow-hidden flex-shrink-0">
+                @if (!string.IsNullOrWhiteSpace(ViewData["AvatarUrl"] as string))
+                {
+                    <img id="avatar-preview" src="@ViewData["AvatarUrl"]" alt="Profile" class="w-full h-full object-cover" />
+                }
+                else
+                {
+                    <span id="avatar-fallback">@((Model.DisplayName?.FirstOrDefault().ToString().ToUpperInvariant()) ?? "C")</span>
+                }
+            </div>
+            <form asp-action="UploadAvatar" method="post" enctype="multipart/form-data" class="flex-1">
+                @Html.AntiForgeryToken()
+                <label for="avatar-file" class="btn-outline inline-flex text-sm cursor-pointer">
+                    Change photo
+                </label>
+                <input id="avatar-file" name="file" type="file" accept="image/*" class="hidden" />
+            </form>
+        </div>
+    </div>
+
+    <!-- Profile form -->
+    <div class="card">
+        <div class="card-body">
+            <form asp-action="Profile" method="post" class="space-y-5">
+                @Html.AntiForgeryToken()
+
+                <div class="grid sm:grid-cols-2 gap-5">
+                    <div>
+                        <label asp-for="FirstName" class="form-label">First name</label>
+                        <input asp-for="FirstName" class="form-input" />
+                        <span asp-validation-for="FirstName" class="text-brand-danger text-sm mt-1"></span>
+                    </div>
+                    <div>
+                        <label asp-for="LastName" class="form-label">Last name</label>
+                        <input asp-for="LastName" class="form-input" />
+                        <span asp-validation-for="LastName" class="text-brand-danger text-sm mt-1"></span>
+                    </div>
+                </div>
+
+                <div>
+                    <label asp-for="DisplayName" class="form-label">Display name</label>
+                    <input asp-for="DisplayName" class="form-input" placeholder="Shown in the storefront header" />
+                    <span asp-validation-for="DisplayName" class="text-brand-danger text-sm mt-1"></span>
+                </div>
+
+                <div>
+                    <label asp-for="PhoneNumber" class="form-label">Phone</label>
+                    <input asp-for="PhoneNumber" type="tel" class="form-input" />
+                    <span asp-validation-for="PhoneNumber" class="text-brand-danger text-sm mt-1"></span>
+                </div>
+
+                <div>
+                    <label asp-for="DateOfBirth" class="form-label">Date of birth</label>
+                    <input asp-for="DateOfBirth" type="date" class="form-input" />
+                    <span asp-validation-for="DateOfBirth" class="text-brand-danger text-sm mt-1"></span>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="btn-primary w-full sm:w-auto">Save changes</button>
+                    <a asp-controller="Account" asp-action="Index" class="btn-outline w-full sm:w-auto mt-3 sm:mt-0 sm:ml-3 inline-block text-center">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/account.js" asp-append-version="true"></script>
+}

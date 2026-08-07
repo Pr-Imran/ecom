@@ -41,6 +41,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<CouponBrand> CouponBrands => Set<CouponBrand>();
     public DbSet<CouponProduct> CouponProducts => Set<CouponProduct>();
     public DbSet<CouponExcludedProduct> CouponExcludedProducts => Set<CouponExcludedProduct>();
+    public DbSet<CustomerAddress> CustomerAddresses => Set<CustomerAddress>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -426,6 +427,28 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             entity.HasIndex(e => e.ProductId);
             entity.HasOne(e => e.Coupon).WithMany(c => c.CouponExcludedProducts).HasForeignKey(e => e.CouponId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.Product).WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CustomerAddress>(entity =>
+        {
+            entity.ToTable("CustomerAddresses");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.Label).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.RecipientName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Phone).HasMaxLength(30);
+            entity.Property(e => e.AddressLine1).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.AddressLine2).HasMaxLength(200);
+            entity.Property(e => e.Area).HasMaxLength(100);
+            entity.Property(e => e.City).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Region).HasMaxLength(100);
+            entity.Property(e => e.PostalCode).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.CountryCode).IsRequired().HasMaxLength(2);
+            entity.Property(e => e.DeliveryInstructions).HasMaxLength(500);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => new { e.UserId, e.IsDefaultShipping });
+            entity.HasIndex(e => new { e.UserId, e.IsDefaultBilling });
+            entity.HasIndex(e => e.CreatedAtUtc);
         });
 
         // Apply soft delete filter
