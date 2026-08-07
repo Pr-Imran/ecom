@@ -1,0 +1,672 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Coupons";
+    ViewData["PageTitle"] = "Coupons";
+}
+
+<div class="space-y-4">
+    @* Tabs: Coupons | Usage History *@
+    <div class="flex gap-1 bg-white rounded-lg border p-1 w-fit max-w-full overflow-x-auto">
+        <button type="button" data-coupons-tab="list" class="px-4 py-2 rounded-md text-sm font-medium bg-brand-primary text-white">Coupons</button>
+        <button type="button" data-coupons-tab="usage" class="px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-50">Usage History</button>
+    </div>
+
+    @* Coupons list panel *@
+    <div data-coupons-panel="list" class="space-y-4">
+        @* Desktop Toolbar *@
+        <div class="hidden lg:flex items-center justify-between gap-4">
+            <div class="flex-1 max-w-md">
+                <input type="text" id="desktopSearch" placeholder="Search coupons..." 
+                       class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+            </div>
+            <div class="flex items-center gap-2">
+                <label class="text-sm text-gray-600">Status:</label>
+                <select id="filterStatus" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-primary">
+                    <option value="">All</option>
+                    <option value="active">Active</option>
+                    <option value="expired">Expired</option>
+                </select>
+                <button id="btnAdd" class="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium">
+                    + Add Coupon
+                </button>
+            </div>
+        </div>
+
+        @* Coupons List - Desktop Table *@
+        <div class="hidden lg:block bg-white rounded-lg shadow-sm border overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Discount</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valid</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usage</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="couponsTableBody" class="divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="6" class="px-6 py-8 text-center text-gray-500 text-sm">
+                            <p>No coupons yet. Click "Add Coupon" to create one.</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        @* Coupons List - Mobile Cards *@
+        <div id="couponsCards" class="lg:hidden space-y-3 pb-24">
+            <div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8">
+                <p>No coupons yet. Tap the + button to create one.</p>
+            </div>
+        </div>
+    </div>
+
+    @* Usage history panel *@
+    <div data-coupons-panel="usage" class="hidden space-y-4">
+        <div class="flex flex-col sm:flex-row gap-3">
+            <div class="flex-1 max-w-md">
+                <input type="text" id="usageSearch" placeholder="Search by coupon code or email..."
+                       class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+            </div>
+            <button id="btnUsageFilter" class="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Apply</button>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coupon</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Discount</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Used At</th>
+                    </tr>
+                </thead>
+                <tbody id="usageTableBody" class="divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="5" class="px-6 py-8 text-center text-gray-500 text-sm">
+                            <p>No coupon usage recorded yet.</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="usageCards" class="lg:hidden space-y-3">
+            <div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8">
+                <p>No coupon usage recorded yet.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Floating Add Button (Mobile) *@
+<button id="btnAddMobile" class="lg:hidden fixed bottom-20 right-4 w-14 h-14 bg-brand-primary text-white rounded-full shadow-lg flex items-center justify-center hover:bg-brand-primary/90 z-30">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+</button>
+
+@* Coupon Form Modal *@
+<div id="couponModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+            <h3 id="modalTitle" class="text-lg font-bold">Add Coupon</h3>
+            <button class="btn-close-modal text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="couponForm" class="p-6 space-y-4">
+            <input type="hidden" id="couponId" />
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="couponCode" class="block text-sm font-medium text-gray-700 mb-1">Code *</label>
+                    <input type="text" id="couponCode" required maxlength="50" placeholder="e.g. SAVE10"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                    <p class="text-xs text-gray-500 mt-1">Codes are case-insensitive and unique.</p>
+                </div>
+                <div>
+                    <label for="couponName" class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                    <input type="text" id="couponName" required maxlength="200"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+            </div>
+
+            <div>
+                <label for="couponDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea id="couponDescription" maxlength="1000" rows="2"
+                          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm"></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label for="couponDiscountType" class="block text-sm font-medium text-gray-700 mb-1">Discount Type</label>
+                    <select id="couponDiscountType" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm">
+                        <option value="0">Percentage (%)</option>
+                        <option value="1">Fixed Amount ($)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="couponDiscountValue" class="block text-sm font-medium text-gray-700 mb-1">Discount Value *</label>
+                    <input type="number" id="couponDiscountValue" required step="0.01" min="0.01"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+                <div>
+                    <label for="couponMaxDiscount" class="block text-sm font-medium text-gray-700 mb-1">Max Discount ($)</label>
+                    <input type="number" id="couponMaxDiscount" step="0.01" min="0" placeholder="Optional"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="couponMinOrder" class="block text-sm font-medium text-gray-700 mb-1">Minimum Order Value ($)</label>
+                    <input type="number" id="couponMinOrder" step="0.01" min="0" placeholder="Optional"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+                <div>
+                    <label for="couponCustomerId" class="block text-sm font-medium text-gray-700 mb-1">Customer ID (specific customer)</label>
+                    <input type="text" id="couponCustomerId" maxlength="450" placeholder="Leave empty for everyone"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="couponStartAt" class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                    <input type="datetime-local" id="couponStartAt"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+                <div>
+                    <label for="couponEndAt" class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                    <input type="datetime-local" id="couponEndAt"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="couponTotalLimit" class="block text-sm font-medium text-gray-700 mb-1">Total Usage Limit</label>
+                    <input type="number" id="couponTotalLimit" min="1" placeholder="Unlimited"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+                <div>
+                    <label for="couponPerCustomerLimit" class="block text-sm font-medium text-gray-700 mb-1">Per-Customer Limit</label>
+                    <input type="number" id="couponPerCustomerLimit" min="1" value="1"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="couponIsFreeShipping" class="w-4 h-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary" />
+                    <span class="text-sm text-gray-700">Free shipping</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="couponIsAutoApply" class="w-4 h-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary" />
+                    <span class="text-sm text-gray-700">Auto apply</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="couponIsFirstOrderOnly" class="w-4 h-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary" />
+                    <span class="text-sm text-gray-700">First order only</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="couponIsActive" checked class="w-4 h-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary" />
+                    <span class="text-sm text-gray-700">Active</span>
+                </label>
+            </div>
+
+            <div class="border-t pt-4 mt-2 space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Categories (restriction)</label>
+                        <select id="couponCategories" multiple
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm min-h-[80px]"></select>
+                        <p class="text-xs text-gray-500 mt-1">Ctrl+click to select multiple.</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Brands (restriction)</label>
+                        <select id="couponBrands" multiple
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm min-h-[80px]"></select>
+                        <p class="text-xs text-gray-500 mt-1">Ctrl+click to select multiple.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Restricted Products</label>
+                        <div class="flex gap-2 mb-2">
+                            <input type="text" id="couponProductSearch" placeholder="Search products..."
+                                   class="flex-1 min-w-0 border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                            <button type="button" id="btnAddProduct" class="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Add</button>
+                        </div>
+                        <div id="couponProductChips" class="flex flex-wrap gap-1.5"></div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Excluded Products</label>
+                        <div class="flex gap-2 mb-2">
+                            <input type="text" id="couponExcludedSearch" placeholder="Search products..."
+                                   class="flex-1 min-w-0 border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                            <button type="button" id="btnAddExcluded" class="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Add</button>
+                        </div>
+                        <div id="couponExcludedChips" class="flex flex-wrap gap-1.5"></div>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <div class="sticky bottom-0 bg-white border-t px-6 py-4 flex items-center justify-end gap-3 rounded-b-2xl">
+            <button type="button" class="btn-close-modal px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+            <button type="submit" form="couponForm" class="px-6 py-2 bg-brand-primary text-white rounded-lg text-sm hover:bg-brand-primary/90 font-medium">Save Coupon</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let coupons = [];
+        let isEditing = false;
+        let selectedProducts = [];
+        let selectedExcluded = [];
+        const productSearchCache = {};
+
+        document.querySelectorAll('.btn-close-modal').forEach(btn => {
+            btn.addEventListener('click', closeModal);
+        });
+        document.getElementById('btnAdd').addEventListener('click', openAddModal);
+        document.getElementById('btnAddMobile').addEventListener('click', openAddModal);
+
+        document.querySelectorAll('[data-coupons-tab]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.couponsTab;
+                document.querySelectorAll('[data-coupons-tab]').forEach(b => {
+                    b.classList.remove('bg-brand-primary', 'text-white');
+                    b.classList.add('text-gray-600', 'hover:bg-gray-50');
+                });
+                btn.classList.add('bg-brand-primary', 'text-white');
+                btn.classList.remove('text-gray-600', 'hover:bg-gray-50');
+                document.querySelectorAll('[data-coupons-panel]').forEach(p => {
+                    p.classList.toggle('hidden', p.dataset.couponsPanel !== tab);
+                });
+                if (tab === 'usage') loadUsage();
+            });
+        });
+
+        function closeModal() {
+            document.getElementById('couponModal').classList.add('hidden');
+        }
+
+        function openAddModal() {
+            isEditing = false;
+            document.getElementById('modalTitle').textContent = 'Add Coupon';
+            document.getElementById('couponForm').reset();
+            document.getElementById('couponId').value = '';
+            document.getElementById('couponDiscountType').value = '0';
+            document.getElementById('couponPerCustomerLimit').value = '1';
+            document.getElementById('couponIsActive').checked = true;
+            selectedProducts = [];
+            selectedExcluded = [];
+            renderChips();
+            document.getElementById('couponModal').classList.remove('hidden');
+        }
+
+        async function loadCoupons() {
+            const status = document.getElementById('filterStatus').value;
+            const search = document.getElementById('desktopSearch').value.trim();
+            const params = new URLSearchParams();
+            if (status) params.set('status', status);
+            if (search) params.set('search', search);
+            const response = await fetch(`/api/admin/coupons?${params.toString()}`);
+            if (response.ok) {
+                coupons = await response.json();
+                renderCoupons();
+            }
+        }
+
+        function formatDiscount(c) {
+            if (c.isFreeShipping) return 'Free shipping';
+            return c.discountType === 0 ? `${c.discountValue}%` : `$${Number(c.discountValue).toFixed(2)}`;
+        }
+
+        function formatDate(value) {
+            if (!value) return 'Never';
+            return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function statusBadge(c) {
+            if (!c.isActive) return '<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Inactive</span>';
+            const now = new Date();
+            const end = c.endAtUtc ? new Date(c.endAtUtc) : null;
+            const start = c.startAtUtc ? new Date(c.startAtUtc) : null;
+            if (end && end < now) return '<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Expired</span>';
+            if (start && start > now) return '<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Scheduled</span>';
+            return '<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>';
+        }
+
+        function renderCoupons() {
+            const tableBody = document.getElementById('couponsTableBody');
+            if (coupons.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500 text-sm">No coupons found</td></tr>';
+            } else {
+                tableBody.innerHTML = coupons.map(c => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-medium text-gray-900">${c.code}</div>
+                            <div class="text-xs text-gray-500">${c.name}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            ${formatDiscount(c)}
+                            ${c.maxDiscountAmount ? `<div class="text-xs text-gray-500">max $${Number(c.maxDiscountAmount).toFixed(2)}</div>` : ''}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            <div>${formatDate(c.startAtUtc)}</div>
+                            <div class="text-xs text-gray-500">to ${formatDate(c.endAtUtc)}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            ${c.usageCount}${c.totalUsageLimit ? ` / ${c.totalUsageLimit}` : ''}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">${statusBadge(c)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="editCoupon('${c.id}')" class="text-brand-primary hover:text-brand-primary/80 mr-3">Edit</button>
+                            <button onclick="duplicateCoupon('${c.id}')" class="text-gray-600 hover:text-gray-800 mr-3">Duplicate</button>
+                            <button onclick="toggleCoupon('${c.id}', ${c.isActive})" class="text-red-600 hover:text-red-700">${c.isActive ? 'Deactivate' : 'Activate'}</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            const cardsContainer = document.getElementById('couponsCards');
+            if (coupons.length === 0) {
+                cardsContainer.innerHTML = '<div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8"><p>No coupons yet.</p></div>';
+            } else {
+                cardsContainer.innerHTML = coupons.map(c => `
+                    <div class="bg-white rounded-lg border p-4">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-bold text-gray-900">${c.code}</h3>
+                                <p class="text-xs text-gray-500 truncate mt-0.5">${c.name}</p>
+                            </div>
+                            ${statusBadge(c)}
+                        </div>
+                        <div class="text-sm text-gray-700 font-medium mb-1">${formatDiscount(c)}</div>
+                        <div class="text-xs text-gray-500 mb-3">
+                            Valid ${formatDate(c.startAtUtc)} to ${formatDate(c.endAtUtc)} · Used ${c.usageCount}${c.totalUsageLimit ? ` of ${c.totalUsageLimit}` : ''}
+                        </div>
+                        <div class="flex gap-2 pt-3 border-t">
+                            <button onclick="editCoupon('${c.id}')" class="flex-1 px-3 py-2 bg-brand-primary text-white rounded-lg text-sm">Edit</button>
+                            <button onclick="duplicateCoupon('${c.id}')" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">Copy</button>
+                            <button onclick="toggleCoupon('${c.id}', ${c.isActive})" class="px-3 py-2 border ${c.isActive ? 'border-red-200 text-red-600' : 'border-green-200 text-green-700'} rounded-lg text-sm">${c.isActive ? 'Off' : 'On'}</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        async function loadOptions() {
+            if (document.getElementById('couponCategories').options.length === 0) {
+                const categories = await (await fetch('/api/admin/categories')).json();
+                document.getElementById('couponCategories').innerHTML = categories.map(x => `<option value="${x.id}">${x.name}</option>`).join('');
+            }
+            if (document.getElementById('couponBrands').options.length === 0) {
+                const brands = await (await fetch('/api/admin/brands')).json();
+                document.getElementById('couponBrands').innerHTML = brands.map(x => `<option value="${x.id}">${x.name}</option>`).join('');
+            }
+        }
+
+        function editCoupon(id) {
+            const c = coupons.find(x => x.id === id);
+            if (!c) return;
+
+            isEditing = true;
+            document.getElementById('modalTitle').textContent = 'Edit Coupon';
+            document.getElementById('couponId').value = c.id;
+            document.getElementById('couponCode').value = c.code;
+            document.getElementById('couponName').value = c.name;
+            document.getElementById('couponDescription').value = c.description || '';
+            document.getElementById('couponDiscountType').value = String(c.discountType);
+            document.getElementById('couponDiscountValue').value = c.discountValue;
+            document.getElementById('couponMaxDiscount').value = c.maxDiscountAmount ?? '';
+            document.getElementById('couponMinOrder').value = c.minOrderValue ?? '';
+            document.getElementById('couponIsFreeShipping').checked = c.isFreeShipping;
+            document.getElementById('couponIsAutoApply').checked = c.isAutoApply;
+            document.getElementById('couponIsFirstOrderOnly').checked = c.isFirstOrderOnly;
+            document.getElementById('couponIsActive').checked = c.isActive;
+            document.getElementById('couponTotalLimit').value = c.totalUsageLimit ?? '';
+            document.getElementById('couponPerCustomerLimit').value = c.perCustomerLimit;
+            document.getElementById('couponStartAt').value = toLocalInput(c.startAtUtc);
+            document.getElementById('couponEndAt').value = toLocalInput(c.endAtUtc);
+            document.getElementById('couponCustomerId').value = c.customerId || '';
+
+            document.getElementById('couponModal').classList.remove('hidden');
+            loadOptions().then(() => {
+                [...document.getElementById('couponCategories').options].forEach(o => { o.selected = c.categoryIds.includes(o.value); });
+                [...document.getElementById('couponBrands').options].forEach(o => { o.selected = c.brandIds.includes(o.value); });
+            });
+
+            selectedProducts = [];
+            selectedExcluded = [];
+            Promise.all(c.productIds.map(fetchProductName)).then(names => {
+                selectedProducts = c.productIds.map((id, i) => ({ id, name: names[i] }));
+                renderChips();
+            });
+            Promise.all(c.excludedProductIds.map(fetchProductName)).then(names => {
+                selectedExcluded = c.excludedProductIds.map((id, i) => ({ id, name: names[i] }));
+                renderChips();
+            });
+        }
+
+        function toLocalInput(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            const pad = n => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+
+        function toUtcIso(value) {
+            if (!value) return null;
+            const d = new Date(value);
+            return isNaN(d.getTime()) ? null : d.toISOString();
+        }
+
+        async function fetchProductName(id) {
+            if (productSearchCache[id]) return productSearchCache[id];
+            try {
+                const res = await fetch(`/api/admin/products/${id}`);
+                if (res.ok) {
+                    const p = await res.json();
+                    productSearchCache[id] = p.name;
+                    return p.name;
+                }
+            } catch (e) { /* fall through */ }
+            return 'Product';
+        }
+
+        async function searchProduct(term) {
+            if (!term.trim()) return [];
+            const res = await fetch(`/api/admin/products?searchTerm=${encodeURIComponent(term.trim())}&pageSize=10`);
+            if (!res.ok) return [];
+            const data = await res.json();
+            return data.products.map(p => ({ id: p.id, name: p.name }));
+        }
+
+        document.getElementById('btnAddProduct').addEventListener('click', async () => {
+            const input = document.getElementById('couponProductSearch');
+            const results = await searchProduct(input.value);
+            const chosen = results.find(r => r.name.toLowerCase() === input.value.trim().toLowerCase()) || results[0];
+            if (chosen && !selectedProducts.some(x => x.id === chosen.id)) {
+                selectedProducts.push(chosen);
+                renderChips();
+                input.value = '';
+            }
+        });
+
+        document.getElementById('btnAddExcluded').addEventListener('click', async () => {
+            const input = document.getElementById('couponExcludedSearch');
+            const results = await searchProduct(input.value);
+            const chosen = results.find(r => r.name.toLowerCase() === input.value.trim().toLowerCase()) || results[0];
+            if (chosen && !selectedExcluded.some(x => x.id === chosen.id)) {
+                selectedExcluded.push(chosen);
+                renderChips();
+                input.value = '';
+            }
+        });
+
+        function renderChips() {
+            document.getElementById('couponProductChips').innerHTML = selectedProducts.map((p, i) =>
+                `<span class="inline-flex items-center gap-1 bg-brand-primary/10 text-brand-primary px-2 py-1 rounded-full text-xs">${p.name}
+                    <button type="button" onclick="removeProductChip(${i})" class="hover:text-brand-danger">&times;</button>
+                </span>`).join('');
+            document.getElementById('couponExcludedChips').innerHTML = selectedExcluded.map((p, i) =>
+                `<span class="inline-flex items-center gap-1 bg-red-50 text-red-600 px-2 py-1 rounded-full text-xs">${p.name}
+                    <button type="button" onclick="removeExcludedChip(${i})" class="hover:text-red-800">&times;</button>
+                </span>`).join('');
+        }
+
+        function removeProductChip(i) { selectedProducts.splice(i, 1); renderChips(); }
+        function removeExcludedChip(i) { selectedExcluded.splice(i, 1); renderChips(); }
+
+        async function duplicateCoupon(id) {
+            if (!confirm('Duplicate this coupon? The copy will be created inactive.')) return;
+            const response = await fetch(`/api/admin/coupons/${id}/duplicate`, { method: 'POST' });
+            if (response.ok) {
+                await loadCoupons();
+            } else {
+                const error = await response.json();
+                alert(error.error || 'Failed to duplicate coupon');
+            }
+        }
+
+        async function toggleCoupon(id, currentActive) {
+            const response = await fetch(`/api/admin/coupons/${id}/toggle`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ isActive: !currentActive })
+            });
+            if (response.ok) {
+                await loadCoupons();
+            } else {
+                const error = await response.json();
+                alert(error.error || 'Failed to update coupon');
+            }
+        }
+
+        document.getElementById('couponForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const id = document.getElementById('couponId').value;
+            const code = document.getElementById('couponCode').value.trim();
+            const name = document.getElementById('couponName').value.trim();
+
+            const payload = {
+                code,
+                name,
+                description: document.getElementById('couponDescription').value.trim() || null,
+                discountType: parseInt(document.getElementById('couponDiscountType').value, 10),
+                discountValue: parseFloat(document.getElementById('couponDiscountValue').value),
+                maxDiscountAmount: parseNumber(document.getElementById('couponMaxDiscount').value),
+                minOrderValue: parseNumber(document.getElementById('couponMinOrder').value),
+                isFreeShipping: document.getElementById('couponIsFreeShipping').checked,
+                isAutoApply: document.getElementById('couponIsAutoApply').checked,
+                isFirstOrderOnly: document.getElementById('couponIsFirstOrderOnly').checked,
+                totalUsageLimit: parseNumber(document.getElementById('couponTotalLimit').value),
+                perCustomerLimit: parseInt(document.getElementById('couponPerCustomerLimit').value, 10) || 1,
+                startAtUtc: toUtcIso(document.getElementById('couponStartAt').value),
+                endAtUtc: toUtcIso(document.getElementById('couponEndAt').value),
+                customerId: document.getElementById('couponCustomerId').value.trim() || null,
+                categoryIds: [...document.getElementById('couponCategories').selectedOptions].map(o => o.value),
+                brandIds: [...document.getElementById('couponBrands').selectedOptions].map(o => o.value),
+                productIds: selectedProducts.map(p => p.id),
+                excludedProductIds: selectedExcluded.map(p => p.id)
+            };
+
+            const url = id ? `/api/admin/coupons/${id}` : '/api/admin/coupons';
+            const method = id ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                closeModal();
+                await loadCoupons();
+            } else {
+                const error = await response.json();
+                alert(error.error || error.title || 'Failed to save coupon');
+            }
+        });
+
+        function parseNumber(value) {
+            if (value === '' || value === null || value === undefined) return null;
+            const n = parseFloat(value);
+            return isNaN(n) ? null : n;
+        }
+
+        async function loadUsage() {
+            const search = document.getElementById('usageSearch').value.trim();
+            const params = new URLSearchParams();
+            if (search) params.set('search', search);
+            const response = await fetch(`/api/admin/coupons/usage`);
+            if (!response.ok) return;
+            let usage = await response.json();
+            if (search) {
+                const needle = search.toLowerCase();
+                usage = usage.filter(u =>
+                    u.couponCode.toLowerCase().includes(needle) ||
+                    (u.userEmail && u.userEmail.toLowerCase().includes(needle)) ||
+                    (u.orderId && u.orderId.toLowerCase().includes(needle)));
+            }
+            renderUsage(usage);
+        }
+
+        function renderUsage(usage) {
+            const tableBody = document.getElementById('usageTableBody');
+            if (usage.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500 text-sm">No usage recorded</td></tr>';
+            } else {
+                tableBody.innerHTML = usage.map(u => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 text-sm font-medium text-gray-900">${u.couponCode}</td>
+                        <td class="px-6 py-4 text-sm text-gray-600">${u.userEmail || u.userId}</td>
+                        <td class="px-6 py-4 text-sm text-gray-500">${u.orderId || '-'}</td>
+                        <td class="px-6 py-4 text-sm font-medium text-brand-success">-$${Number(u.amountDiscounted).toFixed(2)}</td>
+                        <td class="px-6 py-4 text-sm text-gray-500">${new Date(u.usedAtUtc).toLocaleString()}</td>
+                    </tr>
+                `).join('');
+            }
+
+            const cards = document.getElementById('usageCards');
+            if (usage.length === 0) {
+                cards.innerHTML = '<div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8"><p>No usage recorded</p></div>';
+            } else {
+                cards.innerHTML = usage.map(u => `
+                    <div class="bg-white rounded-lg border p-4">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm font-bold text-gray-900">${u.couponCode}</span>
+                            <span class="text-sm font-medium text-brand-success">-$${Number(u.amountDiscounted).toFixed(2)}</span>
+                        </div>
+                        <div class="text-xs text-gray-600">${u.userEmail || u.userId}</div>
+                        <div class="text-xs text-gray-500 mt-1">${u.orderId ? 'Order ' + u.orderId : 'No order'} · ${new Date(u.usedAtUtc).toLocaleString()}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        document.getElementById('filterStatus').addEventListener('change', loadCoupons);
+        document.getElementById('desktopSearch').addEventListener('input', debounce(loadCoupons, 300));
+        document.getElementById('btnUsageFilter').addEventListener('click', loadUsage);
+
+        function debounce(fn, ms) {
+            let t;
+            return function () {
+                clearTimeout(t);
+                t = setTimeout(fn, ms);
+            };
+        }
+
+        loadCoupons();
+    </script>
+}

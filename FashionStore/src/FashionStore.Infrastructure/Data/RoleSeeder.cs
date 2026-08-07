@@ -162,7 +162,7 @@ public class RoleSeeder : IRoleSeeder
                 Categories.Manage, Brands.Manage,
                 Orders.View, Orders.UpdateStatus, Orders.Cancel, Orders.Refund, Orders.PrintInvoice,
                 Customers.View, Customers.Update,
-                Reviews.Manage, Content.Manage,
+                Reviews.Manage, Promotions.Manage, Coupons.Manage, Content.Manage,
                 Reports.View,
                 Users.Manage,
                 AuditLogs.View

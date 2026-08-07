@@ -98,6 +98,18 @@ public class NavigationService : INavigationService
             items.Add(new NavigationItem("customers", "Customers", "/admin/customers", "users"));
         }
 
+        if (HasAnyPermission(permissions, new[] { "Coupons.Manage", "Promotions.Manage" }))
+        {
+            items.Add(new NavigationItem("promotions", "Coupons & Promotions", "/admin/promotions", "tag")
+            {
+                Children = new[]
+                {
+                    HasPermission(permissions, "Coupons.Manage") ? new NavigationItem("coupons", "Coupons", "/admin/coupons", null) : null,
+                    HasPermission(permissions, "Promotions.Manage") ? new NavigationItem("promotions", "Promotions", "/admin/promotions", null) : null
+                }.Where(c => c != null).Cast<NavigationItem>()
+            });
+        }
+
         if (HasAnyPermission(permissions, new[] { "Reviews.Manage" }))
         {
             items.Add(new NavigationItem("reviews", "Reviews", "/admin/reviews", "message-square"));

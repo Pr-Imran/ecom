@@ -94,4 +94,22 @@ public class AdminPagesController : Controller
         ViewData["PageTitle"] = "Inventory";
         return View();
     }
+
+    [HttpGet("/admin/coupons")]
+    public async Task<IActionResult> Coupons(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Coupons";
+        return View();
+    }
+
+    [HttpGet("/admin/promotions")]
+    public async Task<IActionResult> Promotions(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Promotions";
+        return View();
+    }
 }

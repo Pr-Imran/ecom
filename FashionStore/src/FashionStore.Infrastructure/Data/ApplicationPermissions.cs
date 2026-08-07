@@ -46,6 +46,16 @@ public static class ApplicationPermissions
         public const string Manage = "Reviews.Manage";
     }
 
+    public static class Promotions
+    {
+        public const string Manage = "Promotions.Manage";
+    }
+
+    public static class Coupons
+    {
+        public const string Manage = "Coupons.Manage";
+    }
+
     public static class Content
     {
         public const string Manage = "Content.Manage";
@@ -85,6 +95,8 @@ public static class ApplicationPermissions
         Orders.View, Orders.UpdateStatus, Orders.Cancel, Orders.Refund, Orders.PrintInvoice,
         Customers.View, Customers.Update,
         Reviews.Manage,
+        Promotions.Manage,
+        Coupons.Manage,
         Content.Manage,
         Reports.View,
         Settings.Manage,

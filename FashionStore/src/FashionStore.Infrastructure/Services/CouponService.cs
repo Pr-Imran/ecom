@@ -85,7 +85,7 @@ public sealed class CouponService : ICouponService
 
         var coupon = new Coupon
         {
-            Code = request.Code.Trim(),
+            Code = normalized,
             NormalizedCode = normalized,
             Name = request.Name.Trim(),
             Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
@@ -131,7 +131,7 @@ public sealed class CouponService : ICouponService
             throw new InvalidOperationException($"Coupon code '{request.Code}' already exists.");
         }
 
-        coupon.Code = request.Code.Trim();
+        coupon.Code = normalized;
         coupon.NormalizedCode = normalized;
         coupon.Name = request.Name.Trim();
         coupon.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
@@ -297,13 +297,22 @@ public sealed class CouponService : ICouponService
             .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
     }
 
-    private static void ReplaceRestrictions(
+    private void ReplaceRestrictions(
         Coupon coupon,
         IReadOnlyList<Guid> categoryIds,
         IReadOnlyList<Guid> brandIds,
         IReadOnlyList<Guid> productIds,
         IReadOnlyList<Guid> excludedProductIds)
     {
+        // Remove the existing join rows through the context instead of relying on
+        // DetectChanges over the navigation collections. EF marks entities whose
+        // client-set key is discovered via a navigation during DetectChanges as
+        // Modified, which would throw for newly created rows.
+        _context.CouponCategories.RemoveRange(coupon.CouponCategories);
+        _context.CouponBrands.RemoveRange(coupon.CouponBrands);
+        _context.CouponProducts.RemoveRange(coupon.CouponProducts);
+        _context.CouponExcludedProducts.RemoveRange(coupon.CouponExcludedProducts);
+
         coupon.CouponCategories.Clear();
         coupon.CouponBrands.Clear();
         coupon.CouponProducts.Clear();
@@ -311,22 +320,30 @@ public sealed class CouponService : ICouponService
 
         foreach (var id in categoryIds.Distinct())
         {
-            coupon.CouponCategories.Add(new CouponCategory { CouponId = coupon.Id, CategoryId = id });
+            var item = new CouponCategory { CouponId = coupon.Id, CategoryId = id };
+            coupon.CouponCategories.Add(item);
+            _context.CouponCategories.Add(item);
         }
 
         foreach (var id in brandIds.Distinct())
         {
-            coupon.CouponBrands.Add(new CouponBrand { CouponId = coupon.Id, BrandId = id });
+            var item = new CouponBrand { CouponId = coupon.Id, BrandId = id };
+            coupon.CouponBrands.Add(item);
+            _context.CouponBrands.Add(item);
         }
 
         foreach (var id in productIds.Distinct())
         {
-            coupon.CouponProducts.Add(new CouponProduct { CouponId = coupon.Id, ProductId = id });
+            var item = new CouponProduct { CouponId = coupon.Id, ProductId = id };
+            coupon.CouponProducts.Add(item);
+            _context.CouponProducts.Add(item);
         }
 
         foreach (var id in excludedProductIds.Distinct())
         {
-            coupon.CouponExcludedProducts.Add(new CouponExcludedProduct { CouponId = coupon.Id, ProductId = id });
+            var item = new CouponExcludedProduct { CouponId = coupon.Id, ProductId = id };
+            coupon.CouponExcludedProducts.Add(item);
+            _context.CouponExcludedProducts.Add(item);
         }
     }
 

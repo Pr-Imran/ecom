@@ -245,22 +245,119 @@
             btn.addEventListener('click', checkout);
         });
 
+        bindCouponActions();
+    }
+
+    function bindCouponActions() {
         document.querySelectorAll('[data-cart-coupon-toggle]').forEach(function (btn) {
+            if (btn.dataset.bound) return;
+            btn.dataset.bound = 'true';
             btn.addEventListener('click', function () {
                 var form = document.querySelector('[data-cart-coupon-form]');
                 if (form) form.classList.toggle('hidden');
             });
         });
 
+        document.querySelectorAll('[data-cart-coupon-apply]').forEach(function (btn) {
+            if (btn.dataset.bound) return;
+            btn.dataset.bound = 'true';
+            btn.addEventListener('click', function () { applyCoupon(btn); });
+        });
+
+        document.querySelectorAll('[data-cart-coupon-remove]').forEach(function (btn) {
+            if (btn.dataset.bound) return;
+            btn.dataset.bound = 'true';
+            btn.addEventListener('click', function () { removeCoupon(btn); });
+        });
+
         // Cart drawer: load mini cart each time it opens
         var drawerTriggers = document.querySelectorAll('[data-cart-drawer-open]');
         drawerTriggers.forEach(function (btn) {
+            if (btn.dataset.bound) return;
+            btn.dataset.bound = 'true';
             btn.addEventListener('click', function () {
                 refreshCart(function () {
                     if (window.openDrawer) window.openDrawer('cart-drawer');
                 });
             });
         });
+    }
+
+    function setCouponMessage(message, isError) {
+        var input = document.querySelector('[data-cart-coupon-message]');
+        if (input) {
+            input.textContent = message || '';
+            input.classList.toggle('text-brand-danger', !!isError);
+            input.classList.toggle('text-brand-success', !isError);
+        }
+    }
+
+    function applyCoupon(btn) {
+        if (btn.disabled) return;
+        var input = document.querySelector('[data-cart-coupon-input]');
+        var code = input ? input.value.trim() : '';
+        if (!code) {
+            setCouponMessage('Enter a coupon code.', true);
+            return;
+        }
+
+        btn.disabled = true;
+        post('/cart/coupon', { code: code }).then(function (result) {
+            if (!result || result.success === false) {
+                var message = result && (result.message || result.error) ? (result.message || result.error) : 'This coupon cannot be applied.';
+                setCouponMessage(message, true);
+                window.showToast(message, 'danger');
+                return;
+            }
+            setCouponMessage(result.message || 'Coupon applied', false);
+            window.showToast(result.message || 'Coupon applied', 'success');
+            refreshCartPageSummary();
+        }).catch(function () {
+            setCouponMessage('Could not apply coupon. Please try again.', true);
+            window.showToast('Could not apply coupon', 'danger');
+        }).finally(function () {
+            btn.disabled = false;
+        });
+    }
+
+    function removeCoupon(btn) {
+        if (btn.disabled) return;
+        btn.disabled = true;
+        post('/cart/coupon/remove', {}).then(function (result) {
+            window.showToast((result && result.message) || 'Coupon removed', 'success');
+            refreshCartPageSummary();
+        }).catch(function () {
+            window.showToast('Could not remove coupon', 'danger');
+        }).finally(function () {
+            btn.disabled = false;
+        });
+    }
+
+    function refreshCartPageSummary() {
+        fetch('/cart/summary', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (res) { return res.ok ? res.text() : ''; })
+            .then(function (html) {
+                if (!html) return;
+                var summaryRegion = document.querySelector('[data-cart-summary]');
+                if (summaryRegion) summaryRegion.innerHTML = html;
+                bindCouponActions();
+
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(html, 'text/html');
+                var subtotalEl = doc.querySelector('[data-cart-subtotal]');
+                var totalEl = doc.querySelector('[data-cart-total]');
+                if (subtotalEl) {
+                    document.querySelectorAll('[data-cart-mobile-subtotal]').forEach(function (el) {
+                        el.textContent = subtotalEl.textContent;
+                    });
+                }
+                if (totalEl) {
+                    document.querySelectorAll('[data-cart-total], [data-cart-page-total]').forEach(function (el) {
+                        el.textContent = totalEl.textContent;
+                    });
+                }
+                refreshCart();
+            });
     }
 
     window.refreshCartCount = fetchCount;

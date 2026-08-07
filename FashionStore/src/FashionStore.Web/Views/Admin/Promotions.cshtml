@@ -1,0 +1,541 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Promotions";
+    ViewData["PageTitle"] = "Promotions";
+}
+
+<div class="space-y-4">
+    @* Desktop Toolbar *@
+    <div class="hidden lg:flex items-center justify-between gap-4">
+        <div class="flex-1 max-w-md">
+            <input type="text" id="desktopSearch" placeholder="Search promotions..."
+                   class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+        </div>
+        <div class="flex items-center gap-2">
+            <label class="text-sm text-gray-600">Show:</label>
+            <select id="filterStatus" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-primary">
+                <option value="false">Active Only</option>
+                <option value="true">All</option>
+            </select>
+            <button id="btnAdd" class="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium">
+                + Add Promotion
+            </button>
+        </div>
+    </div>
+
+    @* Promotions List - Desktop Table *@
+    <div class="hidden lg:block bg-white rounded-lg shadow-sm border overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-50 border-b">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Discount</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Scope</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="promotionsTableBody" class="divide-y divide-gray-200">
+                <tr>
+                    <td colspan="6" class="px-6 py-8 text-center text-gray-500 text-sm">
+                        <p>No promotions yet. Click "Add Promotion" to create one.</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    @* Promotions List - Mobile Cards *@
+    <div id="promotionsCards" class="lg:hidden space-y-3 pb-24">
+        <div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8">
+            <p>No promotions yet. Tap the + button to create one.</p>
+        </div>
+    </div>
+</div>
+
+@* Floating Add Button (Mobile) *@
+<button id="btnAddMobile" class="lg:hidden fixed bottom-20 right-4 w-14 h-14 bg-brand-primary text-white rounded-full shadow-lg flex items-center justify-center hover:bg-brand-primary/90 z-30">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+</button>
+
+@* Promotion Form Modal *@
+<div id="promotionModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+            <h3 id="modalTitle" class="text-lg font-bold">Add Promotion</h3>
+            <button class="btn-close-modal text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="promotionForm" class="p-6 space-y-4">
+            <input type="hidden" id="promotionId" />
+
+            <div>
+                <label for="promotionName" class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <input type="text" id="promotionName" required maxlength="200"
+                       class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+            </div>
+
+            <div>
+                <label for="promotionDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea id="promotionDescription" maxlength="1000" rows="2"
+                          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm"></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label for="promotionDiscountType" class="block text-sm font-medium text-gray-700 mb-1">Discount Type</label>
+                    <select id="promotionDiscountType" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm">
+                        <option value="0">Percentage (%)</option>
+                        <option value="1">Fixed Amount ($)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="promotionDiscountValue" class="block text-sm font-medium text-gray-700 mb-1">Discount Value *</label>
+                    <input type="number" id="promotionDiscountValue" required step="0.01" min="0.01"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+                <div>
+                    <label for="promotionMaxDiscount" class="block text-sm font-medium text-gray-700 mb-1">Max Discount ($)</label>
+                    <input type="number" id="promotionMaxDiscount" step="0.01" min="0" placeholder="Optional"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label for="promotionMinQuantity" class="block text-sm font-medium text-gray-700 mb-1">Min Quantity</label>
+                    <input type="number" id="promotionMinQuantity" min="1" value="1"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                    <p class="text-xs text-gray-500 mt-1">Line must contain at least this many units.</p>
+                </div>
+                <div>
+                    <label for="promotionPriority" class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                    <input type="number" id="promotionPriority" min="0" value="0"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                    <p class="text-xs text-gray-500 mt-1">Lower values apply first.</p>
+                </div>
+                <div class="flex items-end gap-4 pb-1">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="promotionIsStackable" class="w-4 h-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary" />
+                        <span class="text-sm text-gray-700">Stackable</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="promotionIsActive" checked class="w-4 h-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary" />
+                        <span class="text-sm text-gray-700">Active</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="promotionStartAt" class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                    <input type="datetime-local" id="promotionStartAt"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+                <div>
+                    <label for="promotionEndAt" class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                    <input type="datetime-local" id="promotionEndAt"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+            </div>
+
+            <div class="border-t pt-4 mt-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Scope</label>
+                <div class="flex flex-wrap gap-3 mb-3">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="promotionScope" value="" checked class="w-4 h-4 text-brand-primary border-gray-300 focus:ring-brand-primary" />
+                        <span class="text-sm text-gray-700">All products</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="promotionScope" value="product" class="w-4 h-4 text-brand-primary border-gray-300 focus:ring-brand-primary" />
+                        <span class="text-sm text-gray-700">Product</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="promotionScope" value="category" class="w-4 h-4 text-brand-primary border-gray-300 focus:ring-brand-primary" />
+                        <span class="text-sm text-gray-700">Category</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="promotionScope" value="brand" class="w-4 h-4 text-brand-primary border-gray-300 focus:ring-brand-primary" />
+                        <span class="text-sm text-gray-700">Brand</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="promotionScope" value="collection" class="w-4 h-4 text-brand-primary border-gray-300 focus:ring-brand-primary" />
+                        <span class="text-sm text-gray-700">Collection</span>
+                    </label>
+                </div>
+
+                <div data-promotion-scope="product" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Product</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="promotionProductSearch" placeholder="Search products..." autocomplete="off"
+                               class="flex-1 min-w-0 border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                        <select id="promotionProductResults" class="border border-gray-300 rounded-lg px-3 py-2 text-sm max-w-[220px]">
+                            <option value="">Select...</option>
+                        </select>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1" id="promotionProductSelected"></p>
+                </div>
+
+                <div data-promotion-scope="category" class="hidden">
+                    <label for="promotionCategoryId" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <select id="promotionCategoryId" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm">
+                        <option value="">Select a category...</option>
+                    </select>
+                </div>
+
+                <div data-promotion-scope="brand" class="hidden">
+                    <label for="promotionBrandId" class="block text-sm font-medium text-gray-700 mb-1">Brand</label>
+                    <select id="promotionBrandId" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm">
+                        <option value="">Select a brand...</option>
+                    </select>
+                </div>
+
+                <div data-promotion-scope="collection" class="hidden">
+                    <label for="promotionCollectionId" class="block text-sm font-medium text-gray-700 mb-1">Collection</label>
+                    <select id="promotionCollectionId" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm">
+                        <option value="">Select a collection...</option>
+                    </select>
+                </div>
+            </div>
+        </form>
+        <div class="sticky bottom-0 bg-white border-t px-6 py-4 flex items-center justify-end gap-3 rounded-b-2xl">
+            <button type="button" class="btn-close-modal px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+            <button type="submit" form="promotionForm" class="px-6 py-2 bg-brand-primary text-white rounded-lg text-sm hover:bg-brand-primary/90 font-medium">Save Promotion</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let promotions = [];
+        let isEditing = false;
+        let selectedProduct = null;
+        let optionsLoaded = false;
+
+        document.querySelectorAll('.btn-close-modal').forEach(btn => {
+            btn.addEventListener('click', closeModal);
+        });
+        document.getElementById('btnAdd').addEventListener('click', openAddModal);
+        document.getElementById('btnAddMobile').addEventListener('click', openAddModal);
+
+        function closeModal() {
+            document.getElementById('promotionModal').classList.add('hidden');
+        }
+
+        function openAddModal() {
+            isEditing = false;
+            document.getElementById('modalTitle').textContent = 'Add Promotion';
+            document.getElementById('promotionForm').reset();
+            document.getElementById('promotionId').value = '';
+            document.getElementById('promotionDiscountType').value = '0';
+            document.getElementById('promotionMinQuantity').value = '1';
+            document.getElementById('promotionPriority').value = '0';
+            document.getElementById('promotionIsActive').checked = true;
+            selectedProduct = null;
+            setScope('');
+            loadOptions();
+            document.getElementById('promotionModal').classList.remove('hidden');
+        }
+
+        async function loadOptions() {
+            if (optionsLoaded) return;
+            optionsLoaded = true;
+
+            const [categories, brands, collections] = await Promise.all([
+                (await fetch('/api/admin/categories')).json(),
+                (await fetch('/api/admin/brands')).json(),
+                (await fetch('/api/admin/collections')).json()
+            ]);
+
+            document.getElementById('promotionCategoryId').innerHTML =
+                '<option value="">Select a category...</option>' +
+                categories.map(x => `<option value="${x.id}">${x.name}</option>`).join('');
+            document.getElementById('promotionBrandId').innerHTML =
+                '<option value="">Select a brand...</option>' +
+                brands.map(x => `<option value="${x.id}">${x.name}</option>`).join('');
+            document.getElementById('promotionCollectionId').innerHTML =
+                '<option value="">Select a collection...</option>' +
+                collections.map(x => `<option value="${x.id}">${x.name}</option>`).join('');
+        }
+
+        document.querySelectorAll('input[name="promotionScope"]').forEach(radio => {
+            radio.addEventListener('change', () => setScope(radio.value));
+        });
+
+        function setScope(scope) {
+            document.querySelectorAll('[data-promotion-scope]').forEach(el => {
+                el.classList.toggle('hidden', el.dataset.promotionScope !== scope);
+            });
+            document.querySelectorAll('input[name="promotionScope"]').forEach(r => {
+                r.checked = r.value === scope;
+            });
+        }
+
+        document.getElementById('promotionProductSearch').addEventListener('input', debounce(async function () {
+            const term = this.value.trim();
+            const select = document.getElementById('promotionProductResults');
+            if (!term) {
+                select.innerHTML = '<option value="">Select...</option>';
+                return;
+            }
+            const res = await fetch(`/api/admin/products?searchTerm=${encodeURIComponent(term)}&pageSize=10`);
+            if (!res.ok) return;
+            const data = await res.json();
+            select.innerHTML = '<option value="">Select...</option>' +
+                data.products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+        }, 350));
+
+        document.getElementById('promotionProductResults').addEventListener('change', function () {
+            const id = this.value;
+            const text = this.options[this.selectedIndex] ? this.options[this.selectedIndex].text : '';
+            selectedProduct = id ? { id, name: text } : null;
+            document.getElementById('promotionProductSelected').textContent = selectedProduct
+                ? `Selected: ${selectedProduct.name}`
+                : '';
+        });
+
+        function editPromotion(id) {
+            const p = promotions.find(x => x.id === id);
+            if (!p) return;
+
+            isEditing = true;
+            document.getElementById('modalTitle').textContent = 'Edit Promotion';
+            document.getElementById('promotionId').value = p.id;
+            document.getElementById('promotionName').value = p.name;
+            document.getElementById('promotionDescription').value = p.description || '';
+            document.getElementById('promotionDiscountType').value = String(p.discountType);
+            document.getElementById('promotionDiscountValue').value = p.discountValue;
+            document.getElementById('promotionMaxDiscount').value = p.maxDiscountAmount ?? '';
+            document.getElementById('promotionMinQuantity').value = p.minQuantity;
+            document.getElementById('promotionPriority').value = p.priority;
+            document.getElementById('promotionIsStackable').checked = p.isStackable;
+            document.getElementById('promotionIsActive').checked = p.isActive;
+            document.getElementById('promotionStartAt').value = toLocalInput(p.startAtUtc);
+            document.getElementById('promotionEndAt').value = toLocalInput(p.endAtUtc);
+
+            document.getElementById('promotionModal').classList.remove('hidden');
+            loadOptions().then(() => {
+                if (p.categoryId) {
+                    setScope('category');
+                    document.getElementById('promotionCategoryId').value = p.categoryId;
+                } else if (p.brandId) {
+                    setScope('brand');
+                    document.getElementById('promotionBrandId').value = p.brandId;
+                } else if (p.collectionId) {
+                    setScope('collection');
+                    document.getElementById('promotionCollectionId').value = p.collectionId;
+                } else if (p.productId) {
+                    setScope('product');
+                    fetch(`/api/admin/products/${p.productId}`).then(r => r.ok ? r.json() : null).then(prod => {
+                        if (prod) {
+                            selectedProduct = { id: prod.id, name: prod.name };
+                            document.getElementById('promotionProductSelected').textContent = `Selected: ${prod.name}`;
+                        }
+                    });
+                } else {
+                    setScope('');
+                }
+            });
+        }
+
+        function toLocalInput(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            const pad = n => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+
+        function toUtcIso(value) {
+            if (!value) return null;
+            const d = new Date(value);
+            return isNaN(d.getTime()) ? null : d.toISOString();
+        }
+
+        function formatDiscount(p) {
+            return p.discountType === 0 ? `${p.discountValue}%` : `$${Number(p.discountValue).toFixed(2)}`;
+        }
+
+        function formatDate(value) {
+            if (!value) return 'Never';
+            return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function scopeLabel(p) {
+            if (p.productId) return 'Product';
+            if (p.categoryId) return 'Category';
+            if (p.brandId) return 'Brand';
+            if (p.collectionId) return 'Collection';
+            return 'All products';
+        }
+
+        function statusBadge(p) {
+            if (!p.isActive) return '<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Inactive</span>';
+            const now = new Date();
+            const end = p.endAtUtc ? new Date(p.endAtUtc) : null;
+            if (end && end < now) return '<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Expired</span>';
+            return '<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>';
+        }
+
+        function renderPromotions() {
+            const tableBody = document.getElementById('promotionsTableBody');
+            if (promotions.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500 text-sm">No promotions found</td></tr>';
+            } else {
+                tableBody.innerHTML = promotions.map(p => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-medium text-gray-900">${p.name}</div>
+                            <div class="text-xs text-gray-500">${p.description || ''}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            ${formatDiscount(p)}
+                            ${p.maxDiscountAmount ? `<div class="text-xs text-gray-500">max $${Number(p.maxDiscountAmount).toFixed(2)}</div>` : ''}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            ${scopeLabel(p)}
+                            ${p.minQuantity > 1 ? `<div class="text-xs text-gray-500">min qty ${p.minQuantity}</div>` : ''}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            ${p.priority} ${p.isStackable ? '<span class="text-xs text-blue-600 ml-1">stackable</span>' : ''}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">${statusBadge(p)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="editPromotion('${p.id}')" class="text-brand-primary hover:text-brand-primary/80 mr-3">Edit</button>
+                            <button onclick="duplicatePromotion('${p.id}')" class="text-gray-600 hover:text-gray-800 mr-3">Duplicate</button>
+                            <button onclick="togglePromotion('${p.id}', ${p.isActive})" class="text-red-600 hover:text-red-700">${p.isActive ? 'Deactivate' : 'Activate'}</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            const cardsContainer = document.getElementById('promotionsCards');
+            if (promotions.length === 0) {
+                cardsContainer.innerHTML = '<div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8"><p>No promotions yet.</p></div>';
+            } else {
+                cardsContainer.innerHTML = promotions.map(p => `
+                    <div class="bg-white rounded-lg border p-4">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-bold text-gray-900 truncate">${p.name}</h3>
+                                <p class="text-xs text-gray-500 mt-0.5">${scopeLabel(p)} · min qty ${p.minQuantity} · priority ${p.priority}</p>
+                            </div>
+                            ${statusBadge(p)}
+                        </div>
+                        <div class="text-sm text-gray-700 font-medium mb-1">${formatDiscount(p)} ${p.isStackable ? '<span class="text-xs text-blue-600">stackable</span>' : ''}</div>
+                        <div class="text-xs text-gray-500 mb-3">${formatDate(p.startAtUtc)} to ${formatDate(p.endAtUtc)}</div>
+                        <div class="flex gap-2 pt-3 border-t">
+                            <button onclick="editPromotion('${p.id}')" class="flex-1 px-3 py-2 bg-brand-primary text-white rounded-lg text-sm">Edit</button>
+                            <button onclick="duplicatePromotion('${p.id}')" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">Copy</button>
+                            <button onclick="togglePromotion('${p.id}', ${p.isActive})" class="px-3 py-2 border ${p.isActive ? 'border-red-200 text-red-600' : 'border-green-200 text-green-700'} rounded-lg text-sm">${p.isActive ? 'Off' : 'On'}</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        async function loadPromotions() {
+            const includeInactive = document.getElementById('filterStatus').value === 'true';
+            const search = document.getElementById('desktopSearch').value.trim().toLowerCase();
+            const response = await fetch(`/api/admin/promotions?includeInactive=${includeInactive}`);
+            if (response.ok) {
+                promotions = await response.json();
+                if (search) {
+                    promotions = promotions.filter(p =>
+                        p.name.toLowerCase().includes(search) ||
+                        (p.description && p.description.toLowerCase().includes(search)));
+                }
+                renderPromotions();
+            }
+        }
+
+        async function duplicatePromotion(id) {
+            if (!confirm('Duplicate this promotion? The copy will be created inactive.')) return;
+            const response = await fetch(`/api/admin/promotions/${id}/duplicate`, { method: 'POST' });
+            if (response.ok) {
+                await loadPromotions();
+            } else {
+                const error = await response.json();
+                alert(error.error || 'Failed to duplicate promotion');
+            }
+        }
+
+        async function togglePromotion(id, currentActive) {
+            const response = await fetch(`/api/admin/promotions/${id}/toggle`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ isActive: !currentActive })
+            });
+            if (response.ok) {
+                await loadPromotions();
+            } else {
+                const error = await response.json();
+                alert(error.error || 'Failed to update promotion');
+            }
+        }
+
+        document.getElementById('promotionForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const id = document.getElementById('promotionId').value;
+            const scope = [...document.querySelectorAll('input[name="promotionScope"]')].find(r => r.checked).value;
+
+            const payload = {
+                name: document.getElementById('promotionName').value.trim(),
+                description: document.getElementById('promotionDescription').value.trim() || null,
+                discountType: parseInt(document.getElementById('promotionDiscountType').value, 10),
+                discountValue: parseFloat(document.getElementById('promotionDiscountValue').value),
+                maxDiscountAmount: parseNumber(document.getElementById('promotionMaxDiscount').value),
+                minQuantity: parseInt(document.getElementById('promotionMinQuantity').value, 10) || 1,
+                priority: parseInt(document.getElementById('promotionPriority').value, 10) || 0,
+                isStackable: document.getElementById('promotionIsStackable').checked,
+                startAtUtc: toUtcIso(document.getElementById('promotionStartAt').value),
+                endAtUtc: toUtcIso(document.getElementById('promotionEndAt').value),
+                productId: scope === 'product' ? (selectedProduct ? selectedProduct.id : null) : null,
+                categoryId: scope === 'category' ? (document.getElementById('promotionCategoryId').value || null) : null,
+                brandId: scope === 'brand' ? (document.getElementById('promotionBrandId').value || null) : null,
+                collectionId: scope === 'collection' ? (document.getElementById('promotionCollectionId').value || null) : null
+            };
+
+            const url = id ? `/api/admin/promotions/${id}` : '/api/admin/promotions';
+            const method = id ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                closeModal();
+                await loadPromotions();
+            } else {
+                const error = await response.json();
+                alert(error.error || error.title || 'Failed to save promotion');
+            }
+        });
+
+        function parseNumber(value) {
+            if (value === '' || value === null || value === undefined) return null;
+            const n = parseFloat(value);
+            return isNaN(n) ? null : n;
+        }
+
+        function debounce(fn, ms) {
+            let t;
+            return function () {
+                clearTimeout(t);
+                t = setTimeout(fn, ms);
+            };
+        }
+
+        document.getElementById('filterStatus').addEventListener('change', loadPromotions);
+        document.getElementById('desktopSearch').addEventListener('input', debounce(loadPromotions, 300));
+        loadPromotions();
+    </script>
+}
