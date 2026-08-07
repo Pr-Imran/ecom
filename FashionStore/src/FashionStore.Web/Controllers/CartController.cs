@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using FashionStore.Application.DTOs.Products;
 using FashionStore.Application.DTOs.Promotions;
+using FashionStore.Application.DTOs.Shipping;
 using FashionStore.Application.Interfaces;
 using FashionStore.Web.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -20,17 +21,20 @@ public class CartController : Controller
     private readonly ICartService _cartService;
     private readonly IAddToCartService _addToCartService;
     private readonly IDiscountService _discountService;
+    private readonly IShippingCalculationService _shippingCalculationService;
     private readonly ILogger<CartController> _logger;
 
     public CartController(
         ICartService cartService,
         IAddToCartService addToCartService,
         IDiscountService discountService,
+        IShippingCalculationService shippingCalculationService,
         ILogger<CartController> logger)
     {
         _cartService = cartService;
         _addToCartService = addToCartService;
         _discountService = discountService;
+        _shippingCalculationService = shippingCalculationService;
         _logger = logger;
     }
 
@@ -260,5 +264,52 @@ public class CartController : Controller
         }
 
         return PartialView("Partials/_OrderSummary", data);
+    }
+
+    /// <summary>
+    /// Quotes the shipping methods for the current cart. The destination is taken
+    /// from the request but the lines and subtotal are resolved from the server-side
+    /// cart so the browser can never influence the calculated shipping cost.
+    /// </summary>
+    [HttpPost("shipping/quote")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ShippingQuote([FromBody] ShippingQuoteRequest? request, CancellationToken cancellationToken)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.CountryCode))
+        {
+            return BadRequest(new { success = false, message = "Enter a delivery country." });
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        CartViewData data;
+        if (string.IsNullOrEmpty(userId))
+        {
+            data = await _cartService.ResolveAnonymousAsync(
+                AnonymousCartCookie.Read(HttpContext),
+                AnonymousCouponCookie.Read(HttpContext),
+                cancellationToken);
+        }
+        else
+        {
+            data = await _cartService.GetCartAsync(userId, cancellationToken);
+        }
+
+        var lines = data.Items
+            .Where(i => i.IsAvailable)
+            .Select(i => new ShippingLineInput(i.ProductId, i.VariantId, i.Quantity))
+            .ToList();
+
+        var input = new ShippingCalculationInput(
+            request.CountryCode,
+            request.City,
+            request.Region,
+            request.PostalCode,
+            data.Pricing?.Subtotal ?? data.Subtotal,
+            lines,
+            data.Pricing?.IsFreeShipping ?? false);
+
+        var result = await _shippingCalculationService.QuoteAsync(input, cancellationToken);
+        return Ok(result);
     }
 }

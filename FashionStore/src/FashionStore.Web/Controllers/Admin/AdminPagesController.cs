@@ -112,4 +112,13 @@ public class AdminPagesController : Controller
         ViewData["PageTitle"] = "Promotions";
         return View();
     }
+
+    [HttpGet("/admin/shipping")]
+    public async Task<IActionResult> Shipping(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Shipping";
+        return View();
+    }
 }

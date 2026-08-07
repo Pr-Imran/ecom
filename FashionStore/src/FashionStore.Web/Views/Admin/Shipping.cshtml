@@ -1,0 +1,1206 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Shipping";
+    ViewData["PageTitle"] = "Shipping";
+}
+
+<div class="space-y-4">
+    @* Tabs *@
+    <div class="flex gap-1 bg-white rounded-lg border p-1 w-fit max-w-full overflow-x-auto">
+        <button type="button" data-shipping-tab="methods" class="px-4 py-2 rounded-md text-sm font-medium bg-brand-primary text-white">Methods</button>
+        <button type="button" data-shipping-tab="zones" class="px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-50">Zones</button>
+        <button type="button" data-shipping-tab="rates" class="px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-50">Rates</button>
+        <button type="button" data-shipping-tab="blackouts" class="px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-50">Blackouts</button>
+    </div>
+
+    @* Methods panel *@
+    <div data-shipping-panel="methods" class="space-y-4">
+        <div class="hidden lg:flex items-center justify-between gap-4">
+            <p class="text-sm text-gray-500">Delivery methods shown to customers at checkout. Ordering is controlled with the arrows.</p>
+            <button id="btnAddMethod" class="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium whitespace-nowrap">
+                + Add Method
+            </button>
+        </div>
+
+        <div class="hidden lg:block bg-white rounded-lg shadow-sm border overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">COD</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Free Over</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="methodsTableBody" class="divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="8" class="px-6 py-8 text-center text-gray-500 text-sm">
+                            <p>No shipping methods yet. Click "Add Method" to create one.</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="methodsCards" class="lg:hidden space-y-3 pb-24">
+            <div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8">
+                <p>No shipping methods yet. Tap the + button to create one.</p>
+            </div>
+        </div>
+    </div>
+
+    @* Zones panel *@
+    <div data-shipping-panel="zones" class="hidden space-y-4">
+        <div class="hidden lg:flex items-center justify-between gap-4">
+            <p class="text-sm text-gray-500">Regions that rates can be scoped to. A zone with no countries or cities applies everywhere.</p>
+            <button id="btnAddZone" class="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium whitespace-nowrap">
+                + Add Zone
+            </button>
+        </div>
+
+        <div class="hidden lg:block bg-white rounded-lg shadow-sm border overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Countries</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cities</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="zonesTableBody" class="divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="5" class="px-6 py-8 text-center text-gray-500 text-sm">
+                            <p>No shipping zones yet. Click "Add Zone" to create one.</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="zonesCards" class="lg:hidden space-y-3 pb-24">
+            <div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8">
+                <p>No shipping zones yet. Tap the + button to create one.</p>
+            </div>
+        </div>
+    </div>
+
+    @* Rates panel *@
+    <div data-shipping-panel="rates" class="hidden space-y-4">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div class="w-full sm:w-auto flex flex-col sm:flex-row gap-3 sm:items-center">
+                <label class="text-sm text-gray-600 whitespace-nowrap">Method:</label>
+                <select id="rateMethodFilter" class="w-full sm:w-64 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-primary">
+                    <option value="">All methods</option>
+                </select>
+            </div>
+            <button id="btnAddRate" class="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium whitespace-nowrap">
+                + Add Rate
+            </button>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Scope</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Weight (kg)</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Min Order</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="ratesTableBody" class="divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="8" class="px-6 py-8 text-center text-gray-500 text-sm">
+                            <p>No shipping rates yet. Click "Add Rate" to create one.</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="ratesCards" class="lg:hidden space-y-3 pb-24">
+            <div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8">
+                <p>No shipping rates yet. Tap the + button to create one.</p>
+            </div>
+        </div>
+    </div>
+
+    @* Blackouts panel *@
+    <div data-shipping-panel="blackouts" class="hidden space-y-4">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div class="w-full sm:w-auto flex flex-col sm:flex-row gap-3 sm:items-center">
+                <label class="text-sm text-gray-600 whitespace-nowrap">Method:</label>
+                <select id="blackoutMethodFilter" class="w-full sm:w-64 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-primary">
+                    <option value="">All methods</option>
+                </select>
+            </div>
+            <button id="btnAddBlackout" class="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium whitespace-nowrap">
+                + Add Blackout
+            </button>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Starts</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ends</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="blackoutsTableBody" class="divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="6" class="px-6 py-8 text-center text-gray-500 text-sm">
+                            <p>No delivery blackouts yet. Click "Add Blackout" to create one.</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="blackoutsCards" class="lg:hidden space-y-3 pb-24">
+            <div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8">
+                <p>No delivery blackouts yet. Tap the + button to create one.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Floating Add Method Button (Mobile) *@
+<button id="btnAddMethodMobile" class="lg:hidden fixed bottom-20 right-4 w-14 h-14 bg-brand-primary text-white rounded-full shadow-lg flex items-center justify-center hover:bg-brand-primary/90 z-30">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+</button>
+
+@* Method Modal *@
+<div id="methodModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+            <h3 id="methodModalTitle" class="text-lg font-bold">Add Shipping Method</h3>
+            <button class="btn-close-modal text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="methodForm" class="p-6 space-y-4">
+            <input type="hidden" id="methodId" />
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="methodCode" class="block text-sm font-medium text-gray-700 mb-1">Code *</label>
+                    <input type="text" id="methodCode" required maxlength="50" placeholder="e.g. STANDARD"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                    <p class="text-xs text-gray-500 mt-1">Case-insensitive and unique.</p>
+                </div>
+                <div>
+                    <label for="methodName" class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                    <input type="text" id="methodName" required maxlength="200"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+            </div>
+
+            <div>
+                <label for="methodDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea id="methodDescription" maxlength="1000" rows="2"
+                          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm"></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="methodType" class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <select id="methodType" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary text-sm">
+                        <option value="0">Standard</option>
+                        <option value="1">Express</option>
+                        <option value="2">Free Delivery</option>
+                        <option value="3">Local Pickup</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="methodMinDays" class="block text-sm font-medium text-gray-700 mb-1">Min Days</label>
+                        <input type="number" id="methodMinDays" min="0" value="3"
+                               class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                    </div>
+                    <div>
+                        <label for="methodMaxDays" class="block text-sm font-medium text-gray-700 mb-1">Max Days</label>
+                        <input type="number" id="methodMaxDays" min="0" value="5"
+                               class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="methodFreeThreshold" class="block text-sm font-medium text-gray-700 mb-1">Free Shipping Over ($)</label>
+                    <input type="number" id="methodFreeThreshold" min="0" step="0.01"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" placeholder="Optional" />
+                </div>
+                <div>
+                    <label for="methodMaxWeight" class="block text-sm font-medium text-gray-700 mb-1">Max Package Weight (kg)</label>
+                    <input type="number" id="methodMaxWeight" min="0" step="0.001"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" placeholder="Optional" />
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-4">
+                <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="checkbox" id="methodCod" class="w-4 h-4 text-brand-primary rounded" />
+                    Supports cash on delivery
+                </label>
+                <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="checkbox" id="methodRequiresAddress" checked class="w-4 h-4 text-brand-primary rounded" />
+                    Requires shipping address
+                </label>
+            </div>
+
+            <div id="methodPickupWrap">
+                <label for="methodPickup" class="block text-sm font-medium text-gray-700 mb-1">Pickup Instructions</label>
+                <textarea id="methodPickup" maxlength="1000" rows="2"
+                          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm"></textarea>
+            </div>
+
+            <div class="border-t pt-4 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Product Restrictions</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="methodProductSearch" placeholder="Search product name..."
+                               class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                        <button type="button" id="btnAddProductIncluded" class="px-3 py-2 bg-brand-primary/10 text-brand-primary rounded-lg text-sm font-medium">Include</button>
+                        <button type="button" id="btnAddProductExcluded" class="px-3 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium">Exclude</button>
+                    </div>
+                    <div id="methodProductChips" class="flex flex-wrap gap-2 mt-2"></div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Category Restrictions</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="methodCategorySearch" placeholder="Search category name..."
+                               class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                        <button type="button" id="btnAddCategoryIncluded" class="px-3 py-2 bg-brand-primary/10 text-brand-primary rounded-lg text-sm font-medium">Include</button>
+                        <button type="button" id="btnAddCategoryExcluded" class="px-3 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium">Exclude</button>
+                    </div>
+                    <div id="methodCategoryChips" class="flex flex-wrap gap-2 mt-2"></div>
+                </div>
+                <p class="text-xs text-gray-500">Include restricts the method to carts containing those items; Exclude removes it when those items are present.</p>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-close-modal px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium">Save Method</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Zone Modal *@
+<div id="zoneModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+            <h3 id="zoneModalTitle" class="text-lg font-bold">Add Shipping Zone</h3>
+            <button class="btn-close-modal text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="zoneForm" class="p-6 space-y-4">
+            <input type="hidden" id="zoneId" />
+            <div>
+                <label for="zoneName" class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <input type="text" id="zoneName" required maxlength="200" placeholder="e.g. North America"
+                       class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+            </div>
+            <div>
+                <label for="zoneDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea id="zoneDescription" maxlength="1000" rows="2"
+                          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm"></textarea>
+            </div>
+            <div>
+                <label for="zoneCountries" class="block text-sm font-medium text-gray-700 mb-1">Countries (ISO alpha-2, comma separated)</label>
+                <input type="text" id="zoneCountries" maxlength="500" placeholder="e.g. US,CA,MX"
+                       class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+            </div>
+            <div>
+                <label for="zoneCities" class="block text-sm font-medium text-gray-700 mb-1">Cities (comma separated)</label>
+                <input type="text" id="zoneCities" maxlength="1000" placeholder="e.g. New York,Los Angeles"
+                       class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-close-modal px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium">Save Zone</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Rate Modal *@
+<div id="rateModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+            <h3 id="rateModalTitle" class="text-lg font-bold">Add Shipping Rate</h3>
+            <button class="btn-close-modal text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="rateForm" class="p-6 space-y-4">
+            <input type="hidden" id="rateId" />
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="rateMethod" class="block text-sm font-medium text-gray-700 mb-1">Shipping Method *</label>
+                    <select id="rateMethod" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary text-sm"></select>
+                </div>
+                <div>
+                    <label for="rateZone" class="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+                    <select id="rateZone" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary text-sm">
+                        <option value="">Everywhere (global)</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label for="rateCity" class="block text-sm font-medium text-gray-700 mb-1">City Override</label>
+                <input type="text" id="rateCity" maxlength="100" placeholder="Optional city that overrides the zone"
+                       class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="rateType" class="block text-sm font-medium text-gray-700 mb-1">Pricing</label>
+                    <select id="rateType" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary text-sm">
+                        <option value="0">Flat</option>
+                        <option value="1">Per Unit Weight</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="rateAmount" class="block text-sm font-medium text-gray-700 mb-1">Amount ($)</label>
+                    <input type="number" id="rateAmount" required min="0" step="0.01"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label for="rateMinWeight" class="block text-sm font-medium text-gray-700 mb-1">Min Weight (kg)</label>
+                    <input type="number" id="rateMinWeight" min="0" step="0.001"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+                <div>
+                    <label for="rateMaxWeight" class="block text-sm font-medium text-gray-700 mb-1">Max Weight (kg)</label>
+                    <input type="number" id="rateMaxWeight" min="0" step="0.001"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+                <div>
+                    <label for="rateMinOrder" class="block text-sm font-medium text-gray-700 mb-1">Min Order ($)</label>
+                    <input type="number" id="rateMinOrder" min="0" step="0.01"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                </div>
+            </div>
+            <div>
+                <label for="ratePriority" class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                <input type="number" id="ratePriority" min="0" value="0"
+                       class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+                <p class="text-xs text-gray-500 mt-1">Lower values win when several rates match. City beats zone, zone beats global.</p>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-close-modal px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium">Save Rate</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Blackout Modal *@
+<div id="blackoutModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+            <h3 id="blackoutModalTitle" class="text-lg font-bold">Add Delivery Blackout</h3>
+            <button class="btn-close-modal text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="blackoutForm" class="p-6 space-y-4">
+            <input type="hidden" id="blackoutId" />
+            <div>
+                <label for="blackoutMethod" class="block text-sm font-medium text-gray-700 mb-1">Shipping Method *</label>
+                <select id="blackoutMethod" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary text-sm"></select>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="blackoutStart" class="block text-sm font-medium text-gray-700 mb-1">Starts *</label>
+                    <input type="datetime-local" id="blackoutStart" required
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary text-sm" />
+                </div>
+                <div>
+                    <label for="blackoutEnd" class="block text-sm font-medium text-gray-700 mb-1">Ends *</label>
+                    <input type="datetime-local" id="blackoutEnd" required
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary text-sm" />
+                </div>
+            </div>
+            <div>
+                <label for="blackoutReason" class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+                <input type="text" id="blackoutReason" maxlength="500"
+                       class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm" />
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-close-modal px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium">Save Blackout</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            'use strict';
+
+            let methods = [];
+            let zones = [];
+            let rates = [];
+            let blackouts = [];
+
+            const productCache = {};
+            const categoryCache = {};
+            let selectedProducts = [];
+            let selectedExcludedProducts = [];
+            let selectedCategories = [];
+            let selectedExcludedCategories = [];
+
+            const methodTypeLabels = { 0: 'Standard', 1: 'Express', 2: 'Free Delivery', 3: 'Local Pickup' };
+            const rateTypeLabels = { 0: 'Flat', 1: 'Per Weight' };
+
+            function api(path, options) {
+                return fetch(path, options).then(async res => {
+                    if (res.ok) return res.json();
+                    let error = 'Request failed';
+                    try {
+                        const body = await res.json();
+                        error = body.error || body.title || error;
+                    } catch (e) { /* ignore */ }
+                    throw new Error(error);
+                });
+            }
+
+            function esc(value) {
+                if (value === null || value === undefined) return '';
+                return String(value).replace(/[&<>"']/g, c => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                }[c]));
+            }
+
+            function money(value) {
+                const n = Number(value || 0);
+                return isNaN(n) ? '$0.00' : '$' + n.toFixed(2);
+            }
+
+            // ---- Tabs ----
+            function switchTab(name) {
+                document.querySelectorAll('[data-shipping-tab]').forEach(b => {
+                    const active = b.dataset.shippingTab === name;
+                    b.classList.toggle('bg-brand-primary', active);
+                    b.classList.toggle('text-white', active);
+                    b.classList.toggle('text-gray-600', !active);
+                    b.classList.toggle('hover:bg-gray-50', !active);
+                });
+                document.querySelectorAll('[data-shipping-panel]').forEach(p => {
+                    p.classList.toggle('hidden', p.dataset.shippingPanel !== name);
+                });
+                if (name === 'methods') loadMethods();
+                if (name === 'zones') loadZones();
+                if (name === 'rates') loadRates();
+                if (name === 'blackouts') loadBlackouts();
+            }
+
+            document.querySelectorAll('[data-shipping-tab]').forEach(b =>
+                b.addEventListener('click', () => switchTab(b.dataset.shippingTab)));
+
+            // ---- Methods ----
+            async function loadMethods() {
+                methods = await api('/api/admin/shipping/methods');
+                renderMethods();
+                fillMethodOptions();
+            }
+
+            function renderMethods() {
+                const tbody = document.getElementById('methodsTableBody');
+                if (methods.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-8 text-center text-gray-500 text-sm">No shipping methods yet.</td></tr>';
+                } else {
+                    tbody.innerHTML = methods.map((m, i) => `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 text-sm font-mono text-brand-primary">${esc(m.code)}</td>
+                            <td class="px-6 py-4">
+                                <p class="text-sm font-medium text-gray-900">${esc(m.name)}</p>
+                                ${m.description ? `<p class="text-xs text-gray-500">${esc(m.description)}</p>` : ''}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${methodTypeLabels[m.type] || m.type}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${m.type === 3 ? 'Pickup' : m.estimatedMinDays + '–' + m.estimatedMaxDays + ' days'}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${m.supportsCashOnDelivery ? 'Yes' : 'No'}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${m.freeShippingThreshold ? money(m.freeShippingThreshold) : '—'}</td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex px-2 py-1 rounded-full text-xs font-medium ${m.isActive ? 'bg-brand-success/10 text-brand-success' : 'bg-gray-100 text-gray-500'}">
+                                    ${m.isActive ? 'Active' : 'Inactive'}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-right whitespace-nowrap">
+                                <button onclick="window.shippingEditMethod('${m.id}')" class="text-brand-primary hover:underline text-sm mr-2">Edit</button>
+                                <button onclick="window.shippingToggleMethod('${m.id}', ${m.isActive})" class="text-gray-600 hover:underline text-sm mr-2">${m.isActive ? 'Deactivate' : 'Activate'}</button>
+                                <button onclick="window.shippingMoveMethod('${m.id}', -1)" ${i === 0 ? 'disabled class="text-gray-300"' : 'class="text-gray-500 hover:text-gray-700"'} title="Move up">↑</button>
+                                <button onclick="window.shippingMoveMethod('${m.id}', 1)" ${i === methods.length - 1 ? 'disabled class="text-gray-300"' : 'class="text-gray-500 hover:text-gray-700"'} title="Move down">↓</button>
+                            </td>
+                        </tr>`).join('');
+                }
+
+                const cards = document.getElementById('methodsCards');
+                if (methods.length === 0) {
+                    cards.innerHTML = '<div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8"><p>No shipping methods yet.</p></div>';
+                } else {
+                    cards.innerHTML = methods.map(m => `
+                        <div class="bg-white rounded-lg border p-4">
+                            <div class="flex items-start justify-between gap-2">
+                                <div>
+                                    <p class="text-sm font-bold text-gray-900">${esc(m.name)}</p>
+                                    <p class="text-xs font-mono text-brand-primary mt-0.5">${esc(m.code)}</p>
+                                </div>
+                                <span class="inline-flex px-2 py-1 rounded-full text-xs font-medium ${m.isActive ? 'bg-brand-success/10 text-brand-success' : 'bg-gray-100 text-gray-500'}">
+                                    ${m.isActive ? 'Active' : 'Inactive'}
+                                </span>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-2">${methodTypeLabels[m.type] || m.type} · ${m.type === 3 ? 'Pickup' : m.estimatedMinDays + '–' + m.estimatedMaxDays + ' days'} · COD: ${m.supportsCashOnDelivery ? 'Yes' : 'No'}</div>
+                            ${m.freeShippingThreshold ? `<div class="text-xs text-gray-500 mt-1">Free over ${money(m.freeShippingThreshold)}</div>` : ''}
+                            <div class="flex gap-3 mt-3">
+                                <button onclick="window.shippingEditMethod('${m.id}')" class="text-brand-primary hover:underline text-sm">Edit</button>
+                                <button onclick="window.shippingToggleMethod('${m.id}', ${m.isActive})" class="text-gray-600 hover:underline text-sm">${m.isActive ? 'Deactivate' : 'Activate'}</button>
+                            </div>
+                        </div>`).join('');
+                }
+            }
+
+            function fillMethodOptions() {
+                const options = methods.map(m => `<option value="${m.id}">${esc(m.code)} — ${esc(m.name)}</option>`).join('');
+                document.getElementById('rateMethod').innerHTML = options;
+                document.getElementById('blackoutMethod').innerHTML = options;
+                const filterOptions = '<option value="">All methods</option>' + options;
+                document.getElementById('rateMethodFilter').innerHTML = filterOptions;
+                document.getElementById('blackoutMethodFilter').innerHTML = filterOptions;
+            }
+
+            function openMethodModal(method) {
+                const editing = !!method;
+                document.getElementById('methodModalTitle').textContent = editing ? 'Edit Shipping Method' : 'Add Shipping Method';
+                document.getElementById('methodId').value = method ? method.id : '';
+                document.getElementById('methodCode').value = method ? method.code : '';
+                document.getElementById('methodName').value = method ? method.name : '';
+                document.getElementById('methodDescription').value = method ? (method.description || '') : '';
+                document.getElementById('methodType').value = method ? method.type : 0;
+                document.getElementById('methodMinDays').value = method ? method.estimatedMinDays : 3;
+                document.getElementById('methodMaxDays').value = method ? method.estimatedMaxDays : 5;
+                document.getElementById('methodFreeThreshold').value = method ? (method.freeShippingThreshold ?? '') : '';
+                document.getElementById('methodMaxWeight').value = method ? (method.maxPackageWeight ?? '') : '';
+                document.getElementById('methodCod').checked = method ? method.supportsCashOnDelivery : false;
+                document.getElementById('methodRequiresAddress').checked = method ? method.requiresShippingAddress : true;
+                document.getElementById('methodPickup').value = method ? (method.pickupInstructions || '') : '';
+                document.getElementById('methodPickupWrap').classList.toggle('hidden', method ? method.type !== 3 : true);
+
+                selectedProducts = [];
+                selectedExcludedProducts = [];
+                selectedCategories = [];
+                selectedExcludedCategories = [];
+                if (editing) {
+                    selectedProducts = method.productRestrictions.filter(r => !r.isExclusion).map(r => ({ id: r.productId, name: 'Product' }));
+                    selectedExcludedProducts = method.productRestrictions.filter(r => r.isExclusion).map(r => ({ id: r.productId, name: 'Product' }));
+                    selectedCategories = method.categoryRestrictions.filter(r => !r.isExclusion).map(r => ({ id: r.categoryId, name: 'Category' }));
+                    selectedExcludedCategories = method.categoryRestrictions.filter(r => r.isExclusion).map(r => ({ id: r.categoryId, name: 'Category' }));
+                }
+                renderChips();
+                document.getElementById('methodModal').classList.remove('hidden');
+            }
+
+            function renderChips() {
+                document.getElementById('methodProductChips').innerHTML =
+                    selectedProducts.map((p, i) => chip(p.name, `window.shippingRemoveChip('product', ${i})`)).join('') +
+                    selectedExcludedProducts.map((p, i) => chip(p.name, `window.shippingRemoveChip('excludedProduct', ${i})`, true)).join('');
+                document.getElementById('methodCategoryChips').innerHTML =
+                    selectedCategories.map((c, i) => chip(c.name, `window.shippingRemoveChip('category', ${i})`)).join('') +
+                    selectedExcludedCategories.map((c, i) => chip(c.name, `window.shippingRemoveChip('excludedCategory', ${i})`, true)).join('');
+            }
+
+            function chip(name, onclick, excluded) {
+                return `<span class="inline-flex items-center gap-1 ${excluded ? 'bg-red-50 text-red-600' : 'bg-brand-primary/10 text-brand-primary'} px-2 py-1 rounded-full text-xs">
+                    ${esc(name)} <button type="button" onclick="${onclick}" class="hover:opacity-70">&times;</button></span>`;
+            }
+
+            window.shippingRemoveChip = function (kind, index) {
+                if (kind === 'product') selectedProducts.splice(index, 1);
+                if (kind === 'excludedProduct') selectedExcludedProducts.splice(index, 1);
+                if (kind === 'category') selectedCategories.splice(index, 1);
+                if (kind === 'excludedCategory') selectedExcludedCategories.splice(index, 1);
+                renderChips();
+            };
+
+            async function searchProduct(term) {
+                if (!term.trim()) return [];
+                const res = await api(`/api/admin/products?searchTerm=${encodeURIComponent(term.trim())}&pageSize=8`);
+                return (res.products || []).map(p => ({ id: p.id, name: p.name }));
+            }
+
+            async function searchCategory(term) {
+                if (!term.trim()) return [];
+                const res = await api(`/api/admin/categories`);
+                const needle = term.trim().toLowerCase();
+                return res.filter(c => (c.name || '').toLowerCase().includes(needle)).slice(0, 8).map(c => ({ id: c.id, name: c.name }));
+            }
+
+            async function addScopedProduct(kind) {
+                const input = document.getElementById('methodProductSearch');
+                const results = await searchProduct(input.value);
+                const chosen = results.find(r => r.name.toLowerCase() === input.value.trim().toLowerCase()) || results[0];
+                if (!chosen) return;
+                if (kind === 'included' && !selectedProducts.some(x => x.id === chosen.id)) selectedProducts.push(chosen);
+                if (kind === 'excluded' && !selectedExcludedProducts.some(x => x.id === chosen.id)) selectedExcludedProducts.push(chosen);
+                renderChips();
+                input.value = '';
+            }
+
+            async function addScopedCategory(kind) {
+                const input = document.getElementById('methodCategorySearch');
+                const results = await searchCategory(input.value);
+                const chosen = results.find(r => r.name.toLowerCase() === input.value.trim().toLowerCase()) || results[0];
+                if (!chosen) return;
+                if (kind === 'included' && !selectedCategories.some(x => x.id === chosen.id)) selectedCategories.push(chosen);
+                if (kind === 'excluded' && !selectedExcludedCategories.some(x => x.id === chosen.id)) selectedExcludedCategories.push(chosen);
+                renderChips();
+                input.value = '';
+            }
+
+            document.getElementById('btnAddProductIncluded').addEventListener('click', () => addScopedProduct('included'));
+            document.getElementById('btnAddProductExcluded').addEventListener('click', () => addScopedProduct('excluded'));
+            document.getElementById('btnAddCategoryIncluded').addEventListener('click', () => addScopedCategory('included'));
+            document.getElementById('btnAddCategoryExcluded').addEventListener('click', () => addScopedCategory('excluded'));
+
+            document.getElementById('methodType').addEventListener('change', function () {
+                const isPickup = parseInt(this.value, 10) === 3;
+                document.getElementById('methodPickupWrap').classList.toggle('hidden', !isPickup);
+            });
+
+            document.getElementById('methodForm').addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const id = document.getElementById('methodId').value;
+                const payload = {
+                    code: document.getElementById('methodCode').value.trim(),
+                    name: document.getElementById('methodName').value.trim(),
+                    description: document.getElementById('methodDescription').value.trim() || null,
+                    type: parseInt(document.getElementById('methodType').value, 10),
+                    estimatedMinDays: parseInt(document.getElementById('methodMinDays').value, 10) || 0,
+                    estimatedMaxDays: parseInt(document.getElementById('methodMaxDays').value, 10) || 0,
+                    supportsCashOnDelivery: document.getElementById('methodCod').checked,
+                    requiresShippingAddress: document.getElementById('methodRequiresAddress').checked,
+                    freeShippingThreshold: parseNumber('methodFreeThreshold'),
+                    maxPackageWeight: parseNumber('methodMaxWeight'),
+                    pickupInstructions: document.getElementById('methodPickup').value.trim() || null,
+                    productRestrictions: [
+                        ...selectedProducts.map(p => ({ productId: p.id, isExclusion: false })),
+                        ...selectedExcludedProducts.map(p => ({ productId: p.id, isExclusion: true }))
+                    ],
+                    categoryRestrictions: [
+                        ...selectedCategories.map(c => ({ categoryId: c.id, isExclusion: false })),
+                        ...selectedExcludedCategories.map(c => ({ categoryId: c.id, isExclusion: true }))
+                    ]
+                };
+                if (id) {
+                    payload.id = id;
+                    payload.isActive = methods.find(m => m.id === id).isActive;
+                    payload.displayOrder = methods.find(m => m.id === id).displayOrder;
+                }
+                try {
+                    await api(id ? `/api/admin/shipping/methods/${id}` : '/api/admin/shipping/methods', {
+                        method: id ? 'PUT' : 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    closeModal('methodModal');
+                    await loadMethods();
+                } catch (err) {
+                    alert(err.message);
+                }
+            });
+
+            window.shippingEditMethod = function (id) {
+                openMethodModal(methods.find(m => m.id === id));
+            };
+
+            window.shippingToggleMethod = async function (id, isActive) {
+                try {
+                    await api(`/api/admin/shipping/methods/${id}/toggle`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ isActive: !isActive })
+                    });
+                    await loadMethods();
+                } catch (err) {
+                    alert(err.message);
+                }
+            };
+
+            window.shippingMoveMethod = async function (id, direction) {
+                const index = methods.findIndex(m => m.id === id);
+                const swap = index + direction;
+                if (swap < 0 || swap >= methods.length) return;
+                const reordered = methods.slice();
+                [reordered[index], reordered[swap]] = [reordered[swap], reordered[index]];
+                try {
+                    await api('/api/admin/shipping/methods/reorder', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(reordered.map(m => m.id))
+                    });
+                    await loadMethods();
+                } catch (err) {
+                    alert(err.message);
+                }
+            };
+
+            // ---- Zones ----
+            async function loadZones() {
+                zones = await api('/api/admin/shipping/zones');
+                renderZones();
+                fillZoneOptions();
+            }
+
+            function renderZones() {
+                const tbody = document.getElementById('zonesTableBody');
+                if (zones.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500 text-sm">No shipping zones yet.</td></tr>';
+                } else {
+                    tbody.innerHTML = zones.map(z => `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4">
+                                <p class="text-sm font-medium text-gray-900">${esc(z.name)}</p>
+                                ${z.description ? `<p class="text-xs text-gray-500">${esc(z.description)}</p>` : ''}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${z.countries.length ? z.countries.join(', ') : 'Everywhere'}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${z.cities.length ? z.cities.join(', ') : '—'}</td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex px-2 py-1 rounded-full text-xs font-medium ${z.isActive ? 'bg-brand-success/10 text-brand-success' : 'bg-gray-100 text-gray-500'}">
+                                    ${z.isActive ? 'Active' : 'Inactive'}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-right whitespace-nowrap">
+                                <button onclick="window.shippingEditZone('${z.id}')" class="text-brand-primary hover:underline text-sm mr-2">Edit</button>
+                                <button onclick="window.shippingToggleZone('${z.id}', ${z.isActive})" class="text-gray-600 hover:underline text-sm mr-2">${z.isActive ? 'Deactivate' : 'Activate'}</button>
+                                <button onclick="window.shippingDeleteZone('${z.id}')" class="text-red-600 hover:underline text-sm">Delete</button>
+                            </td>
+                        </tr>`).join('');
+                }
+
+                const cards = document.getElementById('zonesCards');
+                if (zones.length === 0) {
+                    cards.innerHTML = '<div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8"><p>No shipping zones yet.</p></div>';
+                } else {
+                    cards.innerHTML = zones.map(z => `
+                        <div class="bg-white rounded-lg border p-4">
+                            <div class="flex items-start justify-between gap-2">
+                                <p class="text-sm font-bold text-gray-900">${esc(z.name)}</p>
+                                <span class="inline-flex px-2 py-1 rounded-full text-xs font-medium ${z.isActive ? 'bg-brand-success/10 text-brand-success' : 'bg-gray-100 text-gray-500'}">${z.isActive ? 'Active' : 'Inactive'}</span>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-2">${z.countries.length ? z.countries.join(', ') : 'Everywhere'}</div>
+                            ${z.cities.length ? `<div class="text-xs text-gray-500 mt-1">${esc(z.cities.join(', '))}</div>` : ''}
+                            <div class="flex gap-3 mt-3">
+                                <button onclick="window.shippingEditZone('${z.id}')" class="text-brand-primary hover:underline text-sm">Edit</button>
+                                <button onclick="window.shippingToggleZone('${z.id}', ${z.isActive})" class="text-gray-600 hover:underline text-sm">${z.isActive ? 'Deactivate' : 'Activate'}</button>
+                                <button onclick="window.shippingDeleteZone('${z.id}')" class="text-red-600 hover:underline text-sm">Delete</button>
+                            </div>
+                        </div>`).join('');
+                }
+            }
+
+            function fillZoneOptions() {
+                const options = '<option value="">Everywhere (global)</option>' +
+                    zones.map(z => `<option value="${z.id}">${esc(z.name)}</option>`).join('');
+                document.getElementById('rateZone').innerHTML = options;
+            }
+
+            function openZoneModal(zone) {
+                const editing = !!zone;
+                document.getElementById('zoneModalTitle').textContent = editing ? 'Edit Shipping Zone' : 'Add Shipping Zone';
+                document.getElementById('zoneId').value = zone ? zone.id : '';
+                document.getElementById('zoneName').value = zone ? zone.name : '';
+                document.getElementById('zoneDescription').value = zone ? (zone.description || '') : '';
+                document.getElementById('zoneCountries').value = zone ? zone.countries.join(',') : '';
+                document.getElementById('zoneCities').value = zone ? zone.cities.join(',') : '';
+                document.getElementById('zoneModal').classList.remove('hidden');
+            }
+
+            function splitList(value) {
+                return value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            }
+
+            document.getElementById('zoneForm').addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const id = document.getElementById('zoneId').value;
+                const payload = {
+                    name: document.getElementById('zoneName').value.trim(),
+                    description: document.getElementById('zoneDescription').value.trim() || null,
+                    displayOrder: 0,
+                    countries: splitList(document.getElementById('zoneCountries').value),
+                    cities: splitList(document.getElementById('zoneCities').value)
+                };
+                if (id) {
+                    payload.id = id;
+                    payload.isActive = zones.find(z => z.id === id).isActive;
+                    payload.displayOrder = zones.find(z => z.id === id).displayOrder;
+                }
+                try {
+                    await api(id ? `/api/admin/shipping/zones/${id}` : '/api/admin/shipping/zones', {
+                        method: id ? 'PUT' : 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    closeModal('zoneModal');
+                    await loadZones();
+                } catch (err) {
+                    alert(err.message);
+                }
+            });
+
+            window.shippingEditZone = function (id) {
+                openZoneModal(zones.find(z => z.id === id));
+            };
+
+            window.shippingToggleZone = async function (id, isActive) {
+                try {
+                    await api(`/api/admin/shipping/zones/${id}/toggle`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ isActive: !isActive })
+                    });
+                    await loadZones();
+                } catch (err) {
+                    alert(err.message);
+                }
+            };
+
+            window.shippingDeleteZone = async function (id) {
+                if (!confirm('Delete this shipping zone? Rates using it will be blocked.')) return;
+                try {
+                    await api(`/api/admin/shipping/zones/${id}`, { method: 'DELETE' });
+                    await loadZones();
+                } catch (err) {
+                    alert(err.message);
+                }
+            };
+
+            // ---- Rates ----
+            async function loadRates() {
+                const filter = document.getElementById('rateMethodFilter').value;
+                const query = filter ? '?methodId=' + filter : '';
+                rates = await api('/api/admin/shipping/rates' + query);
+                renderRates();
+            }
+
+            function renderRates() {
+                const methodName = id => {
+                    const m = methods.find(m => m.id === id);
+                    return m ? m.name : 'Unknown';
+                };
+                const scopeText = r => {
+                    if (r.cityName) return 'City: ' + r.cityName;
+                    if (r.shippingZoneId) {
+                        const z = zones.find(z => z.id === r.shippingZoneId);
+                        return 'Zone: ' + (z ? z.name : 'Unknown');
+                    }
+                    return 'Global';
+                };
+                const weightText = r => {
+                    if (!r.minWeightKg && !r.maxWeightKg) return 'Any';
+                    return (r.minWeightKg ?? 0) + ' – ' + (r.maxWeightKg ?? '∞');
+                };
+
+                const tbody = document.getElementById('ratesTableBody');
+                if (rates.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-8 text-center text-gray-500 text-sm">No shipping rates yet.</td></tr>';
+                } else {
+                    tbody.innerHTML = rates.map(r => `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 text-sm font-medium text-gray-900">${esc(methodName(r.shippingMethodId))}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${esc(scopeText(r))}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${rateTypeLabels[r.rateType] || r.rateType}</td>
+                            <td class="px-6 py-4 text-sm font-medium text-gray-900">${money(r.amount)}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${weightText(r)}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${r.minOrderAmount ? money(r.minOrderAmount) : '—'}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${r.priority}</td>
+                            <td class="px-6 py-4 text-right whitespace-nowrap">
+                                <button onclick="window.shippingEditRate('${r.id}')" class="text-brand-primary hover:underline text-sm mr-2">Edit</button>
+                                <button onclick="window.shippingDeleteRate('${r.id}')" class="text-red-600 hover:underline text-sm">Delete</button>
+                            </td>
+                        </tr>`).join('');
+                }
+
+                const cards = document.getElementById('ratesCards');
+                if (rates.length === 0) {
+                    cards.innerHTML = '<div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8"><p>No shipping rates yet.</p></div>';
+                } else {
+                    cards.innerHTML = rates.map(r => `
+                        <div class="bg-white rounded-lg border p-4">
+                            <div class="flex items-start justify-between gap-2">
+                                <p class="text-sm font-bold text-gray-900">${esc(methodName(r.shippingMethodId))}</p>
+                                <p class="text-sm font-semibold text-brand-primary">${money(r.amount)}</p>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">${esc(scopeText(r))} · ${rateTypeLabels[r.rateType] || r.rateType}</div>
+                            <div class="text-xs text-gray-500 mt-1">Weight: ${weightText(r)} · Min order: ${r.minOrderAmount ? money(r.minOrderAmount) : '—'} · Priority: ${r.priority}</div>
+                            <div class="flex gap-3 mt-3">
+                                <button onclick="window.shippingEditRate('${r.id}')" class="text-brand-primary hover:underline text-sm">Edit</button>
+                                <button onclick="window.shippingDeleteRate('${r.id}')" class="text-red-600 hover:underline text-sm">Delete</button>
+                            </div>
+                        </div>`).join('');
+                }
+            }
+
+            function openRateModal(rate) {
+                const editing = !!rate;
+                document.getElementById('rateModalTitle').textContent = editing ? 'Edit Shipping Rate' : 'Add Shipping Rate';
+                document.getElementById('rateId').value = rate ? rate.id : '';
+                document.getElementById('rateMethod').value = rate ? rate.shippingMethodId : (methods[0] ? methods[0].id : '');
+                document.getElementById('rateZone').value = rate && rate.shippingZoneId ? rate.shippingZoneId : '';
+                document.getElementById('rateCity').value = rate ? (rate.cityName || '') : '';
+                document.getElementById('rateType').value = rate ? rate.rateType : 0;
+                document.getElementById('rateAmount').value = rate ? rate.amount : '';
+                document.getElementById('rateMinWeight').value = rate ? (rate.minWeightKg ?? '') : '';
+                document.getElementById('rateMaxWeight').value = rate ? (rate.maxWeightKg ?? '') : '';
+                document.getElementById('rateMinOrder').value = rate ? (rate.minOrderAmount ?? '') : '';
+                document.getElementById('ratePriority').value = rate ? rate.priority : 0;
+                document.getElementById('rateModal').classList.remove('hidden');
+            }
+
+            document.getElementById('rateForm').addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const id = document.getElementById('rateId').value;
+                const payload = {
+                    shippingMethodId: document.getElementById('rateMethod').value,
+                    shippingZoneId: document.getElementById('rateZone').value || null,
+                    cityName: document.getElementById('rateCity').value.trim() || null,
+                    name: 'Delivery',
+                    rateType: parseInt(document.getElementById('rateType').value, 10),
+                    amount: parseFloat(document.getElementById('rateAmount').value) || 0,
+                    minWeightKg: parseNumber('rateMinWeight'),
+                    maxWeightKg: parseNumber('rateMaxWeight'),
+                    minOrderAmount: parseNumber('rateMinOrder'),
+                    priority: parseInt(document.getElementById('ratePriority').value, 10) || 0
+                };
+                if (id) payload.id = id;
+                try {
+                    await api(id ? `/api/admin/shipping/rates/${id}` : '/api/admin/shipping/rates', {
+                        method: id ? 'PUT' : 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    closeModal('rateModal');
+                    await loadRates();
+                } catch (err) {
+                    alert(err.message);
+                }
+            });
+
+            window.shippingEditRate = function (id) {
+                openRateModal(rates.find(r => r.id === id));
+            };
+
+            window.shippingDeleteRate = async function (id) {
+                if (!confirm('Delete this shipping rate?')) return;
+                try {
+                    await api(`/api/admin/shipping/rates/${id}`, { method: 'DELETE' });
+                    await loadRates();
+                } catch (err) {
+                    alert(err.message);
+                }
+            };
+
+            // ---- Blackouts ----
+            async function loadBlackouts() {
+                const filter = document.getElementById('blackoutMethodFilter').value;
+                const query = filter ? '?methodId=' + filter : '';
+                const all = await api('/api/admin/shipping/blackouts' + query);
+                blackouts = all;
+                renderBlackouts();
+            }
+
+            function renderBlackouts() {
+                const methodName = id => {
+                    const m = methods.find(m => m.id === id);
+                    return m ? m.name : 'Unknown';
+                };
+
+                const tbody = document.getElementById('blackoutsTableBody');
+                if (blackouts.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500 text-sm">No delivery blackouts yet.</td></tr>';
+                } else {
+                    tbody.innerHTML = blackouts.map(b => `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 text-sm font-medium text-gray-900">${esc(methodName(b.shippingMethodId))}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${new Date(b.startAtUtc).toLocaleString()}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${new Date(b.endAtUtc).toLocaleString()}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${esc(b.reason || '—')}</td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex px-2 py-1 rounded-full text-xs font-medium ${b.isActive ? 'bg-brand-success/10 text-brand-success' : 'bg-gray-100 text-gray-500'}">
+                                    ${b.isActive ? 'Active' : 'Inactive'}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-right whitespace-nowrap">
+                                <button onclick="window.shippingEditBlackout('${b.id}')" class="text-brand-primary hover:underline text-sm mr-2">Edit</button>
+                                <button onclick="window.shippingToggleBlackout('${b.id}', ${b.isActive})" class="text-gray-600 hover:underline text-sm mr-2">${b.isActive ? 'Disable' : 'Enable'}</button>
+                                <button onclick="window.shippingDeleteBlackout('${b.id}')" class="text-red-600 hover:underline text-sm">Delete</button>
+                            </td>
+                        </tr>`).join('');
+                }
+
+                const cards = document.getElementById('blackoutsCards');
+                if (blackouts.length === 0) {
+                    cards.innerHTML = '<div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8"><p>No delivery blackouts yet.</p></div>';
+                } else {
+                    cards.innerHTML = blackouts.map(b => `
+                        <div class="bg-white rounded-lg border p-4">
+                            <div class="flex items-start justify-between gap-2">
+                                <p class="text-sm font-bold text-gray-900">${esc(methodName(b.shippingMethodId))}</p>
+                                <span class="inline-flex px-2 py-1 rounded-full text-xs font-medium ${b.isActive ? 'bg-brand-success/10 text-brand-success' : 'bg-gray-100 text-gray-500'}">${b.isActive ? 'Active' : 'Inactive'}</span>
+                            </div>
+                            <div class="text-xs text-gray-600 mt-2">${new Date(b.startAtUtc).toLocaleString()} → ${new Date(b.endAtUtc).toLocaleString()}</div>
+                            <div class="text-xs text-gray-500 mt-1">${esc(b.reason || 'No reason given')}</div>
+                            <div class="flex gap-3 mt-3">
+                                <button onclick="window.shippingEditBlackout('${b.id}')" class="text-brand-primary hover:underline text-sm">Edit</button>
+                                <button onclick="window.shippingToggleBlackout('${b.id}', ${b.isActive})" class="text-gray-600 hover:underline text-sm">${b.isActive ? 'Disable' : 'Enable'}</button>
+                                <button onclick="window.shippingDeleteBlackout('${b.id}')" class="text-red-600 hover:underline text-sm">Delete</button>
+                            </div>
+                        </div>`).join('');
+                }
+            }
+
+            function openBlackoutModal(blackout) {
+                const editing = !!blackout;
+                document.getElementById('blackoutModalTitle').textContent = editing ? 'Edit Delivery Blackout' : 'Add Delivery Blackout';
+                document.getElementById('blackoutId').value = blackout ? blackout.id : '';
+                document.getElementById('blackoutMethod').value = blackout ? blackout.shippingMethodId : (methods[0] ? methods[0].id : '');
+                document.getElementById('blackoutStart').value = blackout ? toLocalInput(blackout.startAtUtc) : '';
+                document.getElementById('blackoutEnd').value = blackout ? toLocalInput(blackout.endAtUtc) : '';
+                document.getElementById('blackoutReason').value = blackout ? (blackout.reason || '') : '';
+                document.getElementById('blackoutModal').classList.remove('hidden');
+            }
+
+            function toLocalInput(iso) {
+                const d = new Date(iso);
+                const pad = n => String(n).padStart(2, '0');
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            }
+
+            function toUtcIso(value) {
+                if (!value) return null;
+                const d = new Date(value);
+                return isNaN(d.getTime()) ? null : d.toISOString();
+            }
+
+            document.getElementById('blackoutForm').addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const id = document.getElementById('blackoutId').value;
+                const payload = {
+                    shippingMethodId: document.getElementById('blackoutMethod').value,
+                    startAtUtc: toUtcIso(document.getElementById('blackoutStart').value),
+                    endAtUtc: toUtcIso(document.getElementById('blackoutEnd').value),
+                    reason: document.getElementById('blackoutReason').value.trim() || null
+                };
+                if (id) {
+                    payload.id = id;
+                    payload.isActive = blackouts.find(b => b.id === id).isActive;
+                }
+                try {
+                    await api(id ? `/api/admin/shipping/blackouts/${id}` : '/api/admin/shipping/blackouts', {
+                        method: id ? 'PUT' : 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    closeModal('blackoutModal');
+                    await loadBlackouts();
+                } catch (err) {
+                    alert(err.message);
+                }
+            });
+
+            window.shippingEditBlackout = function (id) {
+                openBlackoutModal(blackouts.find(b => b.id === id));
+            };
+
+            window.shippingToggleBlackout = async function (id, isActive) {
+                const b = blackouts.find(x => x.id === id);
+                const payload = {
+                    id,
+                    shippingMethodId: b.shippingMethodId,
+                    startAtUtc: b.startAtUtc,
+                    endAtUtc: b.endAtUtc,
+                    reason: b.reason,
+                    isActive: !isActive
+                };
+                try {
+                    await api(`/api/admin/shipping/blackouts/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    await loadBlackouts();
+                } catch (err) {
+                    alert(err.message);
+                }
+            };
+
+            window.shippingDeleteBlackout = async function (id) {
+                if (!confirm('Delete this delivery blackout?')) return;
+                try {
+                    await api(`/api/admin/shipping/blackouts/${id}`, { method: 'DELETE' });
+                    await loadBlackouts();
+                } catch (err) {
+                    alert(err.message);
+                }
+            };
+
+            // ---- Shared ----
+            function parseNumber(id) {
+                const value = document.getElementById(id).value;
+                if (value === '' || value === null || value === undefined) return null;
+                const n = parseFloat(value);
+                return isNaN(n) ? null : n;
+            }
+
+            function closeModal(id) {
+                document.getElementById(id).classList.add('hidden');
+            }
+
+            document.querySelectorAll('.btn-close-modal').forEach(b =>
+                b.addEventListener('click', () => {
+                    const modal = b.closest('[id$="Modal"]');
+                    if (modal) modal.classList.add('hidden');
+                }));
+
+            document.getElementById('btnAddMethod').addEventListener('click', () => openMethodModal(null));
+            document.getElementById('btnAddMethodMobile').addEventListener('click', () => openMethodModal(null));
+            document.getElementById('btnAddZone').addEventListener('click', () => openZoneModal(null));
+            document.getElementById('btnAddRate').addEventListener('click', () => openRateModal(null));
+            document.getElementById('btnAddBlackout').addEventListener('click', () => openBlackoutModal(null));
+            document.getElementById('rateMethodFilter').addEventListener('change', loadRates);
+            document.getElementById('blackoutMethodFilter').addEventListener('change', loadBlackouts);
+
+            loadMethods().then(() => Promise.all([loadZones(), loadRates(), loadBlackouts()]));
+        })();
+    </script>
+}

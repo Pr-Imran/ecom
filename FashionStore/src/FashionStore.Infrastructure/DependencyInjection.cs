@@ -126,6 +126,8 @@ public static class DependencyInjection
         services.AddScoped<IDiscountService, DiscountService>();
         services.AddScoped<ICouponService, CouponService>();
         services.AddScoped<IPromotionService, PromotionService>();
+        services.AddScoped<IShippingService, ShippingService>();
+        services.AddScoped<IShippingCalculationService, ShippingCalculationService>();
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IAddressService, AddressService>();
         services.AddScoped<IAddressValidationService, AddressValidationService>();
@@ -143,6 +145,9 @@ public static class DependencyInjection
             options.AddPolicy(InventoryPolicies.InventoryManage, policy =>
                 policy.RequireAuthenticatedUser()
                       .RequireClaim("permission", ApplicationPermissions.Products.ManageInventory));
+            options.AddPolicy(ShippingPolicies.ShippingManage, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireClaim("permission", ApplicationPermissions.Shipping.Manage));
         });
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>("database");

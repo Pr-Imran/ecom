@@ -110,6 +110,11 @@ public class NavigationService : INavigationService
             });
         }
 
+        if (HasAnyPermission(permissions, new[] { "Shipping.Manage" }))
+        {
+            items.Add(new NavigationItem("shipping", "Shipping", "/admin/shipping", "truck"));
+        }
+
         if (HasAnyPermission(permissions, new[] { "Reviews.Manage" }))
         {
             items.Add(new NavigationItem("reviews", "Reviews", "/admin/reviews", "message-square"));

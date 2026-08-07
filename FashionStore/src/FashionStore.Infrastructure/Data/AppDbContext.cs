@@ -42,6 +42,14 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<CouponProduct> CouponProducts => Set<CouponProduct>();
     public DbSet<CouponExcludedProduct> CouponExcludedProducts => Set<CouponExcludedProduct>();
     public DbSet<CustomerAddress> CustomerAddresses => Set<CustomerAddress>();
+    public DbSet<ShippingMethod> ShippingMethods => Set<ShippingMethod>();
+    public DbSet<ShippingZone> ShippingZones => Set<ShippingZone>();
+    public DbSet<ShippingZoneCountry> ShippingZoneCountries => Set<ShippingZoneCountry>();
+    public DbSet<ShippingZoneCity> ShippingZoneCities => Set<ShippingZoneCity>();
+    public DbSet<ShippingRate> ShippingRates => Set<ShippingRate>();
+    public DbSet<ShippingMethodProduct> ShippingMethodProducts => Set<ShippingMethodProduct>();
+    public DbSet<ShippingMethodCategory> ShippingMethodCategories => Set<ShippingMethodCategory>();
+    public DbSet<DeliveryBlackout> DeliveryBlackouts => Set<DeliveryBlackout>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -449,6 +457,95 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             entity.HasIndex(e => new { e.UserId, e.IsDefaultShipping });
             entity.HasIndex(e => new { e.UserId, e.IsDefaultBilling });
             entity.HasIndex(e => e.CreatedAtUtc);
+        });
+
+        modelBuilder.Entity<ShippingMethod>(entity =>
+        {
+            entity.ToTable("ShippingMethods");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.PickupInstructions).HasMaxLength(1000);
+            entity.HasIndex(e => e.Code).IsUnique();
+            entity.HasIndex(e => e.IsActive);
+            entity.HasIndex(e => e.DisplayOrder);
+            entity.HasIndex(e => e.Type);
+        });
+
+        modelBuilder.Entity<ShippingZone>(entity =>
+        {
+            entity.ToTable("ShippingZones");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.HasIndex(e => e.IsActive);
+            entity.HasIndex(e => e.DisplayOrder);
+        });
+
+        modelBuilder.Entity<ShippingZoneCountry>(entity =>
+        {
+            entity.ToTable("ShippingZoneCountries");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.CountryCode).IsRequired().HasMaxLength(2);
+            entity.HasIndex(e => new { e.ShippingZoneId, e.CountryCode }).IsUnique();
+            entity.HasIndex(e => e.CountryCode);
+            entity.HasOne(e => e.ShippingZone).WithMany(z => z.Countries).HasForeignKey(e => e.ShippingZoneId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ShippingZoneCity>(entity =>
+        {
+            entity.ToTable("ShippingZoneCities");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.CityName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.NormalizedCityName).IsRequired().HasMaxLength(100);
+            entity.HasIndex(e => new { e.ShippingZoneId, e.NormalizedCityName }).IsUnique();
+            entity.HasIndex(e => e.NormalizedCityName);
+            entity.HasOne(e => e.ShippingZone).WithMany(z => z.Cities).HasForeignKey(e => e.ShippingZoneId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ShippingRate>(entity =>
+        {
+            entity.ToTable("ShippingRates");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.CityName).HasMaxLength(100);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.HasIndex(e => e.ShippingMethodId);
+            entity.HasIndex(e => e.ShippingZoneId);
+            entity.HasIndex(e => e.RateType);
+            entity.HasOne(e => e.ShippingMethod).WithMany(m => m.Rates).HasForeignKey(e => e.ShippingMethodId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.ShippingZone).WithMany().HasForeignKey(e => e.ShippingZoneId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ShippingMethodProduct>(entity =>
+        {
+            entity.ToTable("ShippingMethodProducts");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.ShippingMethodId, e.ProductId, e.IsExclusion }).IsUnique();
+            entity.HasIndex(e => e.ProductId);
+            entity.HasOne(e => e.ShippingMethod).WithMany(m => m.ProductRestrictions).HasForeignKey(e => e.ShippingMethodId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Product).WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ShippingMethodCategory>(entity =>
+        {
+            entity.ToTable("ShippingMethodCategories");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.ShippingMethodId, e.CategoryId, e.IsExclusion }).IsUnique();
+            entity.HasIndex(e => e.CategoryId);
+            entity.HasOne(e => e.ShippingMethod).WithMany(m => m.CategoryRestrictions).HasForeignKey(e => e.ShippingMethodId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Category).WithMany().HasForeignKey(e => e.CategoryId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DeliveryBlackout>(entity =>
+        {
+            entity.ToTable("DeliveryBlackouts");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Reason).HasMaxLength(500);
+            entity.HasIndex(e => e.ShippingMethodId);
+            entity.HasIndex(e => e.IsActive);
+            entity.HasIndex(e => e.StartAtUtc);
+            entity.HasOne(e => e.ShippingMethod).WithMany(m => m.Blackouts).HasForeignKey(e => e.ShippingMethodId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // Apply soft delete filter

@@ -113,6 +113,10 @@
                         Checkout
                     </button>
                 </div>
+                <div class="hidden items-center justify-between mt-1 text-xs text-brand-text-muted" data-cart-mobile-shipping-row>
+                    <span>Shipping</span>
+                    <span data-cart-mobile-shipping>—</span>
+                </div>
                 @if (Model.HasUnavailableItems)
                 {
                     <p class="mt-1 text-xs text-brand-text-muted text-center">Unavailable items excluded from subtotal.</p>

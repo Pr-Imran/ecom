@@ -56,6 +56,11 @@ public static class ApplicationPermissions
         public const string Manage = "Coupons.Manage";
     }
 
+    public static class Shipping
+    {
+        public const string Manage = "Shipping.Manage";
+    }
+
     public static class Content
     {
         public const string Manage = "Content.Manage";
@@ -97,6 +102,7 @@ public static class ApplicationPermissions
         Reviews.Manage,
         Promotions.Manage,
         Coupons.Manage,
+        Shipping.Manage,
         Content.Manage,
         Reports.View,
         Settings.Manage,

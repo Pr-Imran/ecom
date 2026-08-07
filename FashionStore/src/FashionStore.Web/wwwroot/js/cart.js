@@ -246,6 +246,17 @@
         });
 
         bindCouponActions();
+        bindShippingActions();
+
+        try {
+            var savedShipping = JSON.parse(localStorage.getItem('fashionstore.shipping.selection') || 'null');
+            if (savedShipping && savedShipping.country) {
+                var savedCountry = document.querySelector('[data-cart-shipping-country]');
+                var savedCity = document.querySelector('[data-cart-shipping-city]');
+                if (savedCountry) savedCountry.value = savedShipping.country;
+                if (savedCity && savedShipping.city) savedCity.value = savedShipping.city;
+            }
+        } catch (e) { /* storage unavailable */ }
     }
 
     function bindCouponActions() {
@@ -341,6 +352,7 @@
                 var summaryRegion = document.querySelector('[data-cart-summary]');
                 if (summaryRegion) summaryRegion.innerHTML = html;
                 bindCouponActions();
+                bindShippingActions();
 
                 var parser = new DOMParser();
                 var doc = parser.parseFromString(html, 'text/html');
@@ -358,6 +370,240 @@
                 }
                 refreshCart();
             });
+    }
+
+    // ---- Shipping quote ----
+    var shippingState = {
+        country: '',
+        city: '',
+        selectedMethodId: null,
+        quotes: [],
+        quoted: false
+    };
+
+    function money(n) {
+        var value = parseFloat(n);
+        if (isNaN(value)) return '$0.00';
+        return '$' + value.toFixed(2);
+    }
+
+    function etaText(q) {
+        if (q.type === 3) return 'Local pickup';
+        return q.estimatedMinDays + '–' + q.estimatedMaxDays + ' day delivery';
+    }
+
+    function bindShippingActions() {
+        var quoteBtn = document.querySelector('[data-cart-shipping-quote-btn]');
+        if (quoteBtn && !quoteBtn.dataset.bound) {
+            quoteBtn.dataset.bound = 'true';
+            quoteBtn.addEventListener('click', quoteShipping);
+        }
+
+        var country = document.querySelector('[data-cart-shipping-country]');
+        var city = document.querySelector('[data-cart-shipping-city]');
+        [country, city].forEach(function (input) {
+            if (!input || input.dataset.bound) return;
+            input.dataset.bound = 'true';
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    quoteShipping();
+                }
+            });
+        });
+
+        var options = document.querySelector('[data-cart-shipping-options]');
+        if (options && !options.dataset.bound) {
+            options.dataset.bound = 'true';
+            options.addEventListener('change', function (e) {
+                if (e.target && e.target.matches('input[data-shipping-method-radio]')) {
+                    selectShippingMethod(e.target.value);
+                }
+            });
+        }
+
+        if (shippingState.quoted && document.querySelector('[data-cart-shipping-options]')) {
+            renderShippingOptions();
+            updateShippingCost();
+        }
+    }
+
+    function setShippingMessage(message, isError) {
+        var el = document.querySelector('[data-cart-shipping-message]');
+        if (!el) return;
+        el.textContent = message || '';
+        el.classList.toggle('text-brand-danger', !!isError);
+        el.classList.toggle('text-brand-text-muted', !isError);
+    }
+
+    function quoteShipping() {
+        var countryInput = document.querySelector('[data-cart-shipping-country]');
+        var cityInput = document.querySelector('[data-cart-shipping-city]');
+        var countryCode = (countryInput ? countryInput.value : '').trim();
+        var city = (cityInput ? cityInput.value : '').trim();
+
+        if (!countryCode) {
+            setShippingMessage('Enter a delivery country code (e.g. US).', true);
+            return;
+        }
+
+        setShippingMessage('Calculating delivery options...', false);
+        var btn = document.querySelector('[data-cart-shipping-quote-btn]');
+        if (btn) btn.disabled = true;
+
+        post('/cart/shipping/quote', { countryCode: countryCode, city: city || null, region: null, postalCode: null })
+            .then(function (result) {
+                shippingState.country = countryCode;
+                shippingState.city = city;
+                shippingState.quoted = true;
+                shippingState.selectedMethodId = null;
+
+                if (!result || result.isSupported === false) {
+                    shippingState.quotes = [];
+                    setShippingMessage((result && result.unsupportedReason) || 'We do not deliver to this destination yet.', true);
+                    renderShippingOptions();
+                    updateShippingCost();
+                    return;
+                }
+
+                shippingState.quotes = (result.quotes || []).slice();
+                renderShippingOptions();
+
+                var available = shippingState.quotes.filter(function (q) { return q.isAvailable; });
+                if (available.length === 0) {
+                    setShippingMessage('No delivery methods are available for this destination.', true);
+                } else {
+                    setShippingMessage('', false);
+                    selectShippingMethod(available[0].methodId);
+                }
+            })
+            .catch(function () {
+                setShippingMessage('Could not calculate delivery options. Please try again.', true);
+            })
+            .finally(function () {
+                if (btn) btn.disabled = false;
+            });
+    }
+
+    function renderShippingOptions() {
+        var container = document.querySelector('[data-cart-shipping-options]');
+        if (!container) return;
+        container.innerHTML = '';
+
+        if (shippingState.quotes.length === 0) {
+            var empty = document.createElement('p');
+            empty.className = 'text-xs text-brand-text-muted';
+            empty.textContent = 'Enter a destination to see delivery options.';
+            container.appendChild(empty);
+            return;
+        }
+
+        var progressQuote = shippingState.quotes.find(function (q) {
+            return q.isAvailable && q.remainingForFreeShipping !== null && q.remainingForFreeShipping > 0;
+        });
+
+        shippingState.quotes.forEach(function (q) {
+            var label = document.createElement('label');
+            label.className = 'flex items-start gap-3 rounded-brand-sm border p-3 cursor-pointer transition ' +
+                (q.isAvailable ? 'hover:border-brand-primary' : 'opacity-60 cursor-not-allowed');
+            if (q.isAvailable && q.methodId === shippingState.selectedMethodId) {
+                label.classList.add('border-brand-primary', 'ring-1', 'ring-brand-primary');
+            }
+
+            var radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'shipping-method';
+            radio.value = q.methodId;
+            radio.className = 'mt-1 w-4 h-4 text-brand-primary flex-shrink-0';
+            radio.dataset.shippingMethodRadio = 'true';
+            radio.checked = q.isAvailable && q.methodId === shippingState.selectedMethodId;
+            radio.disabled = !q.isAvailable;
+
+            var body = document.createElement('div');
+            body.className = 'flex-1 min-w-0';
+            var top = document.createElement('div');
+            top.className = 'flex items-center justify-between gap-2';
+            var name = document.createElement('span');
+            name.className = 'text-sm font-semibold text-brand-text-primary';
+            name.textContent = q.name;
+            var price = document.createElement('span');
+            price.className = 'text-sm font-bold ' + (q.isFree ? 'text-brand-success' : 'text-brand-text-primary');
+            price.textContent = q.isFree ? 'Free' : money(q.price);
+            top.appendChild(name);
+            top.appendChild(price);
+            var sub = document.createElement('p');
+            sub.className = 'text-xs text-brand-text-muted mt-0.5';
+            if (q.isAvailable) {
+                sub.textContent = etaText(q) + (q.supportsCashOnDelivery ? ' · Cash on delivery available' : '');
+            } else {
+                sub.textContent = q.unavailableReason || 'Unavailable for this destination';
+            }
+            body.appendChild(top);
+            body.appendChild(sub);
+
+            label.appendChild(radio);
+            label.appendChild(body);
+            container.appendChild(label);
+        });
+
+        if (progressQuote) {
+            var progressWrap = document.createElement('div');
+            progressWrap.className = 'mt-3 rounded-brand-sm bg-brand-surface border border-brand-border p-3';
+            var bar = document.createElement('div');
+            bar.className = 'h-1.5 rounded-full bg-brand-border overflow-hidden';
+            var fill = document.createElement('div');
+            fill.className = 'h-full bg-brand-success rounded-full';
+            var max = progressQuote.freeShippingThreshold || progressQuote.remainingForFreeShipping;
+            var pct = max > 0 ? Math.max(0, Math.min(100, ((max - progressQuote.remainingForFreeShipping) / max) * 100)) : 0;
+            fill.style.width = pct + '%';
+            bar.appendChild(fill);
+            var text = document.createElement('p');
+            text.className = 'mt-2 text-xs text-brand-text-muted';
+            text.textContent = 'Add ' + money(progressQuote.remainingForFreeShipping) + ' more for free ' + progressQuote.name.toLowerCase() + ' delivery.';
+            progressWrap.appendChild(bar);
+            progressWrap.appendChild(text);
+            container.appendChild(progressWrap);
+        }
+    }
+
+    function selectShippingMethod(methodId) {
+        shippingState.selectedMethodId = methodId;
+        var quote = shippingState.quotes.find(function (q) { return q.methodId === methodId; });
+        if (quote && quote.isAvailable) {
+            try {
+                localStorage.setItem('fashionstore.shipping.selection', JSON.stringify({
+                    country: shippingState.country,
+                    city: shippingState.city,
+                    methodId: methodId
+                }));
+            } catch (e) { /* storage unavailable */ }
+        }
+        renderShippingOptions();
+        updateShippingCost();
+    }
+
+    function updateShippingCost() {
+        var quote = shippingState.quotes.find(function (q) {
+            return q.methodId === shippingState.selectedMethodId && q.isAvailable;
+        });
+
+        var costEl = document.querySelector('[data-cart-shipping-cost]');
+        if (costEl) {
+            costEl.textContent = quote ? (quote.isFree ? 'Free' : money(quote.price)) : 'Calculated at checkout';
+        }
+
+        var row = document.querySelector('[data-cart-mobile-shipping-row]');
+        var costMobile = document.querySelector('[data-cart-mobile-shipping]');
+        if (row && costMobile) {
+            if (quote) {
+                row.classList.remove('hidden');
+                row.classList.add('flex');
+                costMobile.textContent = quote.isFree ? 'Free' : money(quote.price);
+            } else {
+                row.classList.add('hidden');
+                row.classList.remove('flex');
+            }
+        }
     }
 
     window.refreshCartCount = fetchCount;
