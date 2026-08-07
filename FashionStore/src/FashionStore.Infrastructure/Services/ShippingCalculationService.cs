@@ -318,7 +318,7 @@ public sealed class ShippingCalculationService : IShippingCalculationService
             }
 
             var hasCityScope = !string.IsNullOrEmpty(rate.CityName);
-            if (hasCityScope && (string.IsNullOrEmpty(normalizedCity) || rate.CityName!.Trim().ToUpperInvariant() != normalizedCity))
+            if (hasCityScope && (string.IsNullOrEmpty(normalizedCity) || !string.Equals(rate.CityName!.Trim(), normalizedCity, StringComparison.OrdinalIgnoreCase)))
             {
                 continue;
             }

@@ -216,6 +216,95 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             new ProductReview { ProductId = product.Id, Rating = 5, IsApproved = true },
             new ProductReview { ProductId = product.Id, Rating = 4, IsApproved = true });
 
+        var usZone = new ShippingZone
+        {
+            Name = "United States",
+            IsActive = true,
+            DisplayOrder = 1,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+            Countries = new List<ShippingZoneCountry>
+            {
+                new() { CountryCode = "US" }
+            }
+        };
+
+        var globalZone = new ShippingZone
+        {
+            Name = "Rest of World",
+            IsActive = true,
+            DisplayOrder = 2,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now
+        };
+
+        var standard = new ShippingMethod
+        {
+            Code = "STANDARD",
+            Name = "Standard Delivery",
+            Type = FashionStore.Domain.Enums.ShippingMethodType.Standard,
+            IsActive = true,
+            DisplayOrder = 1,
+            EstimatedMinDays = 3,
+            EstimatedMaxDays = 5,
+            SupportsCashOnDelivery = true,
+            RequiresShippingAddress = true,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now
+        };
+
+        var express = new ShippingMethod
+        {
+            Code = "EXPRESS",
+            Name = "Express Delivery",
+            Type = FashionStore.Domain.Enums.ShippingMethodType.Express,
+            IsActive = true,
+            DisplayOrder = 2,
+            EstimatedMinDays = 1,
+            EstimatedMaxDays = 2,
+            SupportsCashOnDelivery = true,
+            RequiresShippingAddress = true,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now
+        };
+
+        db.ShippingZones.AddRange(usZone, globalZone);
+        db.ShippingMethods.AddRange(standard, express);
+        db.ShippingRates.AddRange(
+            new ShippingRate
+            {
+                ShippingMethodId = standard.Id,
+                ShippingZoneId = usZone.Id,
+                Name = "US Standard",
+                RateType = FashionStore.Domain.Enums.ShippingRateType.Flat,
+                Amount = 9.99m,
+                Priority = 0,
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now
+            },
+            new ShippingRate
+            {
+                ShippingMethodId = standard.Id,
+                ShippingZoneId = globalZone.Id,
+                Name = "International Standard",
+                RateType = FashionStore.Domain.Enums.ShippingRateType.Flat,
+                Amount = 19.99m,
+                Priority = 0,
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now
+            },
+            new ShippingRate
+            {
+                ShippingMethodId = express.Id,
+                ShippingZoneId = usZone.Id,
+                Name = "US Express",
+                RateType = FashionStore.Domain.Enums.ShippingRateType.Flat,
+                Amount = 24.99m,
+                Priority = 0,
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now
+            });
+
         db.SaveChanges();
     }
 }
