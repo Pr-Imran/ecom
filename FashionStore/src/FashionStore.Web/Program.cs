@@ -44,6 +44,10 @@ builder.Services.Configure<PaymentSettings>(
     builder.Configuration.GetSection(PaymentSettings.SectionName));
 builder.Services.Configure<InvoiceSettings>(
     builder.Configuration.GetSection(InvoiceSettings.SectionName));
+builder.Services.Configure<CheckoutSettings>(
+    builder.Configuration.GetSection(CheckoutSettings.SectionName));
+builder.Services.Configure<TaxSettings>(
+    builder.Configuration.GetSection(TaxSettings.SectionName));
 builder.Services.Configure<SecuritySettings>(
     builder.Configuration.GetSection(SecuritySettings.SectionName));
 builder.Services.Configure<BackgroundJobSettings>(

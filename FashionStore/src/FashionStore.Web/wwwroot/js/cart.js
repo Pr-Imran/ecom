@@ -185,7 +185,7 @@
     function checkout() {
         var btn = arguments[0] && arguments[0].currentTarget ? arguments[0].currentTarget : null;
         if (btn && btn.disabled) return;
-        window.showToast('Checkout is coming soon', 'info');
+        window.location.href = '/checkout';
     }
 
     function fetchCount() {

@@ -1,0 +1,384 @@
+@model FashionStore.Application.DTOs.Checkout.CheckoutViewData
+@{
+    ViewData["Title"] = "Checkout";
+    ViewData["HideMobileHeader"] = true;
+    ViewData["HideBottomNav"] = true;
+    var steps = new[] { "Contact", "Address", "Delivery", "Payment", "Review" };
+}
+
+@section Styles {
+    <style>
+        .checkout-appbar { position: sticky; top: 0; z-index: 30; background: rgba(255,255,255,0.92); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-bottom: 1px solid var(--color-brand-border, #e5e7eb); }
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+        .checkout-progress { display: flex; align-items: center; gap: 2px; padding: 0 16px 12px; }
+        .checkout-step { flex: 1; }
+        .checkout-step-bar { height: 4px; border-radius: 999px; background: var(--color-brand-border, #e5e7eb); transition: background 0.25s ease; }
+        .checkout-step-bar.active { background: var(--color-brand-primary, #111827); }
+        .checkout-step-bar.done { background: var(--color-brand-success, #16a34a); }
+        .checkout-step-label { font-size: 10px; color: var(--color-brand-text-muted, #6b7280); text-align: center; margin-top: 4px; }
+        .checkout-step-label.active { color: var(--color-brand-text-primary, #111827); font-weight: 700; }
+        .checkout-panel { display: none; }
+        .checkout-panel.active { display: block; }
+        .checkout-footer { position: sticky; bottom: 0; z-index: 40; background: #fff; border-top: 1px solid var(--color-brand-border, #e5e7eb); }
+        .select-card { border: 1.5px solid var(--color-brand-border, #e5e7eb); border-radius: 12px; padding: 14px; cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease; }
+        .select-card.selected { border-color: var(--color-brand-primary, #111827); background: var(--color-brand-surface, #f9fafb); }
+        .checkout-error { color: var(--color-brand-danger, #dc2626); font-size: 12px; margin-top: 4px; }
+        .form-error { border-color: var(--color-brand-danger, #dc2626) !important; }
+        .summary-sheet { max-height: 60vh; overflow-y: auto; }
+        input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
+    </style>
+}
+
+<form id="checkout-form" class="hidden">@Html.AntiForgeryToken()</form>
+
+<!-- App-like header -->
+<header class="checkout-appbar" role="banner">
+    <div class="flex items-center justify-between gap-2 px-3 py-2">
+        <div class="flex items-center gap-1">
+            <button type="button" class="btn-icon -ml-2" data-checkout-back aria-label="Go back">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <span class="text-base font-bold text-brand-text-primary">Checkout</span>
+        </div>
+        <button type="button" class="text-sm font-bold text-brand-primary tracking-tight" data-checkout-summary-toggle>
+            Summary
+        </button>
+    </div>
+</header>
+
+<!-- Progress indicator -->
+<div class="checkout-progress" role="progressbar" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1" data-checkout-progress aria-label="Checkout progress">
+    @for (var i = 0; i < steps.Length; i++)
+    {
+        <div class="checkout-step">
+            <div class="checkout-step-bar @(i == 0 ? "active" : "")" data-step-bar="@i"></div>
+            <div class="checkout-step-label @(i == 0 ? "active" : "")" data-step-label="@i">@steps[i]</div>
+        </div>
+    }
+</div>
+
+<main class="container mx-auto px-4 pb-40 safe-bottom">
+
+    <!-- Step 1: Contact -->
+    <section class="checkout-panel active" data-step="0">
+        <h2 class="text-lg font-bold text-brand-text-primary mb-4">Contact</h2>
+        <div class="space-y-4">
+            @if (Model.IsAuthenticated)
+            {
+                <div class="rounded-brand-sm bg-brand-surface border border-brand-border p-4">
+                    <p class="text-sm text-brand-text-primary font-medium">Signed in as</p>
+                    <p class="text-sm text-brand-text-muted mt-1">@(Model.UserEmail ?? string.Empty)</p>
+                </div>
+                <input type="hidden" data-field="guestEmail" value="@Model.UserEmail" />
+                <input type="hidden" data-field="guestPhone" value="@Model.UserPhone" />
+            }
+            else
+            {
+                <div>
+                    <label for="guest-email" class="form-label">Email *</label>
+                    <input id="guest-email" class="form-input" type="email" autocomplete="email" placeholder="you@example.com" data-field="guestEmail" value="@(Model.UserEmail ?? string.Empty)" />
+                    <p class="checkout-error" data-error-for="guestEmail"></p>
+                </div>
+                <div>
+                    <label for="guest-phone" class="form-label">Phone *</label>
+                    <input id="guest-phone" class="form-input" type="tel" autocomplete="tel" placeholder="For delivery contact" data-field="guestPhone" value="@(Model.UserPhone ?? string.Empty)" />
+                    <p class="checkout-error" data-error-for="guestPhone"></p>
+                </div>
+                <p class="text-xs text-brand-text-muted">Checking out as a guest. Your order is placed without an account.</p>
+            }
+        </div>
+    </section>
+
+    <!-- Step 2: Address -->
+    <section class="checkout-panel" data-step="1">
+        <h2 class="text-lg font-bold text-brand-text-primary mb-4">Shipping address</h2>
+
+        @if (Model.IsAuthenticated && Model.SavedAddresses.Count > 0)
+        {
+            <div class="space-y-3">
+                <label class="block">
+                    <span class="form-label">Saved addresses</span>
+                    <select class="form-input" data-field="savedAddressId">
+                        <option value="">Enter a new address</option>
+                        @foreach (var saved in Model.SavedAddresses)
+                        {
+                            <option value="@saved.Id">@saved.Label — @saved.AddressLine1, @saved.City</option>
+                        }
+                    </select>
+                </label>
+            </div>
+        }
+
+        <div class="mt-4 space-y-4" data-address-form>
+            <div class="grid sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="co-recipient" class="form-label">Recipient name *</label>
+                    <input id="co-recipient" class="form-input" data-field="recipientName" maxlength="200" placeholder="Full name" />
+                    <p class="checkout-error" data-error-for="shippingAddress"></p>
+                </div>
+                <div>
+                    <label for="co-phone" class="form-label">Phone</label>
+                    <input id="co-phone" class="form-input" type="tel" data-field="phone" maxlength="30" placeholder="For delivery" />
+                </div>
+            </div>
+            <div>
+                <label for="co-address1" class="form-label">Address line 1 *</label>
+                <input id="co-address1" class="form-input" data-field="addressLine1" maxlength="200" placeholder="Street address" />
+            </div>
+            <div>
+                <label for="co-address2" class="form-label">Address line 2</label>
+                <input id="co-address2" class="form-input" data-field="addressLine2" maxlength="200" placeholder="Apartment, suite, etc." />
+            </div>
+            <div class="grid sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="co-area" class="form-label">Area / district</label>
+                    <input id="co-area" class="form-input" data-field="area" maxlength="100" />
+                </div>
+                <div>
+                    <label for="co-city" class="form-label">City *</label>
+                    <input id="co-city" class="form-input" data-field="city" maxlength="100" placeholder="City" />
+                </div>
+            </div>
+            <div class="grid sm:grid-cols-3 gap-4">
+                <div>
+                    <label for="co-region" class="form-label">Region / state</label>
+                    <input id="co-region" class="form-input" data-field="region" maxlength="100" />
+                </div>
+                <div>
+                    <label for="co-postal" class="form-label">Postal code *</label>
+                    <input id="co-postal" class="form-input" data-field="postalCode" maxlength="20" placeholder="Postal code" />
+                </div>
+                <div>
+                    <label for="co-country" class="form-label">Country *</label>
+                    <select id="co-country" class="form-input" data-field="countryCode">
+                        @foreach (var country in Model.Countries)
+                        {
+                            <option value="@country.Code">@country.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label for="co-instructions" class="form-label">Delivery instructions</label>
+                <textarea id="co-instructions" class="form-input" data-field="deliveryInstructions" rows="2" maxlength="500"></textarea>
+            </div>
+        </div>
+
+        <label class="mt-4 flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" class="form-checkbox" checked data-field="billingSameAsShipping" />
+            <span class="text-sm font-medium text-brand-text-primary">Billing address same as shipping</span>
+        </label>
+
+        <div class="mt-3" data-billing-form style="display:none">
+            <h3 class="text-base font-bold text-brand-text-primary mb-3">Billing address</h3>
+            <div class="space-y-4">
+                <div>
+                    <label for="bo-recipient" class="form-label">Recipient name *</label>
+                    <input id="bo-recipient" class="form-input" data-field="billingRecipientName" maxlength="200" />
+                </div>
+                <div>
+                    <label for="bo-address1" class="form-label">Address line 1 *</label>
+                    <input id="bo-address1" class="form-input" data-field="billingAddressLine1" maxlength="200" />
+                </div>
+                <div class="grid sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="bo-city" class="form-label">City *</label>
+                        <input id="bo-city" class="form-input" data-field="billingCity" maxlength="100" />
+                    </div>
+                    <div>
+                        <label for="bo-postal" class="form-label">Postal code *</label>
+                        <input id="bo-postal" class="form-input" data-field="billingPostalCode" maxlength="20" />
+                    </div>
+                </div>
+                <div>
+                    <label for="bo-country" class="form-label">Country *</label>
+                    <select id="bo-country" class="form-input" data-field="billingCountryCode">
+                        @foreach (var country in Model.Countries)
+                        {
+                            <option value="@country.Code">@country.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Step 3: Delivery -->
+    <section class="checkout-panel" data-step="2">
+        <h2 class="text-lg font-bold text-brand-text-primary mb-4">Delivery</h2>
+        <div data-delivery-list class="space-y-3">
+            <p class="text-sm text-brand-text-muted" data-delivery-empty>Enter your shipping address to see delivery options.</p>
+        </div>
+    </section>
+
+    <!-- Step 4: Payment -->
+    <section class="checkout-panel" data-step="3">
+        <h2 class="text-lg font-bold text-brand-text-primary mb-4">Payment</h2>
+        <div data-payment-list class="space-y-3">
+            @foreach (var method in Model.PaymentMethods)
+            {
+                <label class="select-card block" data-payment-card data-code="@method.Code">
+                    <input type="radio" name="paymentMethod" value="@method.Code" class="hidden" data-field="paymentMethodCode" />
+                    <span class="flex items-center justify-between">
+                        <span class="flex items-center gap-3">
+                            <span class="w-5 h-5 rounded-full border border-brand-border flex items-center justify-center">
+                                <span class="w-2.5 h-2.5 rounded-full bg-brand-primary hidden" data-check></span>
+                            </span>
+                            <span>
+                                <span class="block text-sm font-bold text-brand-text-primary">@method.Name</span>
+                                <span class="block text-xs text-brand-text-muted">@method.Description</span>
+                            </span>
+                        </span>
+                    </span>
+                </label>
+                <p class="checkout-error" data-error-for="paymentMethod"></p>
+            }
+        </div>
+    </section>
+
+    <!-- Step 5: Review -->
+    <section class="checkout-panel" data-step="4">
+        <h2 class="text-lg font-bold text-brand-text-primary mb-4">Review</h2>
+
+        <div class="rounded-brand-sm bg-brand-surface border border-brand-border p-4">
+            <h3 class="text-sm font-bold text-brand-text-primary mb-3">Items (@Model.Items.Count(i => i.IsAvailable))</h3>
+            <ul class="divide-y divide-brand-border" data-review-items>
+                @foreach (var item in Model.Items.Where(i => i.IsAvailable))
+                {
+                    <li class="py-2 flex items-center gap-3">
+                        @if (!string.IsNullOrEmpty(item.ImageUrl))
+                        {
+                            <img src="@item.ImageUrl" alt="@item.ProductName" class="w-12 h-12 rounded-brand-sm object-cover" loading="lazy" />
+                        }
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-brand-text-primary truncate">@item.ProductName</p>
+                            <p class="text-xs text-brand-text-muted">@item.ColourName @item.SizeName × @item.Quantity</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold text-brand-text-primary" data-review-line-price="@item.VariantId">—</p>
+                            <p class="text-xs text-brand-text-muted line-through" data-review-line-compare="@item.VariantId" style="display:none"></p>
+                        </div>
+                    </li>
+                }
+            </ul>
+        </div>
+
+        <div class="mt-4 rounded-brand-sm bg-white border border-brand-border p-4" data-review-totals>
+            <div class="flex items-center justify-between text-sm py-1">
+                <span class="text-brand-text-muted">Subtotal</span>
+                <span class="font-semibold text-brand-text-primary" data-review-subtotal>@Model.FormattedSubtotal</span>
+            </div>
+            <div class="flex items-center justify-between text-sm py-1 hidden" data-review-promotions>
+                <span class="text-brand-text-muted">Promotions</span>
+                <span class="font-medium text-brand-success" data-review-promotions-amount></span>
+            </div>
+            <div class="flex items-center justify-between text-sm py-1 hidden" data-review-coupon>
+                <span class="text-brand-text-muted">Coupon</span>
+                <span class="font-medium text-brand-success" data-review-coupon-amount></span>
+            </div>
+            <div class="flex items-center justify-between text-sm py-1">
+                <span class="text-brand-text-muted">Shipping</span>
+                <span class="font-medium text-brand-text-primary" data-review-shipping>—</span>
+            </div>
+            <div class="flex items-center justify-between text-sm py-1 hidden" data-review-tax>
+                <span class="text-brand-text-muted">Tax</span>
+                <span class="font-medium text-brand-text-primary" data-review-tax-amount></span>
+            </div>
+            <div class="flex items-center justify-between text-base py-2 border-t border-brand-border mt-2">
+                <span class="font-bold text-brand-text-primary">Total</span>
+                <span class="font-bold text-brand-text-primary" data-review-total>@Model.FormattedSubtotal</span>
+            </div>
+            <p class="mt-2 text-xs text-brand-text-muted" data-review-currency></p>
+        </div>
+
+        <div class="mt-4 rounded-brand-sm bg-white border border-brand-border p-4" data-review-address>
+            <h3 class="text-sm font-bold text-brand-text-primary mb-2">Delivery to</h3>
+            <p class="text-sm text-brand-text-muted" data-review-address-line>—</p>
+        </div>
+
+        <label class="mt-4 flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" class="form-checkbox mt-0.5" data-field="termsAccepted" />
+            <span class="text-sm text-brand-text-primary">I agree to the <a href="#" class="text-brand-primary underline">terms and conditions</a>.</span>
+        </label>
+        <p class="checkout-error" data-error-for="terms"></p>
+    </section>
+</main>
+
+<!-- Sticky footer -->
+<div class="checkout-footer px-4 pt-3 safe-bottom">
+    <div class="max-w-2xl mx-auto">
+        <div class="flex items-center justify-between gap-3">
+            <div class="flex-1">
+                <div class="text-xs text-brand-text-muted">Subtotal</div>
+                <div class="text-lg font-bold text-brand-text-primary" data-footer-subtotal>@Model.FormattedSubtotal</div>
+                <div class="text-xs text-brand-text-muted hidden" data-footer-shipping-row>
+                    <span data-footer-shipping>—</span> shipping
+                </div>
+            </div>
+            <button type="button" class="btn-primary py-3 px-6" data-checkout-continue>
+                Continue
+            </button>
+            <button type="button" class="btn-primary py-3 px-6 hidden" data-checkout-place-order disabled>
+                Place Order
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Summary bottom sheet -->
+<div id="checkout-summary-sheet" class="fixed inset-0 z-50 hidden" aria-hidden="true" data-summary-sheet>
+    <div class="absolute inset-0 bg-black/40" data-summary-backdrop></div>
+    <div class="absolute bottom-0 inset-x-0 bg-white rounded-t-2xl summary-sheet shadow-lg" role="dialog" aria-label="Order summary">
+        <div class="px-4 py-3 border-b border-brand-border flex items-center justify-between">
+            <h2 class="text-base font-bold text-brand-text-primary">Order Summary</h2>
+            <button type="button" class="btn-icon" data-summary-close aria-label="Close">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="px-4 py-4">
+            <ul class="divide-y divide-brand-border" data-summary-items>
+                @foreach (var item in Model.Items.Where(i => i.IsAvailable))
+                {
+                    <li class="py-2 flex items-center gap-3">
+                        @if (!string.IsNullOrEmpty(item.ImageUrl))
+                        {
+                            <img src="@item.ImageUrl" alt="@item.ProductName" class="w-12 h-12 rounded-brand-sm object-cover" loading="lazy" />
+                        }
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-brand-text-primary truncate">@item.ProductName</p>
+                            <p class="text-xs text-brand-text-muted">@item.ColourName @item.SizeName × @item.Quantity</p>
+                        </div>
+                        <p class="text-sm font-bold text-brand-text-primary">@item.LineTotal.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)</p>
+                    </li>
+                }
+            </ul>
+        </div>
+        <div class="px-4 py-4 border-t border-brand-border">
+            <div class="flex items-center justify-between text-sm py-1">
+                <span class="text-brand-text-muted">Subtotal</span>
+                <span class="font-semibold text-brand-text-primary" data-summary-subtotal>@Model.FormattedSubtotal</span>
+            </div>
+            <div class="flex items-center justify-between text-sm py-1 hidden" data-summary-shipping-row>
+                <span class="text-brand-text-muted">Shipping</span>
+                <span class="font-medium text-brand-text-primary" data-summary-shipping>—</span>
+            </div>
+            <div class="flex items-center justify-between text-sm py-1 hidden" data-summary-tax-row>
+                <span class="text-brand-text-muted">Tax</span>
+                <span class="font-medium text-brand-text-primary" data-summary-tax>—</span>
+            </div>
+            <div class="flex items-center justify-between text-base py-2 border-t border-brand-border mt-2">
+                <span class="font-bold text-brand-text-primary">Total</span>
+                <span class="font-bold text-brand-text-primary" data-summary-total>@Model.FormattedSubtotal</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/checkout.js" asp-append-version="true"></script>
+}
