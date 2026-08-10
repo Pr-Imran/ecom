@@ -313,8 +313,11 @@ public class PaymentServiceTests
             serviceB.HandleWebhookAsync("card", payload, signature, CancellationToken.None));
 
         // The payment settles exactly once with the correct captured amount.
-        var payment = await fixture.Context.Payments.SingleAsync();
-        var storedOrder = await fixture.Context.Orders.SingleAsync();
+        // fixture.Context still tracks the Order it seeded, so identity
+        // resolution would return that stale in-memory instance (Unpaid) instead
+        // of the persisted value; AsNoTracking reads the committed state.
+        var payment = await fixture.Context.Payments.AsNoTracking().SingleAsync();
+        var storedOrder = await fixture.Context.Orders.AsNoTracking().SingleAsync();
         Assert.Equal(PaymentState.Paid, payment.State);
         Assert.Equal(PaymentStatus.Paid, storedOrder.PaymentStatus);
         Assert.Equal(order.GrandTotal, storedOrder.PaidAmount);
