@@ -2,6 +2,7 @@ using FashionStore.Application.Authorization;
 using FashionStore.Application.Configuration;
 using FashionStore.Application.Interfaces;
 using FashionStore.Infrastructure.Data;
+using FashionStore.Infrastructure.Payments;
 using FashionStore.Infrastructure.Services;
 using FashionStore.Infrastructure.Services.Images;
 using FashionStore.Infrastructure.Services.Storage;
@@ -130,6 +131,8 @@ public static class DependencyInjection
         services.AddScoped<IShippingCalculationService, ShippingCalculationService>();
         services.AddScoped<ICheckoutCalculationService, CheckoutCalculationService>();
         services.AddScoped<IOrderService, OrderPlacementService>();
+        services.AddScoped<IPaymentProviderFactory, PaymentProviderFactory>();
+        services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IAddressService, AddressService>();
         services.AddScoped<IAddressValidationService, AddressValidationService>();

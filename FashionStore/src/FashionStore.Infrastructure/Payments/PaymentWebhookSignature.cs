@@ -9,7 +9,7 @@ namespace FashionStore.Infrastructure.Payments;
 /// secret. The same helper signs the mock provider callbacks so the full flow is
 /// testable without a live gateway.
 /// </summary>
-internal static class PaymentWebhookSignature
+public static class PaymentWebhookSignature
 {
     /// <summary>Header carrying the provider webhook signature.</summary>
     public const string HeaderName = "X-Payment-Signature";
@@ -19,7 +19,7 @@ internal static class PaymentWebhookSignature
     {
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
         var bytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(rawPayload));
-        return Convert.ToHexStringLower(bytes);
+        return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
     /// <summary>Verifies that the supplied signature matches the raw payload, using a fixed-time comparison.</summary>

@@ -5,6 +5,7 @@ using FashionStore.Application.DTOs.Checkout;
 using FashionStore.Application.DTOs.Orders;
 using FashionStore.Application.DTOs.Products;
 using FashionStore.Application.DTOs.Promotions;
+using FashionStore.Application.DTOs.Payments;
 using FashionStore.Application.DTOs.Shipping;
 using FashionStore.Application.Interfaces;
 using FashionStore.Web.Models;
@@ -29,6 +30,7 @@ public class CheckoutController : Controller
     private readonly IAddressService _addressService;
     private readonly IProfileService _profileService;
     private readonly IOrderService _orderService;
+    private readonly IPaymentService _paymentService;
     private readonly ILogger<CheckoutController> _logger;
 
     public CheckoutController(
@@ -37,6 +39,7 @@ public class CheckoutController : Controller
         IAddressService addressService,
         IProfileService profileService,
         IOrderService orderService,
+        IPaymentService paymentService,
         ILogger<CheckoutController> logger)
     {
         _cartService = cartService;
@@ -44,6 +47,7 @@ public class CheckoutController : Controller
         _addressService = addressService;
         _profileService = profileService;
         _orderService = orderService;
+        _paymentService = paymentService;
         _logger = logger;
     }
 
@@ -243,7 +247,9 @@ public class CheckoutController : Controller
     /// <summary>
     /// Mobile confirmation screen shown after a successful placement. The order is
     /// rendered from the immutable snapshots stored at placement time, so it stays
-    /// correct even if products or addresses change later.
+    /// correct even if products or addresses change later. The current public
+    /// payment status is attached so the screen can render pending, paid and failed
+    /// payment states.
     /// </summary>
     [HttpGet("confirmation/{publicOrderNumber}")]
     public async Task<IActionResult> Confirmation(string publicOrderNumber, CancellationToken cancellationToken)
@@ -265,7 +271,95 @@ public class CheckoutController : Controller
             return NotFound();
         }
 
-        return View(order);
+        var payment = await _paymentService.GetStatusByOrderNumberAsync(publicOrderNumber, cancellationToken);
+
+        return View(new ConfirmationViewData(order, payment));
+    }
+
+    /// <summary>
+    /// Initiates the payment for a placed order (idempotently). Hosted providers
+    /// return a redirect URL the browser follows to the gateway page; reference
+    /// providers (MFS, bank) return the reference and instructions shown on the
+    /// confirmation screen.
+    /// </summary>
+    [HttpPost("pay")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Pay([FromBody] InitiatePaymentRequest? request, CancellationToken cancellationToken)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.OrderNumber))
+        {
+            return BadRequest(new { success = false, message = "Invalid payment request." });
+        }
+
+        var order = await _orderService.GetByPublicOrderNumberAsync(request.OrderNumber, cancellationToken);
+        if (order is null)
+        {
+            return NotFound(new { success = false, message = "Order not found." });
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrEmpty(userId) &&
+            !string.Equals(order.UserId, userId, StringComparison.Ordinal))
+        {
+            return NotFound(new { success = false, message = "Order not found." });
+        }
+
+        var returnUrl = Url.Action(
+            "Confirmation",
+            "Checkout",
+            new { publicOrderNumber = request.OrderNumber },
+            Request.Scheme);
+
+        try
+        {
+            var placement = await _paymentService.InitiateForOrderAsync(
+                order.OrderId,
+                returnUrl,
+                returnUrl,
+                cancellationToken);
+
+            return Ok(new { success = true, payment = placement });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Payment initiation rejected for order {OrderNumber}", request.OrderNumber);
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Public payment status polled by the confirmation screen. This is a read-only
+    /// status view; it never settles a payment by itself.
+    /// </summary>
+    [HttpGet("confirmation/{publicOrderNumber}/payment-status")]
+    public async Task<IActionResult> PaymentStatus(string publicOrderNumber, CancellationToken cancellationToken)
+    {
+        var status = await _paymentService.GetStatusByOrderNumberAsync(publicOrderNumber, cancellationToken);
+        if (status is null)
+        {
+            return NotFound(new { success = false, message = "Payment not found." });
+        }
+
+        return Ok(new { success = true, payment = status });
+    }
+
+    /// <summary>
+    /// Browser return from a hosted checkout. This is a callback, not proof of
+    /// payment: the payment service asks the provider for the current status and
+    /// only applies a provider-confirmed state. The order is never marked paid
+    /// purely because the browser arrived here.
+    /// </summary>
+    [HttpPost("confirmation/{publicOrderNumber}/callback")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> BrowserCallback(string publicOrderNumber, CancellationToken cancellationToken)
+    {
+        var status = await _paymentService.HandleBrowserCallbackAsync(publicOrderNumber, cancellationToken);
+        if (status is null)
+        {
+            return NotFound(new { success = false, message = "Payment not found." });
+        }
+
+        return Ok(new { success = true, payment = status });
     }
 
     private static string Format(decimal value) => value.ToString("N2", System.Globalization.CultureInfo.InvariantCulture);
@@ -333,3 +427,9 @@ public sealed record CheckoutCalculateRequest(
     string? PaymentMethodCode,
     bool TermsAccepted,
     string? ContinuationToken);
+
+/// <summary>
+/// Body for initiating a payment for a placed order. The public order number is the
+/// only credential a guest holds, so it is used to resolve the order server-side.
+/// </summary>
+public sealed record InitiatePaymentRequest(string OrderNumber);

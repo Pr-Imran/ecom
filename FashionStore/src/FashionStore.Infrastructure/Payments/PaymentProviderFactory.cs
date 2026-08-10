@@ -13,7 +13,7 @@ namespace FashionStore.Infrastructure.Payments;
 /// </summary>
 public sealed class PaymentProviderFactory : IPaymentProviderFactory
 {
-    private readonly IReadOnlyDictionary<string, IPaymentProvider> _providers;
+    private readonly Dictionary<string, IPaymentProvider> _providers;
 
     public PaymentProviderFactory(IOptions<PaymentSettings> options)
     {

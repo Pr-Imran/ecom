@@ -398,8 +398,7 @@
                 .then(function (result) {
                     if (result && result.success && result.orderNumber) {
                         try { sessionStorage.removeItem('fs.checkout.idempotency'); } catch (e) { }
-                        window.location.href = '/checkout/confirmation/' + encodeURIComponent(result.orderNumber);
-                        return;
+                        return initiatePayment(result.orderNumber);
                     }
 
                     clearErrors();
@@ -423,6 +422,26 @@
                     window.showToast('We could not reach the server. Your order has not been placed.', 'danger');
                 });
         });
+    }
+
+    function initiatePayment(orderNumber) {
+        return post('/checkout/pay', { orderNumber: orderNumber })
+            .then(function (result) {
+                if (result && result.success && result.payment) {
+                    if (result.payment.redirectUrl) {
+                        window.location.href = result.payment.redirectUrl;
+                        return;
+                    }
+                }
+                // Reference-based methods (COD, mobile wallet, bank transfer) and
+                // hosted methods that return without a redirect land here.
+                window.location.href = '/checkout/confirmation/' + encodeURIComponent(orderNumber);
+            })
+            .catch(function () {
+                // Initiation failed but the order is placed; the confirmation screen
+                // offers a retry.
+                window.location.href = '/checkout/confirmation/' + encodeURIComponent(orderNumber);
+            });
     }
 
     function init() {

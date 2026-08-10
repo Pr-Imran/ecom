@@ -1,0 +1,74 @@
+@model FashionStore.Web.Models.MockHostedCheckoutViewModel
+@{
+    Layout = null;
+    ViewData["Title"] = "Mock Gateway";
+    var amount = (Model.Currency ?? "USD") == "USD"
+        ? "$" + Model.Amount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)
+        : Model.Amount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) + " " + Model.Currency;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mock Gateway</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f3f4f6; color: #111827; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+        .card { background: #fff; border-radius: 16px; max-width: 420px; width: 100%; padding: 28px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08); }
+        .badge { width: 56px; height: 56px; border-radius: 999px; background: #eef2ff; color: #4f46e5; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+        h1 { font-size: 20px; font-weight: 700; }
+        .muted { color: #6b7280; font-size: 13px; }
+        .amount { font-size: 28px; font-weight: 800; margin: 12px 0 4px; }
+        .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
+        .row span:last-child { font-weight: 600; }
+        .actions { display: flex; gap: 12px; margin-top: 20px; }
+        .btn { flex: 1; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 700; border: none; cursor: pointer; text-align: center; }
+        .btn-pay { background: #111827; color: #fff; }
+        .btn-cancel { background: #f3f4f6; color: #374151; }
+        .note { margin-top: 16px; font-size: 11px; color: #9ca3af; text-align: center; }
+        form { display: flex; flex: 1; }
+        input { display: none; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="badge">
+            <svg width="26" height="26" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h2m4 0h4M5 6h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z" />
+            </svg>
+        </div>
+        <p class="muted">Mock payment gateway</p>
+        <h1>@Model.ProviderCode.ToUpperInvariant() Payment</h1>
+        <div class="amount">@amount</div>
+        <div class="row"><span class="muted">Order</span><span>@Model.OrderNumber</span></div>
+        <div class="row"><span class="muted">Currency</span><span>@Model.Currency</span></div>
+
+        <div class="actions">
+            <form method="post" asp-action="MockProcess">
+                <input name="providerCode" value="@Model.ProviderCode" />
+                <input name="orderNumber" value="@Model.OrderNumber" />
+                <input name="amount" value="@Model.Amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" />
+                <input name="currency" value="@Model.Currency" />
+                <input name="returnUrl" value="@Model.ReturnUrl" />
+                <input name="cancelUrl" value="@Model.CancelUrl" />
+                <input name="decision" value="pay" />
+                <button type="submit" class="btn btn-pay">Pay now</button>
+            </form>
+            <form method="post" asp-action="MockProcess">
+                <input name="providerCode" value="@Model.ProviderCode" />
+                <input name="orderNumber" value="@Model.OrderNumber" />
+                <input name="amount" value="@Model.Amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" />
+                <input name="currency" value="@Model.Currency" />
+                <input name="returnUrl" value="@Model.ReturnUrl" />
+                <input name="cancelUrl" value="@Model.CancelUrl" />
+                <input name="decision" value="cancel" />
+                <button type="submit" class="btn btn-cancel">Cancel</button>
+            </form>
+        </div>
+
+        <p class="note">This is a simulated gateway used for development. A live integration would redirect to the real provider page.</p>
+    </div>
+</body>
+</html>

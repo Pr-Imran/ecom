@@ -1,19 +1,33 @@
-@model FashionStore.Application.DTOs.Orders.OrderSummaryDto
+@model FashionStore.Application.DTOs.Checkout.ConfirmationViewData
 @{
     ViewData["Title"] = "Order Confirmed";
     ViewData["HideMobileHeader"] = true;
     ViewData["HideBottomNav"] = true;
-    var amount = (Model.Currency ?? "USD") == "USD"
-        ? "$" + Model.GrandTotal.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)
-        : Model.GrandTotal.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) + " " + Model.Currency;
+    var order = Model.Order;
+    var payment = Model.Payment;
+    var paymentState = payment?.State.ToString() ?? "Paid";
+    var amount = (order.Currency ?? "USD") == "USD"
+        ? "$" + order.GrandTotal.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)
+        : order.GrandTotal.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) + " " + order.Currency;
+    var isPaid = payment is null ||
+                 payment.State is FashionStore.Domain.Enums.PaymentState.Paid or FashionStore.Domain.Enums.PaymentState.PartiallyRefunded;
+    var isPending = payment is not null &&
+                    payment.State is FashionStore.Domain.Enums.PaymentState.Pending or FashionStore.Domain.Enums.PaymentState.Initiated;
 }
 
 @section Styles {
     <style>
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
         .confirmation-hero { background: linear-gradient(160deg, #f0fdf4 0%, #ffffff 60%); }
+        .confirmation-hero.pending { background: linear-gradient(160deg, #eff6ff 0%, #ffffff 60%); }
+        .confirmation-hero.failed { background: linear-gradient(160deg, #fef2f2 0%, #ffffff 60%); }
         .confirmation-section { border: 1px solid var(--color-brand-border, #e5e7eb); border-radius: 12px; background: #fff; }
         .confirm-badge { width: 64px; height: 64px; border-radius: 999px; background: var(--color-brand-success, #16a34a); color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+        .confirm-badge.pending { background: var(--color-brand-primary, #111827); }
+        .confirm-badge.failed { background: var(--color-brand-danger, #dc2626); }
+        .pay-reference { background: var(--color-brand-surface, #f9fafb); border: 1px dashed var(--color-brand-border, #e5e7eb); border-radius: 10px; padding: 12px; font-weight: 700; letter-spacing: 0.05em; }
+        .spin { width: 18px; height: 18px; border: 2px solid var(--color-brand-border, #e5e7eb); border-top-color: var(--color-brand-primary, #111827); border-radius: 999px; animation: spin 0.8s linear infinite; display: inline-block; vertical-align: -4px; margin-right: 6px; }
+        @@keyframes spin { to { transform: rotate(360deg); } }
     </style>
 }
 
@@ -25,31 +39,94 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
         </a>
-        <span class="text-sm font-bold text-brand-text-primary">Order Confirmed</span>
+        <span class="text-sm font-bold text-brand-text-primary" data-confirmation-title>Order Confirmed</span>
         <span class="w-8"></span>
     </div>
 </header>
 
 <main class="px-4 py-6 max-w-2xl mx-auto">
-    <section class="confirmation-hero rounded-brand-sm px-4 py-8 text-center">
-        <div class="confirm-badge">
-            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-            </svg>
-        </div>
-        <h1 class="mt-4 text-xl font-bold text-brand-text-primary">Thank you!</h1>
-        <p class="mt-1 text-sm text-brand-text-muted">Your order has been placed.</p>
-        <p class="mt-4 inline-block rounded-lg bg-white border border-brand-border px-4 py-2 text-sm">
-            <span class="text-brand-text-muted">Order number</span>
-            <span class="block font-bold text-brand-text-primary">@Model.PublicOrderNumber</span>
-        </p>
-        <p class="mt-2 text-xs text-brand-text-muted">A confirmation email is on its way to @(Model.GuestEmail ?? "your inbox").</p>
-    </section>
+    <input type="hidden" id="checkout-order-number" value="@order.PublicOrderNumber" />
+    <form id="checkout-form" class="hidden">@Html.AntiForgeryToken()</form>
+
+    <!-- Hero + payment state (re-rendered client-side when the status changes) -->
+    <div data-confirmation-status
+         data-initial-state="@paymentState"
+         data-initial-reference="@(payment?.HostedCheckoutReference ?? string.Empty)"
+         data-initial-instructions="@(payment?.Instructions ?? string.Empty)"
+         data-initial-failure="@(payment?.FailureReason ?? string.Empty)"
+         data-initial-provider="@(payment?.ProviderCode ?? string.Empty)"
+         data-initial-hosted="@(payment is not null && payment.ProviderCode is "card" or "online")">
+
+        <section class="confirmation-hero @(isPaid ? "" : isPending ? "pending" : "failed") rounded-brand-sm px-4 py-8 text-center">
+            @if (isPaid)
+            {
+                <div class="confirm-badge">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                </div>
+                <h1 class="mt-4 text-xl font-bold text-brand-text-primary" data-hero-title>Thank you!</h1>
+                <p class="mt-1 text-sm text-brand-text-muted" data-hero-subtitle>Your order has been placed.</p>
+            }
+            else if (isPending)
+            {
+                <div class="confirm-badge pending">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <h1 class="mt-4 text-xl font-bold text-brand-text-primary" data-hero-title>Payment pending</h1>
+                <p class="mt-1 text-sm text-brand-text-muted" data-hero-subtitle>Your order is reserved while we await your payment.</p>
+            }
+            else
+            {
+                <div class="confirm-badge failed">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </div>
+                <h1 class="mt-4 text-xl font-bold text-brand-text-primary" data-hero-title>Payment not completed</h1>
+                <p class="mt-1 text-sm text-brand-text-muted" data-hero-subtitle>Your order was not paid. You can try again below.</p>
+            }
+
+            <p class="mt-4 inline-block rounded-lg bg-white border border-brand-border px-4 py-2 text-sm">
+                <span class="text-brand-text-muted">Order number</span>
+                <span class="block font-bold text-brand-text-primary">@order.PublicOrderNumber</span>
+            </p>
+            <p class="mt-2 text-xs text-brand-text-muted">A confirmation email is on its way to @(order.GuestEmail ?? "your inbox").</p>
+        </section>
+
+        @if (isPending && !string.IsNullOrWhiteSpace(payment?.HostedCheckoutReference))
+        {
+            <section class="confirmation-section mt-4 p-4" data-pay-instructions>
+                <h2 class="text-sm font-bold text-brand-text-primary mb-2">How to pay</h2>
+                <p class="pay-reference text-brand-text-primary" data-pay-reference>@payment.HostedCheckoutReference</p>
+                @if (!string.IsNullOrWhiteSpace(payment.Instructions))
+                {
+                    <p class="mt-3 text-sm text-brand-text-muted" data-pay-instructions-text>@payment.Instructions</p>
+                }
+                <p class="mt-3 text-sm text-brand-text-muted"><span class="spin"></span>Waiting for your payment…</p>
+            </section>
+        }
+
+        @if (!isPaid && !isPending)
+        {
+            <div class="mt-4" data-pay-retry>
+                <button type="button" class="btn-primary w-full py-3 text-center block" data-pay-retry-button>
+                    Try paying again
+                </button>
+                @if (!string.IsNullOrWhiteSpace(payment?.FailureReason))
+                {
+                    <p class="mt-2 text-xs text-brand-text-muted" data-pay-failure-reason>@payment.FailureReason</p>
+                }
+            </div>
+        }
+    </div>
 
     <section class="confirmation-section mt-4 p-4">
         <h2 class="text-sm font-bold text-brand-text-primary mb-3">Items</h2>
         <ul class="divide-y divide-brand-border">
-            @foreach (var item in Model.Items)
+            @foreach (var item in order.Items)
             {
                 <li class="py-3 flex items-center gap-3">
                     @if (!string.IsNullOrEmpty(item.ImageUrl))
@@ -68,7 +145,7 @@
                             × @item.Quantity
                         </p>
                     </div>
-                    <p class="text-sm font-bold text-brand-text-primary">@((Model.Currency ?? "USD") == "USD" ? "$" + item.LineTotal.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) : item.LineTotal.ToString("N2", System.Globalization.CultureInfo.InvariantCulture))</p>
+                    <p class="text-sm font-bold text-brand-text-primary">@((order.Currency ?? "USD") == "USD" ? "$" + item.LineTotal.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) : item.LineTotal.ToString("N2", System.Globalization.CultureInfo.InvariantCulture))</p>
                 </li>
             }
         </ul>
@@ -76,17 +153,17 @@
 
     <section class="confirmation-section mt-4 p-4">
         <h2 class="text-sm font-bold text-brand-text-primary mb-2">Delivery to</h2>
-        @if (Model.ShippingAddress is not null)
+        @if (order.ShippingAddress is not null)
         {
-            <p class="text-sm text-brand-text-primary">@Model.ShippingAddress.RecipientName</p>
-            <p class="text-sm text-brand-text-muted">@Model.ShippingAddress.AddressLine1 @Model.ShippingAddress.AddressLine2</p>
+            <p class="text-sm text-brand-text-primary">@order.ShippingAddress.RecipientName</p>
+            <p class="text-sm text-brand-text-muted">@order.ShippingAddress.AddressLine1 @order.ShippingAddress.AddressLine2</p>
             <p class="text-sm text-brand-text-muted">
-                @Model.ShippingAddress.Area @Model.ShippingAddress.City @Model.ShippingAddress.Region @Model.ShippingAddress.PostalCode
+                @order.ShippingAddress.Area @order.ShippingAddress.City @order.ShippingAddress.Region @order.ShippingAddress.PostalCode
             </p>
-            <p class="text-sm text-brand-text-muted">@Model.ShippingAddress.CountryCode</p>
-            if (!string.IsNullOrEmpty(Model.ShippingMethodName))
+            <p class="text-sm text-brand-text-muted">@order.ShippingAddress.CountryCode</p>
+            if (!string.IsNullOrEmpty(order.ShippingMethodName))
             {
-                <p class="mt-2 text-xs text-brand-text-muted">@Model.ShippingMethodName</p>
+                <p class="mt-2 text-xs text-brand-text-muted">@order.ShippingMethodName</p>
             }
         }
     </section>
@@ -96,34 +173,34 @@
         <div class="space-y-1 text-sm">
             <div class="flex items-center justify-between">
                 <span class="text-brand-text-muted">Subtotal</span>
-                <span class="font-medium text-brand-text-primary">@((Model.Currency ?? "USD") == "USD" ? "$" + Model.Subtotal.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) : Model.Subtotal.ToString("N2", System.Globalization.CultureInfo.InvariantCulture))</span>
+                <span class="font-medium text-brand-text-primary">@((order.Currency ?? "USD") == "USD" ? "$" + order.Subtotal.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) : order.Subtotal.ToString("N2", System.Globalization.CultureInfo.InvariantCulture))</span>
             </div>
-            @if (Model.ProductDiscount > 0)
+            @if (order.ProductDiscount > 0)
             {
                 <div class="flex items-center justify-between">
                     <span class="text-brand-text-muted">Discounts</span>
-                    <span class="font-medium text-brand-text-primary">-@((Model.Currency ?? "USD") == "USD" ? "$" + Model.ProductDiscount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) : Model.ProductDiscount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture))</span>
+                    <span class="font-medium text-brand-text-primary">-@((order.Currency ?? "USD") == "USD" ? "$" + order.ProductDiscount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) : order.ProductDiscount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture))</span>
                 </div>
             }
-            @if (Model.CouponDiscount > 0)
+            @if (order.CouponDiscount > 0)
             {
                 <div class="flex items-center justify-between">
                     <span class="text-brand-text-muted">Coupon</span>
-                    <span class="font-medium text-brand-text-primary">-@((Model.Currency ?? "USD") == "USD" ? "$" + Model.CouponDiscount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) : Model.CouponDiscount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture))</span>
+                    <span class="font-medium text-brand-text-primary">-@((order.Currency ?? "USD") == "USD" ? "$" + order.CouponDiscount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) : order.CouponDiscount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture))</span>
                 </div>
             }
-            @if (Model.ShippingCharge > 0)
+            @if (order.ShippingCharge > 0)
             {
                 <div class="flex items-center justify-between">
                     <span class="text-brand-text-muted">Shipping</span>
-                    <span class="font-medium text-brand-text-primary">@((Model.Currency ?? "USD") == "USD" ? "$" + Model.ShippingCharge.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) : Model.ShippingCharge.ToString("N2", System.Globalization.CultureInfo.InvariantCulture))</span>
+                    <span class="font-medium text-brand-text-primary">@((order.Currency ?? "USD") == "USD" ? "$" + order.ShippingCharge.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) : order.ShippingCharge.ToString("N2", System.Globalization.CultureInfo.InvariantCulture))</span>
                 </div>
             }
-            @if (Model.Tax > 0)
+            @if (order.Tax > 0)
             {
                 <div class="flex items-center justify-between">
                     <span class="text-brand-text-muted">Tax</span>
-                    <span class="font-medium text-brand-text-primary">@((Model.Currency ?? "USD") == "USD" ? "$" + Model.Tax.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) : Model.Tax.ToString("N2", System.Globalization.CultureInfo.InvariantCulture))</span>
+                    <span class="font-medium text-brand-text-primary">@((order.Currency ?? "USD") == "USD" ? "$" + order.Tax.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) : order.Tax.ToString("N2", System.Globalization.CultureInfo.InvariantCulture))</span>
                 </div>
             }
             <div class="flex items-center justify-between pt-2 border-t border-brand-border">
@@ -132,7 +209,7 @@
             </div>
         </div>
         <p class="mt-3 text-xs text-brand-text-muted">
-            Payment method: @Model.PaymentMethodCode?.ToUpperInvariant() (@Model.PaymentStatus)
+            Payment method: @(order.PaymentMethodCode?.ToUpperInvariant() ?? "—") (@order.PaymentStatus)
         </p>
     </section>
 
@@ -144,7 +221,196 @@
 @section Scripts {
     <script>
         (function () {
+            'use strict';
+
             try { sessionStorage.removeItem('fs.checkout.idempotency'); } catch (e) { }
+
+            var container = document.querySelector('[data-confirmation-status]');
+            if (!container) return;
+
+            var orderNumber = document.getElementById('checkout-order-number').value;
+            var formEl = document.getElementById('checkout-form');
+            var tokenInput = formEl ? formEl.querySelector('input[name="__RequestVerificationToken"]') : null;
+            var retryButton = document.querySelector('[data-pay-retry-button]');
+
+            var STATE_NAMES = { 0: 'Pending', 1: 'Initiated', 2: 'Authorised', 3: 'Paid', 4: 'Failed', 5: 'Cancelled', 6: 'Expired', 7: 'PartiallyRefunded', 8: 'Refunded' };
+            var PAID_STATES = ['Paid', 'PartiallyRefunded', 'Refunded'];
+            var TERMINAL_STATES = ['Paid', 'Failed', 'Cancelled', 'Expired', 'PartiallyRefunded', 'Refunded'];
+
+            function stateName(status) {
+                if (!status || status.state === null || status.state === undefined) return 'Paid';
+                return STATE_NAMES[status.state] || String(status.state);
+            }
+
+            function getToken() {
+                return tokenInput ? tokenInput.value : '';
+            }
+
+            function post(url) {
+                return fetch(url, {
+                    method: 'POST',
+                    headers: { 'RequestVerificationToken': getToken() }
+                }).then(function (res) {
+                    if (!res.ok) throw new Error('bad-request');
+                    return res.json();
+                });
+            }
+
+            function renderHero(state, status) {
+                var isPaid = PAID_STATES.indexOf(state) !== -1;
+                var isPending = state === 'Pending' || state === 'Initiated';
+                var hero = container.querySelector('.confirmation-hero');
+                if (!hero) return;
+                hero.classList.remove('pending', 'failed');
+                hero.classList.add(isPaid ? '' : isPending ? 'pending' : 'failed');
+
+                var badge = hero.querySelector('.confirm-badge');
+                var title = hero.querySelector('[data-hero-title]');
+                var subtitle = hero.querySelector('[data-hero-subtitle]');
+                badge.classList.remove('pending', 'failed');
+                badge.classList.add(isPaid ? '' : isPending ? 'pending' : 'failed');
+
+                if (isPaid) {
+                    badge.innerHTML = '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
+                    title.textContent = 'Thank you!';
+                    subtitle.textContent = 'Your order has been placed.';
+                } else if (isPending) {
+                    badge.innerHTML = '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+                    title.textContent = 'Payment pending';
+                    subtitle.textContent = 'Your order is reserved while we await your payment.';
+                } else {
+                    badge.innerHTML = '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>';
+                    title.textContent = 'Payment not completed';
+                    subtitle.textContent = 'Your order was not paid. You can try again below.';
+                }
+            }
+
+            function renderInstructions(state, status) {
+                var existing = container.querySelector('[data-pay-instructions]');
+                if (existing) existing.remove();
+                if (state !== 'Pending' && state !== 'Initiated') return;
+
+                var reference = status ? (status.hostedCheckoutReference || '') : container.getAttribute('data-initial-reference');
+                var instructions = status ? (status.instructions || '') : container.getAttribute('data-initial-instructions');
+                if (!reference) return;
+
+                var section = document.createElement('section');
+                section.className = 'confirmation-section mt-4 p-4';
+                section.setAttribute('data-pay-instructions', '');
+                section.innerHTML =
+                    '<h2 class="text-sm font-bold text-brand-text-primary mb-2">How to pay</h2>' +
+                    '<p class="pay-reference text-brand-text-primary">' + escapeHtml(reference) + '</p>' +
+                    (instructions ? '<p class="mt-3 text-sm text-brand-text-muted">' + escapeHtml(instructions) + '</p>' : '') +
+                    '<p class="mt-3 text-sm text-brand-text-muted"><span class="spin"></span>Waiting for your payment…</p>';
+                container.appendChild(section);
+            }
+
+            function renderRetry(state, status) {
+                var existing = container.querySelector('[data-pay-retry]');
+                if (existing) existing.remove();
+                if (state === 'Pending' || state === 'Initiated' || PAID_STATES.indexOf(state) !== -1) return;
+
+                var reason = status ? (status.failureReason || '') : container.getAttribute('data-initial-failure');
+                var wrap = document.createElement('div');
+                wrap.className = 'mt-4';
+                wrap.setAttribute('data-pay-retry', '');
+                wrap.innerHTML =
+                    '<button type="button" class="btn-primary w-full py-3 text-center block" data-pay-retry-button>Try paying again</button>' +
+                    (reason ? '<p class="mt-2 text-xs text-brand-text-muted">' + escapeHtml(reason) + '</p>' : '');
+                container.appendChild(wrap);
+                wrap.querySelector('[data-pay-retry-button]').addEventListener('click', payAgain);
+            }
+
+            function escapeHtml(value) {
+                return String(value || '').replace(/[&<>"']/g, function (c) {
+                    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+                });
+            }
+
+            function apply(status) {
+                var state = stateName(status);
+                renderHero(state, status);
+                renderInstructions(state, status);
+                renderRetry(state, status);
+                var title = document.querySelector('[data-confirmation-title]');
+                if (title && state === 'Paid') title.textContent = 'Order Confirmed';
+                return state;
+            }
+
+            function payAgain() {
+                var btn = retryButton || container.querySelector('[data-pay-retry-button]');
+                if (!btn) return;
+                btn.disabled = true;
+                var label = btn.textContent;
+                btn.textContent = 'Please wait…';
+                fetch('/checkout/pay', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': getToken() },
+                    body: JSON.stringify({ orderNumber: orderNumber })
+                }).then(function (res) {
+                    if (!res.ok) throw new Error('bad-request');
+                    return res.json();
+                }).then(function (result) {
+                    if (result && result.success && result.payment) {
+                        if (result.payment.redirectUrl) {
+                            window.location.href = result.payment.redirectUrl;
+                            return;
+                        }
+                        window.location.href = '/checkout/confirmation/' + encodeURIComponent(orderNumber);
+                        return;
+                    }
+                    btn.disabled = false;
+                    btn.textContent = label;
+                    window.showToast('We could not restart your payment. Please try again.', 'danger');
+                }).catch(function () {
+                    btn.disabled = false;
+                    btn.textContent = label;
+                    window.showToast('We could not restart your payment. Please try again.', 'danger');
+                });
+            }
+
+            function poll() {
+                fetch('/checkout/confirmation/' + encodeURIComponent(orderNumber) + '/payment-status')
+                    .then(function (res) { return res.json(); })
+                    .then(function (result) {
+                        if (!result || !result.success || !result.payment) return;
+                        var state = apply(result.payment);
+                        if (TERMINAL_STATES.indexOf(state) === -1) {
+                            window.setTimeout(poll, 3000);
+                        }
+                    })
+                    .catch(function () {
+                        window.setTimeout(poll, 5000);
+                    });
+            }
+
+            // Hosted checkout: the browser just returned from the gateway page. Ask the
+            // provider to confirm the payment before relying on the current status.
+            var isHosted = container.getAttribute('data-initial-hosted') === 'true';
+            var initial = container.getAttribute('data-initial-state');
+            var needsCallback = isHosted && (initial === 'Pending' || initial === 'Initiated');
+
+            var start = function () {
+                if (needsCallback) {
+                    post('/checkout/confirmation/' + encodeURIComponent(orderNumber) + '/callback')
+                        .then(function (result) {
+                            if (result && result.success && result.payment) {
+                                var state = apply(result.payment);
+                                if (TERMINAL_STATES.indexOf(state) === -1) poll();
+                                return;
+                            }
+                            poll();
+                        })
+                        .catch(function () { poll(); });
+                } else {
+                    poll();
+                }
+            };
+
+            apply(null);
+            var pay = container.querySelector('[data-pay-retry-button]');
+            if (pay) pay.addEventListener('click', payAgain);
+            start();
         })();
     </script>
 }

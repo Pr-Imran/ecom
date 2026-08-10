@@ -1,4 +1,6 @@
 using FashionStore.Application.DTOs.Account;
+using FashionStore.Application.DTOs.Orders;
+using FashionStore.Application.DTOs.Payments;
 using FashionStore.Application.DTOs.Products;
 using FashionStore.Application.DTOs.Promotions;
 using FashionStore.Application.DTOs.Shipping;
@@ -171,3 +173,13 @@ public sealed record CheckoutViewData(
     IReadOnlyList<AddressDto> SavedAddresses,
     IReadOnlyList<CountryOption> Countries,
     IReadOnlyList<PaymentMethodOption> PaymentMethods);
+
+/// <summary>
+/// View model for the order confirmation screen: the immutable order summary plus
+/// the current public payment status (null when the order has no payment record,
+/// for example a fully discounted order). The payment status is polled by the
+/// storefront to reflect pending, paid and failed states.
+/// </summary>
+public sealed record ConfirmationViewData(
+    OrderSummaryDto Order,
+    PaymentStatusDto? Payment);
