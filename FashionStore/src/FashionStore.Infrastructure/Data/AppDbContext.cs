@@ -57,6 +57,11 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<OrderNote> OrderNotes => Set<OrderNote>();
     public DbSet<OrderNumberSequence> OrderNumberSequences => Set<OrderNumberSequence>();
     public DbSet<OrderIdempotencyRecord> OrderIdempotencyRecords => Set<OrderIdempotencyRecord>();
+    public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<PaymentAttempt> PaymentAttempts => Set<PaymentAttempt>();
+    public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
+    public DbSet<PaymentWebhookLog> PaymentWebhookLogs => Set<PaymentWebhookLog>();
+    public DbSet<PaymentRefundRecord> PaymentRefundRecords => Set<PaymentRefundRecord>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -651,6 +656,80 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             entity.HasIndex(e => e.IdempotencyKey).IsUnique();
             entity.HasIndex(e => e.OrderId);
             entity.HasIndex(e => e.CreatedAtUtc);
+        });
+
+        modelBuilder.Entity<Payment>(entity =>
+        {
+            entity.ToTable("Payments");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ProviderCode).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.PaymentMethodCode).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ProviderTransactionId).HasMaxLength(128);
+            entity.Property(e => e.IdempotencyKey).IsRequired().HasMaxLength(128);
+            entity.Property(e => e.Currency).IsRequired().HasMaxLength(3);
+            entity.Property(e => e.FailureCode).HasMaxLength(50);
+            entity.Property(e => e.FailureReason).HasMaxLength(500);
+            entity.HasIndex(e => e.OrderId).IsUnique();
+            entity.HasIndex(e => e.ProviderTransactionId);
+            entity.HasIndex(e => e.IdempotencyKey).IsUnique();
+            entity.HasIndex(e => e.State);
+            entity.HasIndex(e => e.CreatedAtUtc);
+            entity.HasIndex(e => e.ExpiresAtUtc);
+            entity.HasOne(e => e.Order).WithOne().HasForeignKey<Payment>(e => e.OrderId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PaymentAttempt>(entity =>
+        {
+            entity.ToTable("PaymentAttempts");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ProviderTransactionId).HasMaxLength(128);
+            entity.Property(e => e.FailureReason).HasMaxLength(500);
+            entity.HasIndex(e => e.PaymentId);
+            entity.HasIndex(e => new { e.PaymentId, e.AttemptNumber });
+            entity.HasOne(e => e.Payment).WithMany(p => p.Attempts).HasForeignKey(e => e.PaymentId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PaymentTransaction>(entity =>
+        {
+            entity.ToTable("PaymentTransactions");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ProviderCode).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ProviderTransactionId).HasMaxLength(128);
+            entity.Property(e => e.ResultCode).HasMaxLength(50);
+            entity.Property(e => e.ResultMessage).HasMaxLength(500);
+            entity.HasIndex(e => e.PaymentId);
+            entity.HasIndex(e => e.CreatedAtUtc);
+            entity.HasIndex(e => e.Type);
+            entity.HasOne(e => e.Payment).WithMany(p => p.Transactions).HasForeignKey(e => e.PaymentId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PaymentWebhookLog>(entity =>
+        {
+            entity.ToTable("PaymentWebhookLogs");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ProviderCode).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ProviderEventId).HasMaxLength(128);
+            entity.Property(e => e.Signature).HasMaxLength(1024);
+            entity.Property(e => e.FailureReason).HasMaxLength(500);
+            entity.HasIndex(e => new { e.ProviderCode, e.ProviderEventId }).IsUnique();
+            entity.HasIndex(e => e.PaymentId);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.ReceivedAtUtc);
+            entity.HasOne(e => e.Payment).WithMany().HasForeignKey(e => e.PaymentId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<PaymentRefundRecord>(entity =>
+        {
+            entity.ToTable("PaymentRefundRecords");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Currency).IsRequired().HasMaxLength(3);
+            entity.Property(e => e.ProviderRefundId).HasMaxLength(128);
+            entity.Property(e => e.FailureCode).HasMaxLength(50);
+            entity.Property(e => e.FailureReason).HasMaxLength(500);
+            entity.Property(e => e.InitiatedBy).HasMaxLength(200);
+            entity.HasIndex(e => e.PaymentId);
+            entity.HasIndex(e => e.ProviderRefundId);
+            entity.HasOne(e => e.Payment).WithMany(p => p.Refunds).HasForeignKey(e => e.PaymentId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // Apply soft delete filter

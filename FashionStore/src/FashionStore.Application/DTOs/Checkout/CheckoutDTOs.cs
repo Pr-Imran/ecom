@@ -30,13 +30,15 @@ public sealed record CheckoutAddressInput(
 /// stable machine key (for example "cod" or "card"); the checkout engine resolves
 /// eligibility from the catalog server-side. When <see cref="RequiresCodShipping"/>
 /// is true the method is only eligible if the selected shipping method supports
-/// cash on delivery.
+/// cash on delivery. <see cref="ProviderCode"/> maps the method to the payment
+/// provider used by the payment abstraction.
 /// </summary>
 public sealed record PaymentMethodOption(
     string Code,
     string Name,
     string Description,
-    bool RequiresCodShipping);
+    bool RequiresCodShipping,
+    string ProviderCode);
 
 /// <summary>
 /// Input for the central server-side checkout calculation. The cart lines and

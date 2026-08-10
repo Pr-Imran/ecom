@@ -5,9 +5,10 @@ namespace FashionStore.Application.Common;
 /// <summary>
 /// The supported payment methods presented at checkout. The catalog is the single
 /// server-side source of truth for eligibility; the browser only ever submits a
-/// stable method code. Real charging is not performed here — Phase 20 introduces
-/// the extensible online payment integration — but COD support is already gated on
-/// the selected shipping method.
+/// stable method code. Each method maps to the provider code used by the payment
+/// abstraction (<see cref="FashionStore.Application.Interfaces.IPaymentProvider"/>).
+/// Real charging is never performed by the catalog itself; the eligible method is
+/// delegated to its provider at payment initiation time.
 /// </summary>
 public static class PaymentMethodCatalog
 {
@@ -17,12 +18,26 @@ public static class PaymentMethodCatalog
             "cod",
             "Cash on Delivery",
             "Pay when your order is delivered.",
-            RequiresCodShipping: true),
+            RequiresCodShipping: true,
+            ProviderCode: "cod"),
         new PaymentMethodOption(
             "card",
             "Card Payment",
             "Pay securely online when your order is placed.",
-            RequiresCodShipping: false)
+            RequiresCodShipping: false,
+            ProviderCode: "card"),
+        new PaymentMethodOption(
+            "mfs",
+            "Mobile Wallet",
+            "Pay instantly from your mobile money wallet.",
+            RequiresCodShipping: false,
+            ProviderCode: "mfs"),
+        new PaymentMethodOption(
+            "bank",
+            "Bank Transfer",
+            "Pay by bank transfer using your order reference.",
+            RequiresCodShipping: false,
+            ProviderCode: "bank")
     }.AsReadOnly();
 
     public static PaymentMethodOption? Find(string? code)
