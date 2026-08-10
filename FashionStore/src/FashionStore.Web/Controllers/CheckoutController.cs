@@ -2,6 +2,7 @@ using System.Security.Claims;
 using FashionStore.Application.Common;
 using FashionStore.Application.DTOs.Account;
 using FashionStore.Application.DTOs.Checkout;
+using FashionStore.Application.DTOs.Orders;
 using FashionStore.Application.DTOs.Products;
 using FashionStore.Application.DTOs.Promotions;
 using FashionStore.Application.DTOs.Shipping;
@@ -27,6 +28,7 @@ public class CheckoutController : Controller
     private readonly ICheckoutCalculationService _checkoutCalculationService;
     private readonly IAddressService _addressService;
     private readonly IProfileService _profileService;
+    private readonly IOrderService _orderService;
     private readonly ILogger<CheckoutController> _logger;
 
     public CheckoutController(
@@ -34,12 +36,14 @@ public class CheckoutController : Controller
         ICheckoutCalculationService checkoutCalculationService,
         IAddressService addressService,
         IProfileService profileService,
+        IOrderService orderService,
         ILogger<CheckoutController> logger)
     {
         _cartService = cartService;
         _checkoutCalculationService = checkoutCalculationService;
         _addressService = addressService;
         _profileService = profileService;
+        _orderService = orderService;
         _logger = logger;
     }
 
@@ -163,6 +167,105 @@ public class CheckoutController : Controller
 
         var result = await _checkoutCalculationService.CalculateAsync(input, cancellationToken);
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Places the order. The same server-side cart resolution and checkout
+    /// calculation are re-run here: prices are recomputed, the quoted totals must
+    /// still match the signed continuation token, stock is verified, and the order,
+    /// its snapshots, the stock reservations and the coupon usage are committed in a
+    /// single transaction. The idempotency key makes a repeated attempt (double
+    /// click, refresh, retry) return the already-created order instead of a duplicate.
+    /// </summary>
+    [HttpPost("place")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Place([FromBody] PlaceOrderRequest? request, CancellationToken cancellationToken)
+    {
+        if (request is null)
+        {
+            return BadRequest(new { success = false, message = "Invalid checkout request." });
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        CartViewData cart;
+        string? couponCode;
+        if (string.IsNullOrEmpty(userId))
+        {
+            cart = await _cartService.ResolveAnonymousAsync(
+                AnonymousCartCookie.Read(HttpContext),
+                AnonymousCouponCookie.Read(HttpContext),
+                cancellationToken);
+            couponCode = AnonymousCouponCookie.Read(HttpContext);
+        }
+        else
+        {
+            cart = await _cartService.GetCartAsync(userId, cancellationToken);
+            couponCode = cart.Pricing?.AppliedCouponCode;
+        }
+
+        if (cart.ItemCount == 0)
+        {
+            return Ok(new PlaceOrderResult(
+                false,
+                false,
+                null,
+                null,
+                0m,
+                new[] { new CheckoutValidationError("cart", "empty", "Your cart is empty.") }));
+        }
+
+        var shippingAddress = await ResolveAddressAsync(userId, request.ShippingAddress, cancellationToken);
+        var billingAddress = await ResolveAddressAsync(userId, request.BillingAddress, cancellationToken);
+
+        var input = new CheckoutCalculationInput(
+            userId,
+            cart.Items,
+            couponCode,
+            request.GuestEmail,
+            request.GuestPhone,
+            shippingAddress,
+            billingAddress,
+            request.BillingSameAsShipping,
+            request.ShippingMethodId,
+            request.PaymentMethodCode,
+            request.TermsAccepted,
+            request.ContinuationToken);
+
+        var result = await _orderService.PlaceOrderAsync(
+            input,
+            request.IdempotencyKey,
+            cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Mobile confirmation screen shown after a successful placement. The order is
+    /// rendered from the immutable snapshots stored at placement time, so it stays
+    /// correct even if products or addresses change later.
+    /// </summary>
+    [HttpGet("confirmation/{publicOrderNumber}")]
+    public async Task<IActionResult> Confirmation(string publicOrderNumber, CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var order = await _orderService.GetByPublicOrderNumberAsync(publicOrderNumber, cancellationToken);
+
+        if (order is null)
+        {
+            return NotFound();
+        }
+
+        // Guests have no server-side identity, so the confirmation screen is
+        // keyed by the order number alone (the number is the only credential the
+        // customer holds). Signed-in customers can only view their own orders.
+        if (!string.IsNullOrEmpty(userId) &&
+            !string.Equals(order.UserId, userId, StringComparison.Ordinal))
+        {
+            return NotFound();
+        }
+
+        return View(order);
     }
 
     private static string Format(decimal value) => value.ToString("N2", System.Globalization.CultureInfo.InvariantCulture);

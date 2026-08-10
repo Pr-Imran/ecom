@@ -459,13 +459,8 @@ public sealed class InventoryService : IInventoryService
         };
         _context.StockReservations.Add(reservation);
 
-        var strategy = _context.Database.CreateExecutionStrategy();
-        await strategy.ExecuteAsync(async () =>
+        if (_context.Database.CurrentTransaction is not null)
         {
-            await using var tx = _context.Database.IsRelational()
-                ? await _context.Database.BeginTransactionAsync(cancellationToken)
-                : null;
-
             await ApplyStockChangeAsync(
                 request.VariantId,
                 warehouseId,
@@ -477,10 +472,32 @@ public sealed class InventoryService : IInventoryService
                 $"Reservation {reservation.Id} - {request.CartReference}",
                 null,
                 cancellationToken);
+        }
+        else
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
+            {
+                await using var tx = _context.Database.IsRelational()
+                    ? await _context.Database.BeginTransactionAsync(cancellationToken)
+                    : null;
 
-            if (tx != null)
-                await tx.CommitAsync(cancellationToken);
-        });
+                await ApplyStockChangeAsync(
+                    request.VariantId,
+                    warehouseId,
+                    0,
+                    request.Quantity,
+                    StockAdjustmentReason.OrderReservation,
+                    request.ReferenceType,
+                    request.ReferenceId,
+                    $"Reservation {reservation.Id} - {request.CartReference}",
+                    null,
+                    cancellationToken);
+
+                if (tx != null)
+                    await tx.CommitAsync(cancellationToken);
+            });
+        }
 
         _logger.LogInformation(
             "Reserved {Quantity} units of variant {VariantId} for cart {CartReference} in warehouse {WarehouseId}",
@@ -498,16 +515,11 @@ public sealed class InventoryService : IInventoryService
         if (reservation.Status != StockReservationStatus.Active)
             return true;
 
-        var strategy = _context.Database.CreateExecutionStrategy();
-        await strategy.ExecuteAsync(async () =>
+        reservation.Status = StockReservationStatus.Released;
+        reservation.ReleasedAtUtc = DateTime.UtcNow;
+
+        if (_context.Database.CurrentTransaction is not null)
         {
-            await using var tx = _context.Database.IsRelational()
-                ? await _context.Database.BeginTransactionAsync(cancellationToken)
-                : null;
-
-            reservation.Status = StockReservationStatus.Released;
-            reservation.ReleasedAtUtc = DateTime.UtcNow;
-
             if (reservation.WarehouseId.HasValue)
             {
                 await ApplyStockChangeAsync(
@@ -522,10 +534,35 @@ public sealed class InventoryService : IInventoryService
                     null,
                     cancellationToken);
             }
+        }
+        else
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
+            {
+                await using var tx = _context.Database.IsRelational()
+                    ? await _context.Database.BeginTransactionAsync(cancellationToken)
+                    : null;
 
-            if (tx != null)
-                await tx.CommitAsync(cancellationToken);
-        });
+                if (reservation.WarehouseId.HasValue)
+                {
+                    await ApplyStockChangeAsync(
+                        reservation.ProductVariantId,
+                        reservation.WarehouseId.Value,
+                        0,
+                        -reservation.Quantity,
+                        StockAdjustmentReason.ReservationRelease,
+                        InventoryReferenceType.Cart,
+                        reservation.ReferenceId ?? reservation.Id.ToString(),
+                        $"Release reservation {reservation.Id}",
+                        null,
+                        cancellationToken);
+                }
+
+                if (tx != null)
+                    await tx.CommitAsync(cancellationToken);
+            });
+        }
 
         var variant = await _context.ProductVariants.FindAsync(new object[] { reservation.ProductVariantId }, cancellationToken);
         if (variant != null)
@@ -545,37 +582,31 @@ public sealed class InventoryService : IInventoryService
         if (expired.Count == 0)
             return 0;
 
-        var strategy = _context.Database.CreateExecutionStrategy();
-        await strategy.ExecuteAsync(async () =>
+        if (_context.Database.CurrentTransaction is not null)
         {
-            await using var tx = _context.Database.IsRelational()
-                ? await _context.Database.BeginTransactionAsync(cancellationToken)
-                : null;
-
             foreach (var reservation in expired)
             {
-                reservation.Status = StockReservationStatus.Expired;
-                reservation.ReleasedAtUtc = now;
-
-                if (reservation.WarehouseId.HasValue)
-                {
-                    await ApplyStockChangeAsync(
-                        reservation.ProductVariantId,
-                        reservation.WarehouseId.Value,
-                        0,
-                        -reservation.Quantity,
-                        StockAdjustmentReason.ReservationRelease,
-                        InventoryReferenceType.Cart,
-                        reservation.ReferenceId ?? reservation.Id.ToString(),
-                        $"Auto-release expired reservation {reservation.Id}",
-                        null,
-                        cancellationToken);
-                }
+                await ReleaseExpiredCoreAsync(reservation, now, cancellationToken);
             }
+        }
+        else
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
+            {
+                await using var tx = _context.Database.IsRelational()
+                    ? await _context.Database.BeginTransactionAsync(cancellationToken)
+                    : null;
 
-            if (tx != null)
-                await tx.CommitAsync(cancellationToken);
-        });
+                foreach (var reservation in expired)
+                {
+                    await ReleaseExpiredCoreAsync(reservation, now, cancellationToken);
+                }
+
+                if (tx != null)
+                    await tx.CommitAsync(cancellationToken);
+            });
+        }
 
         foreach (var reservation in expired.Where(r => r.Variant != null))
         {
@@ -584,6 +615,30 @@ public sealed class InventoryService : IInventoryService
 
         _logger.LogInformation("Released {Count} expired stock reservations", expired.Count);
         return expired.Count;
+    }
+
+    private async Task ReleaseExpiredCoreAsync(
+        StockReservation reservation,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        reservation.Status = StockReservationStatus.Expired;
+        reservation.ReleasedAtUtc = now;
+
+        if (reservation.WarehouseId.HasValue)
+        {
+            await ApplyStockChangeAsync(
+                reservation.ProductVariantId,
+                reservation.WarehouseId.Value,
+                0,
+                -reservation.Quantity,
+                StockAdjustmentReason.ReservationRelease,
+                InventoryReferenceType.Cart,
+                reservation.ReferenceId ?? reservation.Id.ToString(),
+                $"Auto-release expired reservation {reservation.Id}",
+                null,
+                cancellationToken);
+        }
     }
 
     public async Task<string> ExportInventoryCsvAsync(InventorySearchRequest request, CancellationToken cancellationToken = default)

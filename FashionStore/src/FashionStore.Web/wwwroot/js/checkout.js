@@ -107,6 +107,16 @@
         };
     }
 
+    function idempotencyKey() {
+        var KEY = 'fs.checkout.idempotency';
+        var existing = null;
+        try { existing = sessionStorage.getItem(KEY); } catch (e) { existing = null; }
+        if (existing) return existing;
+        var key = 'ck-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+        try { sessionStorage.setItem(KEY, key); } catch (e) { /* private mode */ }
+        return key;
+    }
+
     function showLoading(btn) {
         if (!btn) return;
         btn.disabled = true;
@@ -370,6 +380,51 @@
         goToStep(currentStep - 1);
     }
 
+    function placeOrder() {
+        var btn = document.querySelector('[data-checkout-place-order]');
+        showLoading(btn);
+
+        refreshCalculation().then(function (ok) {
+            if (!ok) {
+                hideLoading(btn);
+                window.showToast('Please fix the highlighted fields before placing your order.', 'warning');
+                return;
+            }
+
+            var payload = buildPayload();
+            payload.idempotencyKey = idempotencyKey();
+
+            return post('/checkout/place', payload)
+                .then(function (result) {
+                    if (result && result.success && result.orderNumber) {
+                        try { sessionStorage.removeItem('fs.checkout.idempotency'); } catch (e) { }
+                        window.location.href = '/checkout/confirmation/' + encodeURIComponent(result.orderNumber);
+                        return;
+                    }
+
+                    clearErrors();
+                    if (result && result.errors) {
+                        result.errors.forEach(function (err) {
+                            setError(err.field, err.message);
+                            if (err.field === 'coupon' || err.field === 'items' || err.field === 'cart') {
+                                window.showToast(err.message, 'warning');
+                            }
+                        });
+                        if (result.errors.some(function (e) { return e.code === 'prices-changed'; })) {
+                            window.showToast('Prices changed since you reviewed your order. Please review again.', 'warning');
+                        }
+                    } else {
+                        window.showToast('We could not place your order. Please try again.', 'danger');
+                    }
+                    hideLoading(btn);
+                })
+                .catch(function () {
+                    hideLoading(btn);
+                    window.showToast('We could not reach the server. Your order has not been placed.', 'danger');
+                });
+        });
+    }
+
     function init() {
         document.querySelectorAll('[data-step-label]').forEach(function (el) {
             el.dataset.title = el.textContent;
@@ -381,11 +436,7 @@
 
         var placeBtn = document.querySelector('[data-checkout-place-order]');
         if (placeBtn) placeBtn.addEventListener('click', function () {
-            refreshCalculation().then(function (ok) {
-                if (ok) {
-                    window.showToast('Order placement arrives in the next phase.', 'info');
-                }
-            });
+            placeOrder();
         });
 
         var backBtn = document.querySelector('[data-checkout-back]');

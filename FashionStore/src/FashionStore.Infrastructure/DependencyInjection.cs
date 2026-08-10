@@ -129,6 +129,7 @@ public static class DependencyInjection
         services.AddScoped<IShippingService, ShippingService>();
         services.AddScoped<IShippingCalculationService, ShippingCalculationService>();
         services.AddScoped<ICheckoutCalculationService, CheckoutCalculationService>();
+        services.AddScoped<IOrderService, OrderPlacementService>();
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IAddressService, AddressService>();
         services.AddScoped<IAddressValidationService, AddressValidationService>();

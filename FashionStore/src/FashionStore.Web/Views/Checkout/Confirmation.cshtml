@@ -1,0 +1,150 @@
+@model FashionStore.Application.DTOs.Orders.OrderSummaryDto
+@{
+    ViewData["Title"] = "Order Confirmed";
+    ViewData["HideMobileHeader"] = true;
+    ViewData["HideBottomNav"] = true;
+    var amount = (Model.Currency ?? "USD") == "USD"
+        ? "$" + Model.GrandTotal.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)
+        : Model.GrandTotal.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) + " " + Model.Currency;
+}
+
+@section Styles {
+    <style>
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+        .confirmation-hero { background: linear-gradient(160deg, #f0fdf4 0%, #ffffff 60%); }
+        .confirmation-section { border: 1px solid var(--color-brand-border, #e5e7eb); border-radius: 12px; background: #fff; }
+        .confirm-badge { width: 64px; height: 64px; border-radius: 999px; background: var(--color-brand-success, #16a34a); color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+    </style>
+}
+
+<!-- App-like header -->
+<header class="sticky top-0 z-30 bg-white/92 backdrop-blur border-b border-brand-border" role="banner">
+    <div class="flex items-center justify-between gap-2 px-3 py-2">
+        <a href="/" class="btn-icon -ml-2" aria-label="Back to store">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+        </a>
+        <span class="text-sm font-bold text-brand-text-primary">Order Confirmed</span>
+        <span class="w-8"></span>
+    </div>
+</header>
+
+<main class="px-4 py-6 max-w-2xl mx-auto">
+    <section class="confirmation-hero rounded-brand-sm px-4 py-8 text-center">
+        <div class="confirm-badge">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+        </div>
+        <h1 class="mt-4 text-xl font-bold text-brand-text-primary">Thank you!</h1>
+        <p class="mt-1 text-sm text-brand-text-muted">Your order has been placed.</p>
+        <p class="mt-4 inline-block rounded-lg bg-white border border-brand-border px-4 py-2 text-sm">
+            <span class="text-brand-text-muted">Order number</span>
+            <span class="block font-bold text-brand-text-primary">@Model.PublicOrderNumber</span>
+        </p>
+        <p class="mt-2 text-xs text-brand-text-muted">A confirmation email is on its way to @(Model.GuestEmail ?? "your inbox").</p>
+    </section>
+
+    <section class="confirmation-section mt-4 p-4">
+        <h2 class="text-sm font-bold text-brand-text-primary mb-3">Items</h2>
+        <ul class="divide-y divide-brand-border">
+            @foreach (var item in Model.Items)
+            {
+                <li class="py-3 flex items-center gap-3">
+                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                    {
+                        <img src="@item.ImageUrl" alt="@item.ProductName" class="w-14 h-14 rounded-brand-sm object-cover" loading="lazy" />
+                    }
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-brand-text-primary truncate">@item.ProductName</p>
+                        <p class="text-xs text-brand-text-muted">
+                            @item.Sku
+                            @if (!string.IsNullOrEmpty(item.ColourName) || !string.IsNullOrEmpty(item.SizeName))
+                            {
+                                <text> · </text>
+                                <text>@item.ColourName @item.SizeName</text>
+                            }
+                            × @item.Quantity
+                        </p>
+                    </div>
+                    <p class="text-sm font-bold text-brand-text-primary">@((Model.Currency ?? "USD") == "USD" ? "$" + item.LineTotal.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) : item.LineTotal.ToString("N2", System.Globalization.CultureInfo.InvariantCulture))</p>
+                </li>
+            }
+        </ul>
+    </section>
+
+    <section class="confirmation-section mt-4 p-4">
+        <h2 class="text-sm font-bold text-brand-text-primary mb-2">Delivery to</h2>
+        @if (Model.ShippingAddress is not null)
+        {
+            <p class="text-sm text-brand-text-primary">@Model.ShippingAddress.RecipientName</p>
+            <p class="text-sm text-brand-text-muted">@Model.ShippingAddress.AddressLine1 @Model.ShippingAddress.AddressLine2</p>
+            <p class="text-sm text-brand-text-muted">
+                @Model.ShippingAddress.Area @Model.ShippingAddress.City @Model.ShippingAddress.Region @Model.ShippingAddress.PostalCode
+            </p>
+            <p class="text-sm text-brand-text-muted">@Model.ShippingAddress.CountryCode</p>
+            if (!string.IsNullOrEmpty(Model.ShippingMethodName))
+            {
+                <p class="mt-2 text-xs text-brand-text-muted">@Model.ShippingMethodName</p>
+            }
+        }
+    </section>
+
+    <section class="confirmation-section mt-4 p-4">
+        <h2 class="text-sm font-bold text-brand-text-primary mb-2">Payment summary</h2>
+        <div class="space-y-1 text-sm">
+            <div class="flex items-center justify-between">
+                <span class="text-brand-text-muted">Subtotal</span>
+                <span class="font-medium text-brand-text-primary">@((Model.Currency ?? "USD") == "USD" ? "$" + Model.Subtotal.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) : Model.Subtotal.ToString("N2", System.Globalization.CultureInfo.InvariantCulture))</span>
+            </div>
+            @if (Model.ProductDiscount > 0)
+            {
+                <div class="flex items-center justify-between">
+                    <span class="text-brand-text-muted">Discounts</span>
+                    <span class="font-medium text-brand-text-primary">-@((Model.Currency ?? "USD") == "USD" ? "$" + Model.ProductDiscount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) : Model.ProductDiscount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture))</span>
+                </div>
+            }
+            @if (Model.CouponDiscount > 0)
+            {
+                <div class="flex items-center justify-between">
+                    <span class="text-brand-text-muted">Coupon</span>
+                    <span class="font-medium text-brand-text-primary">-@((Model.Currency ?? "USD") == "USD" ? "$" + Model.CouponDiscount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) : Model.CouponDiscount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture))</span>
+                </div>
+            }
+            @if (Model.ShippingCharge > 0)
+            {
+                <div class="flex items-center justify-between">
+                    <span class="text-brand-text-muted">Shipping</span>
+                    <span class="font-medium text-brand-text-primary">@((Model.Currency ?? "USD") == "USD" ? "$" + Model.ShippingCharge.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) : Model.ShippingCharge.ToString("N2", System.Globalization.CultureInfo.InvariantCulture))</span>
+                </div>
+            }
+            @if (Model.Tax > 0)
+            {
+                <div class="flex items-center justify-between">
+                    <span class="text-brand-text-muted">Tax</span>
+                    <span class="font-medium text-brand-text-primary">@((Model.Currency ?? "USD") == "USD" ? "$" + Model.Tax.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) : Model.Tax.ToString("N2", System.Globalization.CultureInfo.InvariantCulture))</span>
+                </div>
+            }
+            <div class="flex items-center justify-between pt-2 border-t border-brand-border">
+                <span class="font-bold text-brand-text-primary">Total</span>
+                <span class="font-bold text-brand-text-primary">@amount</span>
+            </div>
+        </div>
+        <p class="mt-3 text-xs text-brand-text-muted">
+            Payment method: @Model.PaymentMethodCode?.ToUpperInvariant() (@Model.PaymentStatus)
+        </p>
+    </section>
+
+    <div class="mt-6 pb-8 safe-bottom">
+        <a href="/" class="btn-primary w-full py-3 text-center block">Continue shopping</a>
+    </div>
+</main>
+
+@section Scripts {
+    <script>
+        (function () {
+            try { sessionStorage.removeItem('fs.checkout.idempotency'); } catch (e) { }
+        })();
+    </script>
+}

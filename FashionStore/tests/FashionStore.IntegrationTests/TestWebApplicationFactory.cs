@@ -175,32 +175,33 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
         db.Products.AddRange(product, shoe, scarf);
         db.SaveChanges();
 
-        db.ProductVariants.AddRange(
-            new ProductVariant
+        var sweaterVariant = new ProductVariant
+        {
+            ProductId = product.Id,
+            Sku = "SW-1001-GREY-M",
+            Price = 128.00m,
+            IsActive = true,
+            IsDefault = true,
+            StockQuantity = 10,
+            ReservedStock = 0,
+            VariantAttributeValues = new List<ProductVariantAttributeValue>
             {
-                ProductId = product.Id,
-                Sku = "SW-1001-GREY-M",
-                Price = 128.00m,
-                IsActive = true,
-                IsDefault = true,
-                StockQuantity = 10,
-                ReservedStock = 0,
-                VariantAttributeValues = new List<ProductVariantAttributeValue>
-                {
-                    new() { AttributeValue = heatherGrey },
-                    new() { AttributeValue = sizeM }
-                }
-            },
-            new ProductVariant
-            {
-                ProductId = shoe.Id,
-                Sku = "SH-3003-BLK-09",
-                Price = 150.00m,
-                IsActive = true,
-                IsDefault = true,
-                StockQuantity = 0,
-                ReservedStock = 0
-            });
+                new() { AttributeValue = heatherGrey },
+                new() { AttributeValue = sizeM }
+            }
+        };
+        var shoeVariant = new ProductVariant
+        {
+            ProductId = shoe.Id,
+            Sku = "SH-3003-BLK-09",
+            Price = 150.00m,
+            IsActive = true,
+            IsDefault = true,
+            StockQuantity = 0,
+            ReservedStock = 0
+        };
+
+        db.ProductVariants.AddRange(sweaterVariant, shoeVariant);
 
         db.ProductImages.Add(new ProductImage
         {
@@ -211,6 +212,21 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             ImageFormat = "jpeg",
             ContentType = "image/jpeg"
         });
+
+        var warehouse = new Warehouse
+        {
+            Name = "Main Warehouse",
+            Code = "MAIN",
+            Description = "Primary fulfilment warehouse",
+            City = "New York",
+            Country = "US",
+            IsActive = true,
+            IsDefault = true,
+            DisplayOrder = 1,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now
+        };
+        db.Warehouses.Add(warehouse);
 
         db.ProductReviews.AddRange(
             new ProductReview { ProductId = product.Id, Rating = 5, IsApproved = true },
@@ -301,6 +317,28 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
                 RateType = FashionStore.Domain.Enums.ShippingRateType.Flat,
                 Amount = 24.99m,
                 Priority = 0,
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now
+            });
+
+        db.WarehouseStocks.AddRange(
+            new WarehouseStock
+            {
+                WarehouseId = warehouse.Id,
+                ProductVariantId = sweaterVariant.Id,
+                OnHandQuantity = 10,
+                ReservedQuantity = 0,
+                AllowBackorder = false,
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now
+            },
+            new WarehouseStock
+            {
+                WarehouseId = warehouse.Id,
+                ProductVariantId = shoeVariant.Id,
+                OnHandQuantity = 0,
+                ReservedQuantity = 0,
+                AllowBackorder = false,
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now
             });

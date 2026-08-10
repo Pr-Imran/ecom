@@ -422,6 +422,7 @@ public sealed class CheckoutCalculationService : ICheckoutCalculationService
                 linePricing?.LineSubtotal ?? Round(item.UnitPrice * item.Quantity),
                 linePricing?.PromotionDiscount ?? 0m,
                 linePricing?.CouponDiscount ?? 0m,
+                lineTax,
                 lineTotal));
         }
 

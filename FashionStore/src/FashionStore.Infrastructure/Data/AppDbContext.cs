@@ -50,6 +50,13 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<ShippingMethodProduct> ShippingMethodProducts => Set<ShippingMethodProduct>();
     public DbSet<ShippingMethodCategory> ShippingMethodCategories => Set<ShippingMethodCategory>();
     public DbSet<DeliveryBlackout> DeliveryBlackouts => Set<DeliveryBlackout>();
+    public DbSet<Order> Orders => Set<Order>();
+    public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+    public DbSet<OrderAddress> OrderAddresses => Set<OrderAddress>();
+    public DbSet<OrderStatusHistory> OrderStatusHistories => Set<OrderStatusHistory>();
+    public DbSet<OrderNote> OrderNotes => Set<OrderNote>();
+    public DbSet<OrderNumberSequence> OrderNumberSequences => Set<OrderNumberSequence>();
+    public DbSet<OrderIdempotencyRecord> OrderIdempotencyRecords => Set<OrderIdempotencyRecord>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -546,6 +553,104 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             entity.HasIndex(e => e.IsActive);
             entity.HasIndex(e => e.StartAtUtc);
             entity.HasOne(e => e.ShippingMethod).WithMany(m => m.Blackouts).HasForeignKey(e => e.ShippingMethodId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Order>(entity =>
+        {
+            entity.ToTable("Orders");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PublicOrderNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.InvoiceNumber).HasMaxLength(50);
+            entity.Property(e => e.UserId).HasMaxLength(450);
+            entity.Property(e => e.GuestEmail).HasMaxLength(254);
+            entity.Property(e => e.GuestPhone).HasMaxLength(30);
+            entity.Property(e => e.CustomerName).HasMaxLength(200);
+            entity.Property(e => e.Currency).IsRequired().HasMaxLength(3);
+            entity.Property(e => e.PaymentMethodCode).HasMaxLength(50);
+            entity.Property(e => e.ShippingMethodCode).HasMaxLength(50);
+            entity.Property(e => e.ShippingMethodName).HasMaxLength(200);
+            entity.HasIndex(e => e.PublicOrderNumber).IsUnique();
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.GuestEmail);
+            entity.HasIndex(e => e.OrderStatus);
+            entity.HasIndex(e => e.PaymentStatus);
+            entity.HasIndex(e => e.FulfilmentStatus);
+            entity.HasIndex(e => e.CreatedAtUtc);
+            entity.HasOne(e => e.ShippingAddress).WithMany().HasForeignKey(e => e.ShippingAddressId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.BillingAddress).WithMany().HasForeignKey(e => e.BillingAddressId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<OrderItem>(entity =>
+        {
+            entity.ToTable("OrderItems");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ProductName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.ProductSlug).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Sku).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.ColourName).HasMaxLength(100);
+            entity.Property(e => e.ColourValue).HasMaxLength(50);
+            entity.Property(e => e.SizeName).HasMaxLength(100);
+            entity.Property(e => e.ImageUrl).HasMaxLength(500);
+            entity.HasIndex(e => e.OrderId);
+            entity.HasIndex(e => e.ProductId);
+            entity.HasIndex(e => e.ProductVariantId);
+            entity.HasOne(e => e.Order).WithMany(o => o.Items).HasForeignKey(e => e.OrderId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<OrderAddress>(entity =>
+        {
+            entity.ToTable("OrderAddresses");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.RecipientName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Phone).HasMaxLength(30);
+            entity.Property(e => e.AddressLine1).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.AddressLine2).HasMaxLength(200);
+            entity.Property(e => e.Area).HasMaxLength(100);
+            entity.Property(e => e.City).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Region).HasMaxLength(100);
+            entity.Property(e => e.PostalCode).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.CountryCode).IsRequired().HasMaxLength(2);
+            entity.Property(e => e.DeliveryInstructions).HasMaxLength(500);
+        });
+
+        modelBuilder.Entity<OrderStatusHistory>(entity =>
+        {
+            entity.ToTable("OrderStatusHistories");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Note).HasMaxLength(500);
+            entity.Property(e => e.CreatedBy).HasMaxLength(450);
+            entity.HasIndex(e => e.OrderId);
+            entity.HasIndex(e => e.CreatedAtUtc);
+            entity.HasOne(e => e.Order).WithMany(o => o.StatusHistory).HasForeignKey(e => e.OrderId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<OrderNote>(entity =>
+        {
+            entity.ToTable("OrderNotes");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Note).IsRequired().HasMaxLength(2000);
+            entity.Property(e => e.CreatedBy).HasMaxLength(450);
+            entity.HasIndex(e => e.OrderId);
+            entity.HasOne(e => e.Order).WithMany(o => o.Notes).HasForeignKey(e => e.OrderId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<OrderNumberSequence>(entity =>
+        {
+            entity.ToTable("OrderNumberSequences");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Prefix).IsRequired().HasMaxLength(20);
+            entity.HasIndex(e => new { e.Prefix, e.Year }).IsUnique();
+        });
+
+        modelBuilder.Entity<OrderIdempotencyRecord>(entity =>
+        {
+            entity.ToTable("OrderIdempotencyRecords");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.IdempotencyKey).IsRequired().HasMaxLength(128);
+            entity.Property(e => e.UserId).HasMaxLength(450);
+            entity.HasIndex(e => e.IdempotencyKey).IsUnique();
+            entity.HasIndex(e => e.OrderId);
+            entity.HasIndex(e => e.CreatedAtUtc);
         });
 
         // Apply soft delete filter

@@ -80,6 +80,7 @@ public sealed record CheckoutLineItemDto(
     decimal LineSubtotal,
     decimal PromotionsDiscount,
     decimal CouponDiscount,
+    decimal Tax,
     decimal LineTotal);
 
 /// <summary>
