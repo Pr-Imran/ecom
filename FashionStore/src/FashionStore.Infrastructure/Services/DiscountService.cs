@@ -218,14 +218,16 @@ public sealed class DiscountService : IDiscountService
                 return false;
             }
 
-            var totalUsed = await _context.CouponUsages.CountAsync(u => u.CouponId == couponId, cancellationToken);
+            var totalUsed = await _context.CouponUsages.CountAsync(
+                u => u.CouponId == couponId && u.VoidedAtUtc == null,
+                cancellationToken);
             if (coupon.TotalUsageLimit.HasValue && totalUsed >= coupon.TotalUsageLimit.Value)
             {
                 return false;
             }
 
             var usedByCustomer = await _context.CouponUsages.CountAsync(
-                u => u.CouponId == couponId && u.UserId == userId,
+                u => u.CouponId == couponId && u.UserId == userId && u.VoidedAtUtc == null,
                 cancellationToken);
             if (usedByCustomer >= coupon.PerCustomerLimit)
             {
@@ -286,7 +288,7 @@ public sealed class DiscountService : IDiscountService
         if (coupon.IsFirstOrderOnly && !string.IsNullOrEmpty(userId))
         {
             var hasPriorOrder = await _context.CouponUsages.AsNoTracking()
-                .AnyAsync(u => u.UserId == userId && u.OrderId != null, cancellationToken);
+                .AnyAsync(u => u.UserId == userId && u.OrderId != null && u.VoidedAtUtc == null, cancellationToken);
             if (hasPriorOrder)
             {
                 return Fail("This coupon is only valid on your first order.");
@@ -294,7 +296,7 @@ public sealed class DiscountService : IDiscountService
         }
 
         var totalUsed = await _context.CouponUsages.AsNoTracking()
-            .CountAsync(u => u.CouponId == coupon.Id, cancellationToken);
+            .CountAsync(u => u.CouponId == coupon.Id && u.VoidedAtUtc == null, cancellationToken);
         if (coupon.TotalUsageLimit.HasValue && totalUsed >= coupon.TotalUsageLimit.Value)
         {
             return Fail("This coupon has reached its usage limit.");
@@ -303,7 +305,7 @@ public sealed class DiscountService : IDiscountService
         if (!string.IsNullOrEmpty(userId))
         {
             var usedByCustomer = await _context.CouponUsages.AsNoTracking()
-                .CountAsync(u => u.CouponId == coupon.Id && u.UserId == userId, cancellationToken);
+                .CountAsync(u => u.CouponId == coupon.Id && u.UserId == userId && u.VoidedAtUtc == null, cancellationToken);
             if (usedByCustomer >= coupon.PerCustomerLimit)
             {
                 return Fail("You have already used this coupon.");

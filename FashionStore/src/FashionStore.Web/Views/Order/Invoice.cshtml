@@ -1,0 +1,74 @@
+@model FashionStore.Application.DTOs.Orders.OrderDetailDto
+@{
+    ViewData["Title"] = "Invoice " + Model.InvoiceNumber;
+    ViewData["HideMobileHeader"] = true;
+    var accessToken = ViewData["GuestAccessToken"] as string;
+    var currency = Model.Currency ?? "USD";
+    Func<decimal, string> money = v => currency == "USD"
+        ? "$" + v.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)
+        : v.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) + " " + currency;
+}
+
+@section Styles {
+    <style>
+        .invoice-appbar { position: sticky; top: 0; z-index: 30; background: rgba(255,255,255,0.92); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-bottom: 1px solid var(--color-brand-border, #e5e7eb); }
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+        .invoice-sheet { border: 1px solid var(--color-brand-border, #e5e7eb); border-radius: 14px; background: #fff; overflow: hidden; }
+    </style>
+}
+
+<!-- App-like header -->
+<header class="invoice-appbar lg:hidden" role="banner">
+    <div class="flex items-center justify-between gap-2 px-3 py-2">
+        <div class="flex items-center gap-1 min-w-0">
+            <button type="button" class="btn-icon -ml-2 flex-shrink-0" onclick="history.back()" aria-label="Go back">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <span class="text-base font-bold text-brand-text-primary truncate">Invoice</span>
+        </div>
+        <span class="w-8"></span>
+    </div>
+</header>
+
+<!-- Desktop heading -->
+<div class="hidden lg:block container mx-auto px-4 pt-6">
+    <h1 class="text-2xl font-bold text-brand-text-primary">Invoice @Model.InvoiceNumber</h1>
+</div>
+
+<div class="container mx-auto px-4 pt-4 pb-10 safe-bottom max-w-2xl lg:pt-6">
+    <div class="invoice-sheet">
+        <div class="px-5 py-6 text-center">
+            <div class="mx-auto w-16 h-16 rounded-full bg-brand-surface text-brand-primary flex items-center justify-center">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+            </div>
+            <h2 class="mt-4 text-lg font-bold text-brand-text-primary">Invoice @Model.InvoiceNumber</h2>
+            <p class="mt-1 text-sm text-brand-text-muted">Order @Model.PublicOrderNumber · @Model.CreatedAtUtc.ToLocalTime().ToString("MMM d, yyyy")</p>
+            <p class="mt-4 text-sm text-brand-text-muted">
+                Your downloadable invoice will be available here shortly. A confirmation was sent to
+                @(string.IsNullOrEmpty(Model.GuestEmail) ? "your inbox" : Model.GuestEmail).
+            </p>
+            <div class="mt-4 text-left max-w-sm mx-auto rounded-brand-sm bg-brand-surface p-4">
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-brand-text-muted">Total</span>
+                    <span class="font-bold text-brand-text-primary">@money(Model.GrandTotal)</span>
+                </div>
+                <div class="flex items-center justify-between text-sm mt-1">
+                    <span class="text-brand-text-muted">Status</span>
+                    <span class="status-pill text-brand-text-primary">@Model.PaymentStatus</span>
+                </div>
+            </div>
+            <a asp-action="Details" asp-route-publicOrderNumber="@Model.PublicOrderNumber" asp-route-t="@accessToken"
+               class="btn-primary mt-6 w-full max-w-sm py-3 text-center block mx-auto">
+                Back to order
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .status-pill { display: inline-flex; align-items: center; padding: 0.125rem 0.625rem; border-radius: 999px; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; background: #F3F4F6; }
+</style>

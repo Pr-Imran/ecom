@@ -25,5 +25,12 @@ public class CouponUsage : Entity
 
     public DateTime UsedAtUtc { get; set; }
 
+    /// <summary>
+    /// When set, this redemption was voided (for example because the order it was
+    /// recorded against was cancelled) and no longer counts towards usage limits.
+    /// </summary>
+    [Column(TypeName = "datetime2")]
+    public DateTime? VoidedAtUtc { get; set; }
+
     public virtual Coupon? Coupon { get; set; }
 }

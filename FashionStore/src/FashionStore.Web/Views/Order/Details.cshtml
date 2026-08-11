@@ -1,0 +1,505 @@
+@model FashionStore.Application.DTOs.Orders.OrderDetailDto
+@using FashionStore.Domain.Enums
+@{
+    ViewData["Title"] = "Order " + Model.PublicOrderNumber;
+    ViewData["HideMobileHeader"] = true;
+    var accessToken = ViewData["GuestAccessToken"] as string;
+    var isGuest = Model.IsGuest;
+    var currency = Model.Currency ?? "USD";
+    Func<decimal, string> money = v => currency == "USD"
+        ? "$" + v.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)
+        : v.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) + " " + currency;
+}
+
+@section Styles {
+    <style>
+        .detail-appbar { position: sticky; top: 0; z-index: 30; background: rgba(255,255,255,0.92); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-bottom: 1px solid var(--color-brand-border, #e5e7eb); }
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+        .detail-section { border: 1px solid var(--color-brand-border, #e5e7eb); border-radius: 14px; background: #fff; overflow: hidden; }
+        .detail-thumb { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; background: var(--color-brand-surface, #f9fafb); flex-shrink: 0; }
+        .status-pill { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.125rem 0.625rem; border-radius: 999px; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+        .status-placed { background: #FEF3C7; color: #92400E; }
+        .status-confirmed { background: #DBEAFE; color: #1E40AF; }
+        .status-processing { background: #E0E7FF; color: #3730A3; }
+        .status-shipped { background: #EDE9FE; color: #5B21B6; }
+        .status-delivered { background: #DCFCE7; color: #166534; }
+        .status-completed { background: #DCFCE7; color: #166534; }
+        .status-cancelled { background: #FEE2E2; color: #991B1B; }
+        .pay-unpaid { background: #FEF3C7; color: #92400E; }
+        .pay-paid { background: #DCFCE7; color: #166534; }
+        .pay-partiallypaid { background: #DBEAFE; color: #1E40AF; }
+        .pay-refunded { background: #F3F4F6; color: #374151; }
+        .pay-failed { background: #FEE2E2; color: #991B1B; }
+        .support-cta { position: sticky; bottom: 0; z-index: 20; background: rgba(255,255,255,0.94); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-top: 1px solid var(--color-brand-border, #e5e7eb); }
+        .summary-toggle { cursor: pointer; }
+        .summary-body { display: none; }
+        .summary-body.open { display: block; }
+        .timeline-dot { width: 14px; height: 14px; border-radius: 999px; border: 3px solid #fff; box-shadow: 0 0 0 1.5px var(--color-brand-border, #e5e7eb); background: #fff; flex-shrink: 0; margin-top: 3px; }
+        .timeline-dot.done { background: var(--color-brand-success, #16a34a); box-shadow: 0 0 0 1.5px var(--color-brand-success, #16a34a); }
+        .timeline-dot.current { background: var(--color-brand-primary, #8B4513); box-shadow: 0 0 0 1.5px var(--color-brand-primary, #8B4513); }
+        .buy-again-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.625rem 0; }
+    </style>
+}
+
+<!-- App-like header -->
+<header class="detail-appbar lg:hidden" role="banner">
+    <div class="flex items-center justify-between gap-2 px-3 py-2">
+        <div class="flex items-center gap-1 min-w-0">
+            <button type="button" class="btn-icon -ml-2 flex-shrink-0" onclick="history.back()" aria-label="Go back">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <span class="text-base font-bold text-brand-text-primary truncate">Order Details</span>
+        </div>
+        @if (!isGuest)
+        {
+            <a asp-controller="Order" asp-action="Index" class="text-sm font-bold text-brand-primary tracking-tight flex-shrink-0">My Orders</a>
+        }
+        else
+        {
+            <a asp-controller="Home" asp-action="Index" class="text-sm font-bold text-brand-primary tracking-tight flex-shrink-0">FashionStore</a>
+        }
+    </div>
+</header>
+
+<!-- Desktop heading -->
+<div class="hidden lg:block container mx-auto px-4 pt-6">
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-brand-text-primary">Order @Model.PublicOrderNumber</h1>
+        @if (!isGuest)
+        {
+            <a asp-controller="Order" asp-action="Index" class="text-sm text-brand-primary font-medium hover:underline">Back to My Orders</a>
+        }
+    </div>
+</div>
+
+<div class="container mx-auto px-4 pt-3 pb-8 safe-bottom lg:pt-6 max-w-2xl">
+    @if (TempData["OrderMessage"] != null)
+    {
+        <div class="alert-success mb-4" role="alert"><p class="text-sm">@TempData["OrderMessage"]</p></div>
+    }
+    @if (TempData["OrderError"] != null)
+    {
+        <div class="alert-danger mb-4" role="alert"><p class="text-sm">@TempData["OrderError"]</p></div>
+    }
+
+    <!-- Order status hero -->
+    <section class="detail-section p-4">
+        <div class="flex items-center justify-between gap-2">
+            <span class="text-xs text-brand-text-muted">Placed @Model.CreatedAtUtc.ToLocalTime().ToString("MMM d, yyyy 'at' h:mm tt")</span>
+            <span class="status-pill status-@Model.OrderStatus.ToLowerInvariant()">@Model.OrderStatus</span>
+        </div>
+        <div class="mt-2 flex flex-wrap gap-2">
+            <span class="status-pill pay-@Model.PaymentStatus.ToLowerInvariant()">@Model.PaymentStatus</span>
+            @if (Model.OrderStatus is not ("Cancelled" or "Completed"))
+            {
+                <span class="status-pill status-@Model.OrderStatus.ToLowerInvariant()">@Model.FulfilmentStatus</span>
+            }
+        </div>
+        <dl class="mt-4 grid grid-cols-2 gap-3">
+            <div>
+                <dt class="text-xs text-brand-text-muted">Order number</dt>
+                <dd class="text-sm font-semibold text-brand-text-primary">@Model.PublicOrderNumber</dd>
+            </div>
+            <div>
+                <dt class="text-xs text-brand-text-muted">Invoice</dt>
+                <dd class="text-sm font-semibold text-brand-text-primary">
+                    @if (!string.IsNullOrEmpty(Model.InvoiceNumber))
+                    {
+                        <a asp-action="Invoice" asp-route-publicOrderNumber="@Model.PublicOrderNumber" asp-route-t="@accessToken" class="text-brand-primary hover:underline">@Model.InvoiceNumber</a>
+                    }
+                    else
+                    {
+                        <text>—</text>
+                    }
+                </dd>
+            </div>
+        </dl>
+        @if (!string.IsNullOrEmpty(Model.ShippingMethodName))
+        {
+            <p class="mt-3 text-xs text-brand-text-muted">Delivery: @Model.ShippingMethodName</p>
+        }
+    </section>
+
+    <!-- Items -->
+    <section class="detail-section mt-4">
+        <h2 class="px-4 pt-3 pb-1 text-sm font-bold text-brand-text-primary">Items</h2>
+        <ul class="divide-y divide-brand-border">
+            @foreach (var item in Model.Items)
+            {
+                <li class="px-4 py-3 flex items-center gap-3">
+                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                    {
+                        <img src="@item.ImageUrl" alt="@item.ProductName" class="detail-thumb" loading="lazy" />
+                    }
+                    else
+                    {
+                        <div class="detail-thumb flex items-center justify-center text-brand-text-muted">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                            </svg>
+                        </div>
+                    }
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-brand-text-primary truncate">@item.ProductName</p>
+                        <p class="text-xs text-brand-text-muted">
+                            @item.Sku
+                            @if (!string.IsNullOrEmpty(item.ColourName) || !string.IsNullOrEmpty(item.SizeName))
+                            {
+                                <text> · </text>
+                                <text>@item.ColourName</text>
+                                if (!string.IsNullOrEmpty(item.SizeName))
+                                {
+                                    <text> / @item.SizeName</text>
+                                }
+                            }
+                            · × @item.Quantity
+                        </p>
+                        @if (item.CompareAtPrice.HasValue && item.CompareAtPrice > item.UnitPrice)
+                        {
+                            <p class="text-xs text-brand-text-muted"><s>@money(item.CompareAtPrice.Value)</s></p>
+                        }
+                    </div>
+                    <p class="text-sm font-bold text-brand-text-primary">@money(item.LineTotal)</p>
+                </li>
+            }
+        </ul>
+    </section>
+
+    <!-- Delivery info -->
+    @if (Model.Delivery is not null)
+    {
+        <section class="detail-section mt-4">
+            <h2 class="px-4 pt-3 pb-1 text-sm font-bold text-brand-text-primary">Delivery</h2>
+            <div class="px-4 pb-4">
+                @if (Model.DeliveredAtUtc.HasValue)
+                {
+                    <p class="text-sm font-semibold text-brand-success mb-2">Delivered @Model.DeliveredAtUtc.Value.ToLocalTime().ToString("MMM d, yyyy")</p>
+                }
+                else if (Model.ShippedAtUtc.HasValue)
+                {
+                    <p class="text-sm font-semibold text-brand-primary mb-2">Shipped @Model.ShippedAtUtc.Value.ToLocalTime().ToString("MMM d, yyyy")</p>
+                }
+                <p class="text-sm text-brand-text-primary">@Model.Delivery.RecipientName</p>
+                <p class="text-sm text-brand-text-muted">@Model.Delivery.AddressLine1 @Model.Delivery.AddressLine2</p>
+                <p class="text-sm text-brand-text-muted">@Model.Delivery.Area @Model.Delivery.City @Model.Delivery.Region @Model.Delivery.PostalCode</p>
+                <p class="text-sm text-brand-text-muted">@Model.Delivery.CountryCode</p>
+                @if (!string.IsNullOrEmpty(Model.Delivery.Phone))
+                {
+                    <p class="text-sm text-brand-text-muted mt-1">@Model.Delivery.Phone</p>
+                }
+            </div>
+        </section>
+    }
+
+    <!-- Payment summary (expandable) -->
+    <section class="detail-section mt-4">
+        <div class="summary-toggle flex items-center justify-between px-4 py-3" data-summary-toggle role="button" aria-expanded="false" tabindex="0">
+            <h2 class="text-sm font-bold text-brand-text-primary">Payment summary</h2>
+            <svg class="w-5 h-5 text-brand-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" data-summary-chevron>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </div>
+        <div class="summary-body px-4 pb-4" data-summary-body>
+            <div class="space-y-1 text-sm">
+                <div class="flex items-center justify-between">
+                    <span class="text-brand-text-muted">Subtotal</span>
+                    <span class="font-medium text-brand-text-primary">@money(Model.Subtotal)</span>
+                </div>
+                @if (Model.ProductDiscount > 0)
+                {
+                    <div class="flex items-center justify-between">
+                        <span class="text-brand-text-muted">Discounts</span>
+                        <span class="font-medium text-brand-text-primary">-@money(Model.ProductDiscount)</span>
+                    </div>
+                }
+                @if (Model.CouponDiscount > 0)
+                {
+                    <div class="flex items-center justify-between">
+                        <span class="text-brand-text-muted">Coupon</span>
+                        <span class="font-medium text-brand-text-primary">-@money(Model.CouponDiscount)</span>
+                    </div>
+                }
+                @if (Model.ShippingCharge > 0)
+                {
+                    <div class="flex items-center justify-between">
+                        <span class="text-brand-text-muted">Shipping</span>
+                        <span class="font-medium text-brand-text-primary">@money(Model.ShippingCharge)</span>
+                    </div>
+                }
+                @if (Model.Tax > 0)
+                {
+                    <div class="flex items-center justify-between">
+                        <span class="text-brand-text-muted">Tax</span>
+                        <span class="font-medium text-brand-text-primary">@money(Model.Tax)</span>
+                    </div>
+                }
+                <div class="flex items-center justify-between pt-2 border-t border-brand-border">
+                    <span class="font-bold text-brand-text-primary">Total</span>
+                    <span class="font-bold text-brand-text-primary">@money(Model.GrandTotal)</span>
+                </div>
+                @if (Model.PaidAmount > 0)
+                {
+                    <div class="flex items-center justify-between pt-1">
+                        <span class="text-brand-text-muted">Paid</span>
+                        <span class="font-medium text-brand-success">@money(Model.PaidAmount)</span>
+                    </div>
+                }
+                @if (Model.RefundedAmount > 0)
+                {
+                    <div class="flex items-center justify-between">
+                        <span class="text-brand-text-muted">Refunded</span>
+                        <span class="font-medium text-brand-text-muted">@money(Model.RefundedAmount)</span>
+                    </div>
+                }
+            </div>
+            @if (Model.Payment is not null)
+            {
+                <p class="mt-3 text-xs text-brand-text-muted">
+                    Payment method: @(Model.PaymentMethodCode?.ToUpperInvariant() ?? "—")
+                    @if (!string.IsNullOrEmpty(Model.Payment.ProviderTransactionId))
+                    {
+                        <text>· Ref @Model.Payment.ProviderTransactionId</text>
+                    }
+                </p>
+            }
+            else
+            {
+                <p class="mt-3 text-xs text-brand-text-muted">Payment method: @(Model.PaymentMethodCode?.ToUpperInvariant() ?? "—")</p>
+            }
+        </div>
+    </section>
+
+    <!-- Timeline -->
+    <section class="detail-section mt-4 p-4">
+        <h2 class="text-sm font-bold text-brand-text-primary mb-3">Order timeline</h2>
+        @if (Model.Timeline.Count == 0)
+        {
+            <p class="text-sm text-brand-text-muted">No status updates yet.</p>
+        }
+        else
+        {
+            <ol class="relative">
+                @{
+                    var lastIndex = Model.Timeline.Count - 1;
+                    var currentStatus = Model.OrderStatus;
+                }
+                @foreach (var entry in Model.Timeline)
+                {
+                    var isLast = entry.Sequence - 1 == lastIndex;
+                    var isCurrent = string.Equals(entry.ToStatus, currentStatus, StringComparison.Ordinal) && isLast;
+                    var isDone = !isCurrent && !(isLast && currentStatus == "Cancelled");
+                    <li class="flex gap-3 @(isLast ? "" : "pb-4")">
+                        <div class="flex flex-col items-center">
+                            <span class="timeline-dot @(isCurrent ? "current" : isDone && currentStatus != "Cancelled" ? "done" : "")"></span>
+                            @if (!isLast)
+                            {
+                                <span class="flex-1 w-px bg-brand-border my-1"></span>
+                            }
+                        </div>
+                        <div class="flex-1 min-w-0 pt-0.5">
+                            <p class="text-sm font-medium text-brand-text-primary">
+                                @if (entry.ToStatus == "Cancelled" && !string.IsNullOrEmpty(entry.Note))
+                                {
+                                    <text>@entry.Note</text>
+                                }
+                                else if (entry.ToStatus == "Cancelled")
+                                {
+                                    <text>Order cancelled</text>
+                                }
+                                else
+                                {
+                                    <text>@entry.ToStatus</text>
+                                }
+                            </p>
+                            <p class="text-xs text-brand-text-muted">@entry.CreatedAtUtc.ToLocalTime().ToString("MMM d, yyyy 'at' h:mm tt")</p>
+                            @if (!string.IsNullOrEmpty(entry.Actor) && entry.ToStatus == "Cancelled")
+                            {
+                                <p class="text-xs text-brand-text-muted">By @entry.Actor</p>
+                            }
+                        </div>
+                    </li>
+                }
+            </ol>
+        }
+    </section>
+
+    <!-- Cancellation -->
+    @if (Model.CanCancel)
+    {
+        <section class="detail-section mt-4 p-4">
+            <h2 class="text-sm font-bold text-brand-text-primary mb-1">Cancel this order?</h2>
+            <p class="text-xs text-brand-text-muted">
+                You can cancel while the order is still being processed and hasn't been paid. Reserved stock is returned to sale and any coupon becomes available again.
+            </p>
+            <form method="post" asp-action="Cancel" asp-route-publicOrderNumber="@Model.PublicOrderNumber" class="mt-3 space-y-3">
+                @Html.AntiForgeryToken()
+                @if (!string.IsNullOrEmpty(accessToken))
+                {
+                    <input type="hidden" name="t" value="@accessToken" />
+                }
+                <label for="reason" class="block text-xs font-semibold text-brand-text-primary">Reason (optional)</label>
+                <select id="reason" name="reason" class="w-full rounded-brand-sm border border-brand-border bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/40">
+                    <option value="">Select a reason…</option>
+                    <option value="CustomerRequested">I changed my mind</option>
+                    <option value="ChangedMind">No longer needed</option>
+                    <option value="FoundCheaperElsewhere">Found it cheaper elsewhere</option>
+                    <option value="DeliveryTooLate">Delivery too late</option>
+                    <option value="DuplicateOrder">Duplicate order</option>
+                    <option value="PaymentIssue">Payment issue</option>
+                    <option value="Other">Other</option>
+                </select>
+                <button type="submit" class="w-full py-3 rounded-brand-sm border border-brand-danger text-brand-danger text-sm font-semibold hover:bg-brand-danger hover:text-white transition-colors" data-cancel-button>
+                    Cancel order
+                </button>
+            </form>
+        </section>
+    }
+    else if (Model.OrderStatus == "Cancelled" && !string.IsNullOrEmpty(Model.CancelledReasonCode))
+    {
+        <section class="detail-section mt-4 p-4">
+            <h2 class="text-sm font-bold text-brand-text-primary mb-1">This order was cancelled</h2>
+            <p class="text-xs text-brand-text-muted">Reason: @Model.CancelledReasonCode</p>
+            @if (Model.CancelledAtUtc.HasValue)
+            {
+                <p class="text-xs text-brand-text-muted mt-1">Cancelled @Model.CancelledAtUtc.Value.ToLocalTime().ToString("MMM d, yyyy 'at' h:mm tt")</p>
+            }
+        </section>
+    }
+
+    <!-- Return request placeholder -->
+    @if (Model.OrderStatus is "Delivered" or "Completed" && Model.OrderStatus != "Cancelled")
+    {
+        <section class="detail-section mt-4 p-4">
+            <h2 class="text-sm font-bold text-brand-text-primary mb-1">Need to return an item?</h2>
+            <p class="text-xs text-brand-text-muted">Returns are currently handled by our support team.</p>
+            <button type="button" class="w-full mt-3 py-3 rounded-brand-sm border border-brand-border text-brand-text-primary text-sm font-semibold hover:border-brand-primary transition-colors" data-return-button>
+                Request a return
+            </button>
+        </section>
+    }
+
+    <!-- Buy again -->
+    <section class="detail-section mt-4 p-4">
+        <h2 class="text-sm font-bold text-brand-text-primary mb-2">Buy again</h2>
+        <div class="divide-y divide-brand-border" data-buy-again>
+            @foreach (var item in Model.Items)
+            {
+                <div class="buy-again-item">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-brand-text-primary truncate">@item.ProductName</p>
+                        <p class="text-xs text-brand-text-muted">@item.Sku · × @item.Quantity</p>
+                    </div>
+                    <button type="button"
+                            class="text-sm font-semibold text-brand-primary hover:underline disabled:text-brand-text-muted disabled:hover:no-underline"
+                            data-add-to-cart data-product-variant-id="@item.ProductVariantId" data-quantity="@item.Quantity"
+                            data-buy-again-item
+                            @(item.ProductVariantId.HasValue ? "" : "disabled")>Add to cart</button>
+                </div>
+            }
+        </div>
+        <p class="mt-2 text-[11px] text-brand-text-muted" data-buy-again-note>
+            @if (Model.Items.Any(i => i.ProductVariantId.HasValue))
+            {
+                <text>Item availability is checked when you add it to your cart.</text>
+            }
+            else
+            {
+                <text>These items are no longer available.</text>
+            }
+        </p>
+    </section>
+</div>
+
+<!-- Sticky support action -->
+<div class="support-cta lg:hidden">
+    <div class="container mx-auto px-4 py-3 flex items-center gap-3">
+        <a asp-controller="Home" asp-action="Index" class="btn-primary flex-1 py-3 text-center">Continue shopping</a>
+        <button type="button" class="btn-icon border border-brand-border" aria-label="Contact support" data-support-btn>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+            </svg>
+        </button>
+    </div>
+</div>
+
+<form id="order-antiforgery" class="hidden">@Html.AntiForgeryToken()</form>
+
+@section Scripts {
+    <script>
+        (function () {
+            'use strict';
+
+            // Expandable payment summary
+            var toggle = document.querySelector('[data-summary-toggle]');
+            if (toggle) {
+                toggle.addEventListener('click', function () {
+                    var body = document.querySelector('[data-summary-body]');
+                    var chevron = document.querySelector('[data-summary-chevron]');
+                    var open = body.classList.toggle('open');
+                    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                    if (chevron) chevron.style.transform = open ? 'rotate(180deg)' : '';
+                });
+                toggle.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle.click(); }
+                });
+            }
+
+            // Cancellation confirmation
+            var cancelButton = document.querySelector('[data-cancel-button]');
+            if (cancelButton) {
+                cancelButton.addEventListener('click', function (e) {
+                    if (!window.confirm('Are you sure you want to cancel this order? Reserved stock will be released.')) {
+                        e.preventDefault();
+                    }
+                });
+            }
+
+            // Buy again -> add to cart (reuses the global cart drawer)
+            var tokenForm = document.getElementById('order-antiforgery');
+            var tokenInput = tokenForm ? tokenForm.querySelector('input[name="__RequestVerificationToken"]') : null;
+            document.querySelectorAll('[data-add-to-cart]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var variantId = btn.getAttribute('data-product-variant-id');
+                    var quantity = parseInt(btn.getAttribute('data-quantity') || '1', 10);
+                    if (!variantId || btn.disabled) return;
+                    var cartUrl = '/cart/add?variantId=' + encodeURIComponent(variantId) + '&quantity=' + quantity;
+                    var options = { method: 'POST' };
+                    if (tokenInput) {
+                        options.headers = { 'RequestVerificationToken': tokenInput.value };
+                    }
+                    fetch(cartUrl, options)
+                        .then(function (res) { return res.json(); })
+                        .then(function (result) {
+                            if (result && result.success) {
+                                if (window.showToast) window.showToast(result.message || 'Added to cart', 'success');
+                                if (window.fsCart && window.fsCart.refresh) window.fsCart.refresh();
+                            } else {
+                                if (window.showToast) window.showToast((result && result.message) || 'Could not add to cart', 'danger');
+                            }
+                        })
+                        .catch(function () {
+                            if (window.showToast) window.showToast('Could not add to cart', 'danger');
+                        });
+                });
+            });
+
+            // Support action
+            var supportBtn = document.querySelector('[data-support-btn]');
+            if (supportBtn) {
+                supportBtn.addEventListener('click', function () {
+                    if (window.showToast) window.showToast('Support chat is coming soon.', 'info');
+                });
+            }
+
+            // Return request placeholder
+            var returnBtn = document.querySelector('[data-return-button]');
+            if (returnBtn) {
+                returnBtn.addEventListener('click', function () {
+                    if (window.showToast) window.showToast('Please contact support to start a return.', 'info');
+                });
+            }
+        })();
+    </script>
+}

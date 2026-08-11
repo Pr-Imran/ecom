@@ -104,6 +104,10 @@ public class Order : Entity
     [Column(TypeName = "datetime2")]
     public DateTime? CancelledAtUtc { get; set; }
 
+    /// <summary>Stable cancellation reason code when the order was cancelled.</summary>
+    [MaxLength(50)]
+    public string? CancelledReasonCode { get; set; }
+
     public Guid? ShippingAddressId { get; set; }
 
     public Guid? BillingAddressId { get; set; }

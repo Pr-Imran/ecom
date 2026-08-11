@@ -49,3 +49,19 @@ public enum OrderAddressType
     Shipping = 0,
     Billing = 1
 }
+
+/// <summary>
+/// The reason a customer asked to cancel an order. The code is stored on the order
+/// and a human-readable note is appended to the status history so cancellations are
+/// auditable without trusting free-form input.
+/// </summary>
+public enum OrderCancellationReason
+{
+    CustomerRequested = 0,
+    ChangedMind = 1,
+    FoundCheaperElsewhere = 2,
+    DeliveryTooLate = 3,
+    DuplicateOrder = 4,
+    PaymentIssue = 5,
+    Other = 6
+}
