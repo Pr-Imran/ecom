@@ -132,6 +132,7 @@ public static class DependencyInjection
         services.AddScoped<ICheckoutCalculationService, CheckoutCalculationService>();
         services.AddScoped<IOrderService, OrderPlacementService>();
         services.AddScoped<ICustomerOrderService, CustomerOrderService>();
+        services.AddScoped<IOrderAdministrationService, OrderAdministrationService>();
         services.AddScoped<IPaymentProviderFactory, PaymentProviderFactory>();
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<IProfileService, ProfileService>();
@@ -154,6 +155,21 @@ public static class DependencyInjection
             options.AddPolicy(ShippingPolicies.ShippingManage, policy =>
                 policy.RequireAuthenticatedUser()
                       .RequireClaim("permission", ApplicationPermissions.Shipping.Manage));
+            options.AddPolicy(OrderPolicies.OrdersView, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireClaim("permission", ApplicationPermissions.Orders.View));
+            options.AddPolicy(OrderPolicies.OrdersUpdateStatus, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireClaim("permission", ApplicationPermissions.Orders.UpdateStatus));
+            options.AddPolicy(OrderPolicies.OrdersCancel, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireClaim("permission", ApplicationPermissions.Orders.Cancel));
+            options.AddPolicy(OrderPolicies.OrdersAddNote, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireClaim("permission", ApplicationPermissions.Orders.AddNote));
+            options.AddPolicy(OrderPolicies.OrdersPrintInvoice, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireClaim("permission", ApplicationPermissions.Orders.PrintInvoice));
         });
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>("database");

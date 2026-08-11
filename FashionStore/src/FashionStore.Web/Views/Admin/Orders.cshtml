@@ -1,0 +1,389 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Orders";
+    ViewData["PageTitle"] = "Orders";
+}
+
+<div class="space-y-4 pb-24">
+    @* Search + actions *@
+    <div class="flex flex-col sm:flex-row gap-3">
+        <div class="flex-1 flex gap-2">
+            <div class="relative flex-1">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <input type="search" id="orderSearch" placeholder="Search order, customer, email, phone, transaction..."
+                       class="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+            </div>
+            <button id="btnApplySearch" class="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium whitespace-nowrap">Search</button>
+        </div>
+        <div class="flex gap-2">
+            <button id="btnExport" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 whitespace-nowrap">
+                Export CSV
+            </button>
+            <button id="btnOpenFilters" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 whitespace-nowrap flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414A1 1 0 0014 15.586V20a1 1 0 01-.674.948l-4 1.5A1 1 0 018 21.5v-5.914a1 1 0 00-.293-.707L1.293 8.293A1 1 0 011 7.586V4z"/>
+                </svg>
+                Filters
+                <span id="filterCount" class="hidden text-xs bg-brand-primary text-white rounded-full px-1.5"></span>
+            </button>
+        </div>
+    </div>
+
+    @* Filter bottom sheet (mobile) / panel (desktop) *@
+    <div id="filterSheet" class="hidden fixed inset-0 bg-black/50 z-50 items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b px-5 py-4 flex items-center justify-between rounded-t-2xl z-10">
+                <h3 class="text-lg font-bold">Filter orders</h3>
+                <button id="btnCloseFilters" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="sm:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Placed between</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="date" id="filterDateFrom" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-primary" />
+                        <input type="date" id="filterDateTo" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-primary" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Order status</label>
+                    <select id="filterOrderStatus" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-primary">
+                        <option value="">All</option>
+                        <option value="Placed">Placed</option>
+                        <option value="Confirmed">Confirmed</option>
+                        <option value="Processing">Processing</option>
+                        <option value="Shipped">Shipped</option>
+                        <option value="Delivered">Delivered</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Payment status</label>
+                    <select id="filterPaymentStatus" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-primary">
+                        <option value="">All</option>
+                        <option value="Unpaid">Unpaid</option>
+                        <option value="Paid">Paid</option>
+                        <option value="PartiallyPaid">Partially paid</option>
+                        <option value="Refunded">Refunded</option>
+                        <option value="Failed">Failed</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Fulfilment status</label>
+                    <select id="filterFulfilmentStatus" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-primary">
+                        <option value="">All</option>
+                        <option value="Unfulfilled">Unfulfilled</option>
+                        <option value="PartiallyFulfilled">Partially fulfilled</option>
+                        <option value="Fulfilled">Fulfilled</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Shipping method</label>
+                    <select id="filterShippingMethod" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-primary">
+                        <option value="">All</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Payment method</label>
+                    <select id="filterPaymentMethod" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-primary">
+                        <option value="">All</option>
+                    </select>
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Total amount</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" id="filterMinAmount" min="0" step="0.01" placeholder="Min ($)" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-primary" />
+                        <input type="number" id="filterMaxAmount" min="0" step="0.01" placeholder="Max ($)" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-primary" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Sort by</label>
+                    <select id="filterSortBy" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-primary">
+                        <option value="date">Date</option>
+                        <option value="total">Total</option>
+                        <option value="number">Order number</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Direction</label>
+                    <select id="filterSortDirection" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-primary">
+                        <option value="desc">Newest first</option>
+                        <option value="asc">Oldest first</option>
+                    </select>
+                </div>
+            </div>
+            <div class="sticky bottom-0 bg-white border-t px-5 py-4 flex justify-end gap-3 rounded-b-2xl">
+                <button id="btnClearFilters" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700">Reset</button>
+                <button id="btnApplyFilters" class="px-5 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium">Apply filters</button>
+            </div>
+        </div>
+    </div>
+
+    @* Results *@
+    <div class="hidden lg:block bg-white rounded-lg shadow-sm border overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-50 border-b">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Placed</th>
+                </tr>
+            </thead>
+            <tbody id="ordersTableBody" class="divide-y divide-gray-200">
+                <tr>
+                    <td colspan="6" class="px-6 py-10 text-center text-gray-500 text-sm">
+                        <p>Loading orders...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div id="ordersCards" class="lg:hidden space-y-3">
+        <div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8">
+            <p>Loading orders...</p>
+        </div>
+    </div>
+
+    @* Pagination *@
+    <div id="pagination" class="hidden items-center justify-between gap-3">
+        <p id="pageInfo" class="text-sm text-gray-500"></p>
+        <div class="flex gap-2">
+            <button id="btnPrevPage" class="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Previous</button>
+            <button id="btnNextPage" class="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Next</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            'use strict';
+
+            const statusColors = {
+                Placed: 'bg-blue-50 text-blue-700',
+                Confirmed: 'bg-indigo-50 text-indigo-700',
+                Processing: 'bg-amber-50 text-amber-700',
+                Shipped: 'bg-purple-50 text-purple-700',
+                Delivered: 'bg-emerald-50 text-emerald-700',
+                Completed: 'bg-emerald-50 text-emerald-700',
+                Cancelled: 'bg-red-50 text-red-600'
+            };
+            const paymentColors = {
+                Unpaid: 'bg-gray-100 text-gray-600',
+                Paid: 'bg-emerald-50 text-emerald-700',
+                PartiallyPaid: 'bg-amber-50 text-amber-700',
+                Refunded: 'bg-rose-50 text-rose-600',
+                Failed: 'bg-red-50 text-red-600'
+            };
+
+            let state = { page: 1, pageSize: 20, totalCount: 0, hasMore: false };
+            let shippingMethods = [];
+            let paymentMethods = [];
+
+            function api(path, options) {
+                return fetch(path, options).then(async res => {
+                    if (res.ok) return res.json();
+                    let error = 'Request failed';
+                    try {
+                        const body = await res.json();
+                        error = body.error || body.title || error;
+                    } catch (e) { /* ignore */ }
+                    throw new Error(error);
+                });
+            }
+
+            function esc(value) {
+                if (value === null || value === undefined) return '';
+                return String(value).replace(/[&<>"']/g, c => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                }[c]));
+            }
+
+            function money(value, currency) {
+                const n = Number(value || 0);
+                const sym = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '$';
+                return isNaN(n) ? sym + '0.00' : sym + n.toFixed(2);
+            }
+
+            function badge(value, colors) {
+                return `<span class="inline-flex px-2 py-1 rounded-full text-xs font-medium ${colors[value] || 'bg-gray-100 text-gray-600'}">${esc(value)}</span>`;
+            }
+
+            function buildQuery() {
+                const params = new URLSearchParams();
+                const search = document.getElementById('orderSearch').value.trim();
+                if (search) params.set('search', search);
+                if (document.getElementById('filterDateFrom').value) params.set('dateFromUtc', document.getElementById('filterDateFrom').value + 'T00:00:00Z');
+                if (document.getElementById('filterDateTo').value) params.set('dateToUtc', document.getElementById('filterDateTo').value + 'T23:59:59Z');
+                if (document.getElementById('filterOrderStatus').value) params.set('orderStatus', document.getElementById('filterOrderStatus').value);
+                if (document.getElementById('filterPaymentStatus').value) params.set('paymentStatus', document.getElementById('filterPaymentStatus').value);
+                if (document.getElementById('filterFulfilmentStatus').value) params.set('fulfilmentStatus', document.getElementById('filterFulfilmentStatus').value);
+                if (document.getElementById('filterShippingMethod').value) params.set('shippingMethodId', document.getElementById('filterShippingMethod').value);
+                if (document.getElementById('filterPaymentMethod').value) params.set('paymentMethodCode', document.getElementById('filterPaymentMethod').value);
+                if (document.getElementById('filterMinAmount').value) params.set('minAmount', document.getElementById('filterMinAmount').value);
+                if (document.getElementById('filterMaxAmount').value) params.set('maxAmount', document.getElementById('filterMaxAmount').value);
+                params.set('sortBy', document.getElementById('filterSortBy').value || 'date');
+                params.set('sortDirection', document.getElementById('filterSortDirection').value || 'desc');
+                params.set('page', state.page);
+                params.set('pageSize', state.pageSize);
+                return params.toString();
+            }
+
+            async function loadOrders() {
+                const html = await api('/api/admin/orders?' + buildQuery());
+                state.page = html.page;
+                state.pageSize = html.pageSize;
+                state.totalCount = html.totalCount;
+                state.hasMore = html.hasMore;
+                shippingMethods = html.shippingMethods || [];
+                paymentMethods = html.paymentMethods || [];
+                renderOrders(html.items || []);
+                renderPagination();
+                fillFilterOptions();
+            }
+
+            function renderOrders(orders) {
+                const tbody = document.getElementById('ordersTableBody');
+                if (orders.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-10 text-center text-gray-500 text-sm">No orders match your filters.</td></tr>';
+                } else {
+                    tbody.innerHTML = orders.map(o => `
+                        <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='/admin/orders/${o.orderId}'">
+                            <td class="px-6 py-4">
+                                <p class="text-sm font-semibold text-brand-primary font-mono">#${esc(o.publicOrderNumber)}</p>
+                                ${o.invoiceNumber ? `<p class="text-xs text-gray-500">Inv: ${esc(o.invoiceNumber)}</p>` : ''}
+                            </td>
+                            <td class="px-6 py-4">
+                                <p class="text-sm font-medium text-gray-900">${esc(o.customerName || 'Guest')}</p>
+                                ${o.guestEmail ? `<p class="text-xs text-gray-500">${esc(o.guestEmail)}</p>` : ''}
+                            </td>
+                            <td class="px-6 py-4">${badge(o.orderStatus, statusColors)}</td>
+                            <td class="px-6 py-4">${badge(o.paymentStatus, paymentColors)}</td>
+                            <td class="px-6 py-4 text-sm font-semibold text-gray-900">${money(o.grandTotal, o.currency)}</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">${new Date(o.createdAtUtc).toLocaleString()}</td>
+                        </tr>`).join('');
+                }
+
+                const cards = document.getElementById('ordersCards');
+                if (orders.length === 0) {
+                    cards.innerHTML = '<div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-10"><p>No orders match your filters.</p></div>';
+                } else {
+                    cards.innerHTML = orders.map(o => `
+                        <a href="/admin/orders/${o.orderId}" class="block bg-white rounded-lg border p-4 hover:border-brand-primary transition-colors">
+                            <div class="flex items-start justify-between gap-2">
+                                <div>
+                                    <p class="text-sm font-bold text-brand-primary font-mono">#${esc(o.publicOrderNumber)}</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">${esc(o.customerName || 'Guest')} · ${new Date(o.createdAtUtc).toLocaleDateString()}</p>
+                                </div>
+                                <p class="text-sm font-bold text-gray-900">${money(o.grandTotal, o.currency)}</p>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5 mt-3">
+                                ${badge(o.orderStatus, statusColors)}
+                                ${badge(o.paymentStatus, paymentColors)}
+                                ${badge(o.fulfilmentStatus, { Unfulfilled: 'bg-gray-100 text-gray-600', PartiallyFulfilled: 'bg-amber-50 text-amber-700', Fulfilled: 'bg-emerald-50 text-emerald-700' })}
+                            </div>
+                            <div class="text-xs text-gray-500 mt-3">
+                                ${esc(o.shippingMethodName || '—')} · ${o.itemCount} item${o.itemCount === 1 ? '' : 's'} · ${esc(o.paymentMethodCode || '—')}
+                            </div>
+                        </a>`).join('');
+                }
+            }
+
+            function renderPagination() {
+                const pagination = document.getElementById('pagination');
+                if (state.totalCount === 0) {
+                    pagination.classList.add('hidden');
+                    return;
+                }
+                pagination.classList.remove('hidden');
+                pagination.classList.add('flex');
+                const start = (state.page - 1) * state.pageSize + 1;
+                const end = Math.min(state.page * state.pageSize, state.totalCount);
+                document.getElementById('pageInfo').textContent = `${start}–${end} of ${state.totalCount} orders`;
+                document.getElementById('btnPrevPage').disabled = state.page <= 1;
+                document.getElementById('btnNextPage').disabled = !state.hasMore;
+            }
+
+            function fillFilterOptions() {
+                const shippingSel = document.getElementById('filterShippingMethod');
+                shippingSel.innerHTML = '<option value="">All</option>' +
+                    shippingMethods.map(m => `<option value="${esc(m.shippingMethodId)}">${esc(m.shippingMethodName)}</option>`).join('');
+                const paymentSel = document.getElementById('filterPaymentMethod');
+                paymentSel.innerHTML = '<option value="">All</option>' +
+                    paymentMethods.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+            }
+
+            function updateFilterCount() {
+                const fields = ['filterDateFrom', 'filterDateTo', 'filterOrderStatus', 'filterPaymentStatus',
+                    'filterFulfilmentStatus', 'filterShippingMethod', 'filterPaymentMethod', 'filterMinAmount', 'filterMaxAmount'];
+                const count = fields.filter(id => document.getElementById(id).value).length;
+                const el = document.getElementById('filterCount');
+                if (count > 0) {
+                    el.textContent = count;
+                    el.classList.remove('hidden');
+                } else {
+                    el.classList.add('hidden');
+                }
+            }
+
+            document.getElementById('btnApplySearch').addEventListener('click', () => { state.page = 1; loadOrders(); });
+            document.getElementById('orderSearch').addEventListener('keydown', e => {
+                if (e.key === 'Enter') { state.page = 1; loadOrders(); }
+            });
+
+            document.getElementById('btnOpenFilters').addEventListener('click', () => {
+                document.getElementById('filterSheet').classList.remove('hidden');
+                document.getElementById('filterSheet').classList.add('flex');
+            });
+            document.getElementById('btnCloseFilters').addEventListener('click', closeFilters);
+            document.getElementById('filterSheet').addEventListener('click', e => {
+                if (e.target.id === 'filterSheet') closeFilters();
+            });
+
+            function closeFilters() {
+                document.getElementById('filterSheet').classList.add('hidden');
+                document.getElementById('filterSheet').classList.remove('flex');
+            }
+
+            document.getElementById('btnApplyFilters').addEventListener('click', () => {
+                state.page = 1;
+                updateFilterCount();
+                closeFilters();
+                loadOrders();
+            });
+
+            document.getElementById('btnClearFilters').addEventListener('click', () => {
+                ['filterDateFrom', 'filterDateTo', 'filterOrderStatus', 'filterPaymentStatus',
+                    'filterFulfilmentStatus', 'filterShippingMethod', 'filterPaymentMethod',
+                    'filterMinAmount', 'filterMaxAmount'].forEach(id => { document.getElementById(id).value = ''; });
+                updateFilterCount();
+                state.page = 1;
+                closeFilters();
+                loadOrders();
+            });
+
+            document.getElementById('btnPrevPage').addEventListener('click', () => {
+                if (state.page > 1) { state.page--; loadOrders(); }
+            });
+            document.getElementById('btnNextPage').addEventListener('click', () => {
+                if (state.hasMore) { state.page++; loadOrders(); }
+            });
+
+            document.getElementById('btnExport').addEventListener('click', () => {
+                window.location.href = '/api/admin/orders/export?' + buildQuery();
+            });
+
+            loadOrders();
+        })();
+    </script>
+}

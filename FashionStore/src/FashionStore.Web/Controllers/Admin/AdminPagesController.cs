@@ -121,4 +121,33 @@ public class AdminPagesController : Controller
         ViewData["PageTitle"] = "Shipping";
         return View();
     }
+
+    [HttpGet("/admin/orders")]
+    public async Task<IActionResult> Orders(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Orders";
+        return View();
+    }
+
+    [HttpGet("/admin/orders/{id:guid}")]
+    public async Task<IActionResult> OrderDetail(Guid id, CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Order";
+        ViewData["OrderId"] = id;
+        return View();
+    }
+
+    [HttpGet("/admin/orders/{id:guid}/invoice")]
+    public async Task<IActionResult> OrderInvoice(Guid id, CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Invoice";
+        ViewData["OrderId"] = id;
+        return View();
+    }
 }

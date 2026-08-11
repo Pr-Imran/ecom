@@ -17,6 +17,9 @@ public class OrderNote : Entity
     [MaxLength(2000)]
     public string Note { get; set; } = string.Empty;
 
+    /// <summary>True for staff-only notes; false for notes shown to the customer.</summary>
+    public bool IsInternal { get; set; } = true;
+
     [MaxLength(450)]
     public string? CreatedBy { get; set; }
 

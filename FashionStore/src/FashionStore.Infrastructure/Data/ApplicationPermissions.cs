@@ -33,6 +33,7 @@ public static class ApplicationPermissions
         public const string Cancel = "Orders.Cancel";
         public const string Refund = "Orders.Refund";
         public const string PrintInvoice = "Orders.PrintInvoice";
+        public const string AddNote = "Orders.AddNote";
     }
 
     public static class Customers
@@ -97,7 +98,7 @@ public static class ApplicationPermissions
         Products.View, Products.Create, Products.Update, Products.Delete, Products.ManageInventory,
         Categories.Manage,
         Brands.Manage,
-        Orders.View, Orders.UpdateStatus, Orders.Cancel, Orders.Refund, Orders.PrintInvoice,
+        Orders.View, Orders.UpdateStatus, Orders.Cancel, Orders.Refund, Orders.PrintInvoice, Orders.AddNote,
         Customers.View, Customers.Update,
         Reviews.Manage,
         Promotions.Manage,

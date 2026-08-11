@@ -1,0 +1,563 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Order";
+    ViewData["PageTitle"] = "Order";
+    var orderId = ViewData["OrderId"] as Guid? ?? Guid.Empty;
+}
+
+<div class="space-y-4 pb-28" id="orderDetailRoot">
+    <div class="flex items-center justify-between gap-3">
+        <a href="/admin/orders" class="text-sm text-gray-500 hover:text-brand-primary flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Back to orders
+        </a>
+        <div id="headerActions" class="hidden lg:flex gap-2"></div>
+    </div>
+
+    <div id="orderHeader" class="bg-white rounded-lg border p-5">
+        <div class="text-center py-6">
+            <p class="text-2xl font-bold text-brand-primary font-mono" id="orderNumber">Loading...</p>
+        </div>
+    </div>
+
+    <div id="orderBody" class="space-y-4">
+        <p class="text-center text-gray-400 py-10">Loading order...</p>
+    </div>
+</div>
+
+@* Ship modal *@
+<div id="shipModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-5 py-4 flex items-center justify-between rounded-t-2xl z-10">
+            <h3 class="text-lg font-bold">Mark as shipped</h3>
+            <button class="btn-close-modal text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="shipForm" class="p-5 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Carrier</label>
+                <input type="text" id="shipCarrier" maxlength="50" placeholder="e.g. ups" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tracking number</label>
+                <input type="text" id="shipTracking" maxlength="100" placeholder="Courier tracking number" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tracking URL</label>
+                <input type="url" id="shipTrackingUrl" maxlength="500" placeholder="Optional courier lookup url" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary" />
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-close-modal px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium">Ship order</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Note modal *@
+<div id="noteModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-5 py-4 flex items-center justify-between rounded-t-2xl z-10">
+            <h3 class="text-lg font-bold">Add note</h3>
+            <button class="btn-close-modal text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="noteForm" class="p-5 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Note *</label>
+                <textarea id="noteText" required maxlength="2000" rows="4" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary" placeholder="Write a note for this order"></textarea>
+            </div>
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" id="noteInternal" checked class="w-4 h-4 text-brand-primary rounded" />
+                Internal note (not shown to the customer)
+            </label>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-close-modal px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium">Save note</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Cancel confirmation sheet *@
+<div id="cancelSheet" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md">
+        <div class="p-5">
+            <h3 class="text-lg font-bold text-red-600">Cancel this order?</h3>
+            <p class="text-sm text-gray-600 mt-2">Reserved stock will be released and the coupon (if used) will be available again. This action is recorded in the audit history.</p>
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+                <select id="cancelReason" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary">
+                    <option value="Customer requested cancellation">Customer requested cancellation</option>
+                    <option value="Duplicate order">Duplicate order</option>
+                    <option value="Payment issue">Payment issue</option>
+                    <option value="Out of stock">Out of stock</option>
+                    <option value="Administrative error">Administrative error</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="flex justify-end gap-3 mt-5">
+                <button class="btn-close-modal px-4 py-2 border border-gray-300 rounded-lg text-sm">Keep order</button>
+                <button id="btnConfirmCancel" class="px-5 py-2 bg-red-600 text-white rounded-lg text-sm font-medium">Cancel order</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Sticky action bar (mobile) *@
+<div id="mobileActionBar" class="lg:hidden fixed bottom-0 inset-x-0 bg-white border-t z-40 px-4 py-3">
+    <div class="flex gap-2 overflow-x-auto" id="mobileActionButtons"></div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            'use strict';
+
+            const orderId = '@orderId';
+            const statusColors = {
+                Placed: 'bg-blue-50 text-blue-700',
+                Confirmed: 'bg-indigo-50 text-indigo-700',
+                Processing: 'bg-amber-50 text-amber-700',
+                Shipped: 'bg-purple-50 text-purple-700',
+                Delivered: 'bg-emerald-50 text-emerald-700',
+                Completed: 'bg-emerald-50 text-emerald-700',
+                Cancelled: 'bg-red-50 text-red-600'
+            };
+            const paymentColors = {
+                Unpaid: 'bg-gray-100 text-gray-600',
+                Paid: 'bg-emerald-50 text-emerald-700',
+                PartiallyPaid: 'bg-amber-50 text-amber-700',
+                Refunded: 'bg-rose-50 text-rose-600',
+                Failed: 'bg-red-50 text-red-600'
+            };
+
+            let order = null;
+
+            function api(path, options) {
+                return fetch(path, options).then(async res => {
+                    if (res.ok) return res.json();
+                    let error = 'Request failed';
+                    try {
+                        const body = await res.json();
+                        error = body.error || body.title || error;
+                    } catch (e) { /* ignore */ }
+                    throw new Error(error);
+                });
+            }
+
+            function esc(value) {
+                if (value === null || value === undefined) return '';
+                return String(value).replace(/[&<>"']/g, c => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                }[c]));
+            }
+
+            function money(value) {
+                const n = Number(value || 0);
+                return isNaN(n) ? '$0.00' : '$' + n.toFixed(2);
+            }
+
+            function badge(value, colors) {
+                return `<span class="inline-flex px-2 py-1 rounded-full text-xs font-medium ${colors[value] || 'bg-gray-100 text-gray-600'}">${esc(value)}</span>`;
+            }
+
+            function dateTime(value) {
+                return value ? new Date(value).toLocaleString() : '—';
+            }
+
+            function section(title, body, open) {
+                return `<details class="bg-white rounded-lg border" ${open ? 'open' : ''}>
+                    <summary class="px-5 py-4 flex items-center justify-between cursor-pointer select-none list-none">
+                        <h2 class="text-sm font-bold text-gray-900">${esc(title)}</h2>
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </summary>
+                    <div class="px-5 pb-5">${body}</div>
+                </details>`;
+            }
+
+            async function load() {
+                order = await api('/api/admin/orders/' + orderId);
+                renderHeader();
+                renderBody();
+                renderActions();
+            }
+
+            function renderHeader() {
+                document.getElementById('orderNumber').textContent = '#' + order.publicOrderNumber;
+                const header = document.getElementById('orderHeader');
+                header.innerHTML = `
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div>
+                            <p class="text-xl font-bold text-brand-primary font-mono">#${esc(order.publicOrderNumber)}</p>
+                            <p class="text-sm text-gray-500 mt-1">
+                                ${esc(order.customerName || 'Guest')}${order.isGuest ? ' · <span class="text-amber-600 font-medium">Guest</span>' : ''} · placed ${dateTime(order.createdAtUtc)}
+                            </p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 justify-center">
+                            ${badge(order.orderStatus, statusColors)}
+                            ${badge(order.paymentStatus, paymentColors)}
+                            ${badge(order.fulfilmentStatus, { Unfulfilled: 'bg-gray-100 text-gray-600', PartiallyFulfilled: 'bg-amber-50 text-amber-700', Fulfilled: 'bg-emerald-50 text-emerald-700' })}
+                        </div>
+                    </div>`;
+            }
+
+            function renderBody() {
+                const body = document.getElementById('orderBody');
+
+                const totalSummary = `
+                    <div class="space-y-1.5 text-sm">
+                        <div class="flex justify-between"><span class="text-gray-500">Subtotal</span><span class="font-medium">${money(order.subtotal)}</span></div>
+                        ${order.productDiscount > 0 ? `<div class="flex justify-between"><span class="text-gray-500">Product discount</span><span class="font-medium text-emerald-600">-${money(order.productDiscount)}</span></div>` : ''}
+                        ${order.couponDiscount > 0 ? `<div class="flex justify-between"><span class="text-gray-500">Coupon discount</span><span class="font-medium text-emerald-600">-${money(order.couponDiscount)}</span></div>` : ''}
+                        <div class="flex justify-between"><span class="text-gray-500">Shipping</span><span class="font-medium">${money(order.shippingCharge)}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">Tax</span><span class="font-medium">${money(order.tax)}</span></div>
+                        <div class="border-t pt-2 mt-2 flex justify-between text-base font-bold"><span>Total</span><span>${money(order.grandTotal)}</span></div>
+                        <div class="flex justify-between text-xs"><span class="text-gray-500">Paid</span><span class="font-medium text-emerald-600">${money(order.paidAmount)}</span></div>
+                        ${order.amountDue > 0 ? `<div class="flex justify-between text-xs"><span class="text-gray-500">Amount due</span><span class="font-medium text-amber-600">${money(order.amountDue)}</span></div>` : ''}
+                        ${order.refundedAmount > 0 ? `<div class="flex justify-between text-xs"><span class="text-gray-500">Refunded</span><span class="font-medium text-rose-600">${money(order.refundedAmount)}</span></div>` : ''}
+                    </div>`;
+
+                const itemsHtml = `
+                    <div class="space-y-3">
+                        ${order.items.map(i => `
+                            <div class="flex gap-3">
+                                <div class="w-16 h-16 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden">
+                                    ${i.imageUrl ? `<img src="${esc(i.imageUrl)}" alt="${esc(i.productName)}" class="w-full h-full object-cover" />` : '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">IMG</div>'}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-gray-900">${esc(i.productName)}</p>
+                                    <p class="text-xs text-gray-500 font-mono mt-0.5">SKU: ${esc(i.sku)}</p>
+                                    <div class="flex flex-wrap gap-1.5 mt-1.5">
+                                        ${i.colourName ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-brand-primary/10 text-brand-primary">${i.colourValue ? `<span class="w-2.5 h-2.5 rounded-full inline-block" style="background:${esc(i.colourValue)}"></span>` : ''} ${esc(i.colourName)}</span>` : ''}
+                                        ${i.sizeName ? `<span class="inline-flex px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700 font-medium">${esc(i.sizeName)}</span>` : ''}
+                                        <span class="inline-flex px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">Qty ${i.quantity}</span>
+                                    </div>
+                                </div>
+                                <div class="text-right flex-shrink-0">
+                                    <p class="text-sm font-semibold text-gray-900">${money(i.lineTotal)}</p>
+                                    <p class="text-xs text-gray-500">${money(i.unitPrice)} each</p>
+                                    ${i.discount > 0 ? `<p class="text-xs text-emerald-600">-${money(i.discount)}</p>` : ''}
+                                </div>
+                            </div>`).join('') || '<p class="text-sm text-gray-500">No items on this order.</p>'}
+                        <div class="border-t pt-3">${totalSummary}</div>
+                    </div>`;
+
+                const customerHtml = `
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Customer</p>
+                            <p class="font-medium">${esc(order.customerName || 'Guest')}</p>
+                            ${order.isGuest ? `<p class="text-xs text-amber-600 mt-0.5">Guest checkout</p>` : ''}
+                            ${order.userId ? `<p class="text-xs text-gray-500 mt-0.5">User: ${esc(order.userId)}</p>` : ''}
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Contact</p>
+                            <p>Email: ${esc(order.guestEmail || '—')}</p>
+                            <p class="mt-0.5">Phone: ${esc(order.guestPhone || '—')}</p>
+                        </div>
+                    </div>`;
+
+                const addressHtml = (label, a) => `
+                    <div>
+                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">${label}</p>
+                        <div class="text-sm text-gray-800">
+                            <p class="font-medium">${esc(a.recipientName)}</p>
+                            <p>${esc(a.addressLine1)}${a.addressLine2 ? ', ' + esc(a.addressLine2) : ''}</p>
+                            ${a.area ? `<p>${esc(a.area)}</p>` : ''}
+                            <p>${esc(a.city)}${a.region ? ', ' + esc(a.region) : ''} ${esc(a.postalCode)}</p>
+                            <p>${esc(a.countryCode)}</p>
+                            ${a.phone ? `<p class="mt-1 text-gray-500">${esc(a.phone)}</p>` : ''}
+                            ${a.deliveryInstructions ? `<p class="mt-1 text-gray-500 italic">${esc(a.deliveryInstructions)}</p>` : ''}
+                        </div>
+                    </div>`;
+
+                const addressesHtml = order.shippingAddress || order.billingAddress
+                    ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        ${order.shippingAddress ? addressHtml('Shipping address', order.shippingAddress) : ''}
+                        ${order.billingAddress ? addressHtml('Billing address', order.billingAddress) : ''}
+                    </div>`
+                    : '<p class="text-sm text-gray-500">No address snapshots on this order.</p>';
+
+                const paymentHtml = `
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                        <div><p class="text-xs text-gray-500">Method</p><p class="font-medium">${esc(order.paymentMethodCode || '—')}</p></div>
+                        <div><p class="text-xs text-gray-500">Status</p><p class="font-medium">${badge(order.paymentStatus, paymentColors)}</p></div>
+                        <div><p class="text-xs text-gray-500">Paid</p><p class="font-medium">${money(order.paidAmount)}</p></div>
+                        <div><p class="text-xs text-gray-500">Due</p><p class="font-medium">${money(order.amountDue)}</p></div>
+                    </div>
+                    <div class="mt-4">
+                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Transaction history</p>
+                        ${order.paymentTransactions.length === 0
+                            ? '<p class="text-sm text-gray-500">No payment transactions recorded yet.</p>'
+                            : `<div class="space-y-2">${order.paymentTransactions.map(t => `
+                                <div class="flex items-center justify-between text-sm border rounded-lg px-3 py-2">
+                                    <div>
+                                        <p class="font-medium">${esc(t.type)} <span class="text-gray-500 text-xs">· ${esc(t.providerCode)}</span></p>
+                                        ${t.providerTransactionId ? `<p class="text-xs text-gray-500 font-mono">${esc(t.providerTransactionId)}</p>` : ''}
+                                        ${t.resultMessage ? `<p class="text-xs text-gray-500">${esc(t.resultMessage)}</p>` : ''}
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-xs font-medium ${t.succeeded ? 'text-emerald-600' : 'text-red-600'}">${t.succeeded ? 'Succeeded' : 'Failed'}</span>
+                                        <p class="text-xs text-gray-400">${dateTime(t.createdAtUtc)}</p>
+                                    </div>
+                                </div>`).join('')}</div>`}
+                    </div>`;
+
+                const shippingHtml = `
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p class="text-xs text-gray-500">Method</p>
+                            <p class="font-medium">${esc(order.shippingMethodName || '—')}${order.shippingMethodCode ? ` <span class="text-gray-400 text-xs">(${esc(order.shippingMethodCode)})</span>` : ''}</p>
+                            <p class="text-xs text-gray-500 mt-2">Packed</p>
+                            <p class="font-medium">${dateTime(order.packedAtUtc)}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500">Tracking</p>
+                            ${order.trackingNumber
+                                ? `<p class="font-medium">${esc(order.trackingNumber)}</p><p class="text-xs text-gray-500">${esc(order.carrierCode || '—')}</p>
+                                   ${order.trackingUrl ? `<a href="${esc(order.trackingUrl)}" target="_blank" rel="noopener" class="text-brand-primary text-xs underline">Track package</a>` : ''}`
+                                : '<p class="font-medium">Not shipped yet</p>'}
+                            <p class="text-xs text-gray-500 mt-2">Shipped</p>
+                            <p class="font-medium">${dateTime(order.shippedAtUtc)}</p>
+                            <p class="text-xs text-gray-500 mt-2">Delivered</p>
+                            <p class="font-medium">${dateTime(order.deliveredAtUtc)}</p>
+                        </div>
+                    </div>`;
+
+                const timelineHtml = `
+                    <ol class="relative space-y-4">
+                        ${order.statusHistory.map((h, i) => `
+                            <li class="flex gap-3">
+                                <div class="flex flex-col items-center">
+                                    <span class="w-3 h-3 rounded-full ${i === order.statusHistory.length - 1 ? 'bg-brand-primary' : 'bg-gray-300'} mt-1"></span>
+                                    ${i < order.statusHistory.length - 1 ? '<span class="w-px flex-1 bg-gray-200"></span>' : ''}
+                                </div>
+                                <div class="pb-1 flex-1">
+                                    <p class="text-sm font-medium text-gray-900">
+                                        ${h.fromStatus ? esc(h.fromStatus) : '—'} → ${esc(h.toStatus)}
+                                    </p>
+                                    ${h.note ? `<p class="text-xs text-gray-500 mt-0.5">${esc(h.note)}</p>` : ''}
+                                    <p class="text-xs text-gray-400 mt-0.5">${dateTime(h.createdAtUtc)} · ${esc(h.createdBy || 'system')}</p>
+                                </div>
+                            </li>`).join('')}
+                    </ol>`;
+
+                const inventoryHtml = order.inventoryHistory.length === 0
+                    ? '<p class="text-sm text-gray-500">No stock movements reference this order yet.</p>'
+                    : `<div class="space-y-2">${order.inventoryHistory.map(t => `
+                        <div class="text-sm border rounded-lg px-3 py-2 flex items-center justify-between gap-3">
+                            <div>
+                                <p class="font-medium">${esc(t.sku)}${t.productName ? ` <span class="text-gray-400 text-xs">· ${esc(t.productName)}</span>` : ''}</p>
+                                <p class="text-xs text-gray-500">${esc(t.reason)}${t.notes ? ` — ${esc(t.notes)}` : ''}</p>
+                            </div>
+                            <div class="text-right flex-shrink-0">
+                                <p class="text-xs font-medium ${t.quantityChange > 0 ? 'text-emerald-600' : t.quantityChange < 0 ? 'text-red-600' : 'text-gray-500'}">
+                                    ${t.quantityChange > 0 ? '+' : ''}${t.quantityChange} on hand · reserved ${t.reservedQuantityChange > 0 ? '+' : ''}${t.reservedQuantityChange}
+                                </p>
+                                <p class="text-xs text-gray-400">${dateTime(t.createdAtUtc)}</p>
+                            </div>
+                        </div>`).join('')}</div>`;
+
+                const notesHtml = (notes, empty) => notes.length === 0
+                    ? `<p class="text-sm text-gray-500">${empty}</p>`
+                    : `<div class="space-y-2">${notes.map(n => `
+                        <div class="text-sm bg-gray-50 rounded-lg px-3 py-2">
+                            <p class="whitespace-pre-wrap">${esc(n.note)}</p>
+                            <p class="text-xs text-gray-400 mt-1">${dateTime(n.createdAtUtc)} · ${esc(n.createdBy || 'unknown')}</p>
+                        </div>`).join('')}</div>`;
+
+                const sections = [
+                    section('Items & totals', itemsHtml, true),
+                    section('Customer & contact', customerHtml, true),
+                    section('Addresses', addressesHtml, true),
+                    section('Payment', paymentHtml, true),
+                    section('Shipping & tracking', shippingHtml, true),
+                    section('Status history', timelineHtml, true),
+                    section('Inventory history', inventoryHtml, false),
+                    section('Internal notes', notesHtml(order.internalNotes, 'No internal notes yet.'), false),
+                    section('Customer notes', notesHtml(order.customerNotes, 'No customer-visible notes yet.'), false)
+                ];
+
+                body.innerHTML = sections.join('');
+            }
+
+            function actionButton(label, style, onclick) {
+                return `<button type="button" onclick="${onclick}" class="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${style}">${label}</button>`;
+            }
+
+            function buildActionList() {
+                const actions = [];
+                if (order.canProcess) {
+                    actions.push(actionButton('Mark as processing', 'bg-brand-primary text-white', 'window.adminOrderAction.process()'));
+                }
+                if (order.canPack) {
+                    actions.push(actionButton('Mark as packed', 'bg-brand-primary text-white', 'window.adminOrderAction.pack()'));
+                }
+                if (order.canShip) {
+                    actions.push(actionButton('Mark as shipped', 'bg-brand-primary text-white', 'window.adminOrderAction.ship()'));
+                }
+                if (order.canDeliver) {
+                    actions.push(actionButton('Mark as delivered', 'bg-brand-primary text-white', 'window.adminOrderAction.deliver()'));
+                }
+                if (order.orderStatus === 'Delivered') {
+                    actions.push(actionButton('Mark as completed', 'bg-brand-primary text-white', 'window.adminOrderAction.complete()'));
+                }
+                if (order.canCancel) {
+                    actions.push(actionButton('Cancel order', 'border border-red-200 text-red-600', 'window.adminOrderAction.cancel()'));
+                }
+                actions.push(actionButton('Add note', 'border border-gray-300 text-gray-700', 'window.adminOrderAction.openNote()'));
+                actions.push(actionButton('Open invoice', 'border border-gray-300 text-gray-700', `window.location='/admin/orders/${order.orderId}/invoice'`));
+                if (order.refundedAmount > 0 || order.paymentStatus === 'Paid' || order.paymentStatus === 'PartiallyPaid') {
+                    actions.push(actionButton('Issue refund', 'border border-gray-300 text-gray-500', 'window.adminOrderAction.refund()'));
+                }
+                if (order.orderStatus === 'Delivered' || order.orderStatus === 'Completed') {
+                    actions.push(actionButton('Process return', 'border border-gray-300 text-gray-500', 'window.adminOrderAction.returnRequest()'));
+                }
+                actions.push(actionButton('Print packing slip', 'border border-gray-300 text-gray-700', 'window.adminOrderAction.packingSlip()'));
+                actions.push(actionButton('Print shipping summary', 'border border-gray-300 text-gray-700', 'window.adminOrderAction.shippingSummary()'));
+                return actions;
+            }
+
+            function renderActions() {
+                const actions = buildActionList();
+                document.getElementById('headerActions').innerHTML = actions.join('');
+                document.getElementById('mobileActionButtons').innerHTML = actions.join('');
+                document.getElementById('mobileActionBar').classList.toggle('hidden', actions.length === 0);
+            }
+
+            function toast(message) {
+                if (window.showToast) { window.showToast(message, 'info'); return; }
+                alert(message);
+            }
+
+            function refresh() { load(); }
+
+            function post(path, body) {
+                return api(path, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: body ? JSON.stringify(body) : undefined
+                });
+            }
+
+            window.adminOrderAction = {
+                process: async function () {
+                    try {
+                        await post('/api/admin/orders/' + orderId + '/status', { toStatus: 'Processing' });
+                        toast('Order marked as processing.');
+                        refresh();
+                    } catch (err) { toast(err.message); }
+                },
+                pack: async function () {
+                    try {
+                        await post('/api/admin/orders/' + orderId + '/pack');
+                        toast('Order marked as packed.');
+                        refresh();
+                    } catch (err) { toast(err.message); }
+                },
+                ship: function () {
+                    document.getElementById('shipModal').classList.remove('hidden');
+                },
+                deliver: async function () {
+                    try {
+                        await post('/api/admin/orders/' + orderId + '/deliver');
+                        toast('Order marked as delivered.');
+                        refresh();
+                    } catch (err) { toast(err.message); }
+                },
+                complete: async function () {
+                    try {
+                        await post('/api/admin/orders/' + orderId + '/status', { toStatus: 'Completed' });
+                        toast('Order marked as completed.');
+                        refresh();
+                    } catch (err) { toast(err.message); }
+                },
+                cancel: function () {
+                    document.getElementById('cancelSheet').classList.remove('hidden');
+                },
+                openNote: function () {
+                    document.getElementById('noteModal').classList.remove('hidden');
+                },
+                refund: function () {
+                    toast('Refunds are processed through the payment pipeline in a later phase.');
+                },
+                returnRequest: function () {
+                    toast('Return processing arrives in a later phase.');
+                },
+                packingSlip: function () {
+                    toast('Packing slip printing arrives in a later phase.');
+                },
+                shippingSummary: function () {
+                    toast('Shipping summary printing arrives in a later phase.');
+                }
+            };
+
+            // ---- Ship form ----
+            document.getElementById('shipForm').addEventListener('submit', async function (e) {
+                e.preventDefault();
+                try {
+                    await post('/api/admin/orders/' + orderId + '/ship', {
+                        carrierCode: document.getElementById('shipCarrier').value.trim() || null,
+                        trackingNumber: document.getElementById('shipTracking').value.trim() || null,
+                        trackingUrl: document.getElementById('shipTrackingUrl').value.trim() || null
+                    });
+                    closeModal('shipModal');
+                    toast('Order marked as shipped.');
+                    refresh();
+                } catch (err) { toast(err.message); }
+            });
+
+            // ---- Note form ----
+            document.getElementById('noteForm').addEventListener('submit', async function (e) {
+                e.preventDefault();
+                try {
+                    await post('/api/admin/orders/' + orderId + '/notes', {
+                        note: document.getElementById('noteText').value.trim(),
+                        isInternal: document.getElementById('noteInternal').checked
+                    });
+                    closeModal('noteModal');
+                    document.getElementById('noteText').value = '';
+                    toast('Note added.');
+                    refresh();
+                } catch (err) { toast(err.message); }
+            });
+
+            // ---- Cancel ----
+            document.getElementById('btnConfirmCancel').addEventListener('click', async function () {
+                try {
+                    await post('/api/admin/orders/' + orderId + '/cancel', {
+                        reason: document.getElementById('cancelReason').value
+                    });
+                    closeModal('cancelSheet');
+                    toast('Order cancelled. Stock reservations released.');
+                    refresh();
+                } catch (err) { toast(err.message); }
+            });
+
+            // ---- Modal helpers ----
+            function closeModal(id) {
+                document.getElementById(id).classList.add('hidden');
+            }
+
+            document.querySelectorAll('.btn-close-modal').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const modal = btn.closest('[id$="Modal"], #cancelSheet');
+                    if (modal) modal.classList.add('hidden');
+                });
+            });
+
+            load();
+        })();
+    </script>
+}

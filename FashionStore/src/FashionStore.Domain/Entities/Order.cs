@@ -108,6 +108,21 @@ public class Order : Entity
     [MaxLength(50)]
     public string? CancelledReasonCode { get; set; }
 
+    /// <summary>Courier tracking number assigned when the order is shipped.</summary>
+    [MaxLength(100)]
+    public string? TrackingNumber { get; set; }
+
+    /// <summary>Courier code for the tracking number (for example "ups", "fedex", "dhl").</summary>
+    [MaxLength(50)]
+    public string? CarrierCode { get; set; }
+
+    /// <summary>Public tracking lookup url for the selected courier.</summary>
+    [MaxLength(500)]
+    public string? TrackingUrl { get; set; }
+
+    [Column(TypeName = "datetime2")]
+    public DateTime? PackedAtUtc { get; set; }
+
     public Guid? ShippingAddressId { get; set; }
 
     public Guid? BillingAddressId { get; set; }
