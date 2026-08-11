@@ -185,7 +185,7 @@ public class AdminPagesController : Controller
         ViewData["PageTitle"] = "Invoice";
         ViewData["OrderId"] = id;
 
-        return View(new InvoiceViewModel
+        return View("~/Views/Admin/OrderInvoice.cshtml", new InvoiceViewModel
         {
             Invoice = invoice,
             Branding = _invoiceOptions.Value,

@@ -104,7 +104,7 @@ public class InvoiceTests : IClassFixture<TestWebApplicationFactory>
                 ProductVariantId = CartTestsHelper.GetVariantId(_factory, "SW-1001-GREY-M"),
                 ProductName = "Cashmere Crew Neck Sweater",
                 ProductSlug = "cashmere-crew-neck-sweater",
-                Sku = i == 0 ? "SW-1001-GREY-M" : $"SW-1001-GREY-M-{i:D2}",
+                Sku = $"SW-1001-GREY-M-{i:D2}",
                 ColourName = "Heather Grey",
                 ColourValue = "#999999",
                 SizeName = "M",

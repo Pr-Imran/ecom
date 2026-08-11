@@ -522,8 +522,9 @@ public sealed class CustomerReturnService : ICustomerReturnService
                 returnRequest.CarrierCode = NormalizeOptional(carrierCode, 50);
                 returnRequest.UpdatedAtUtc = now;
 
-                returnRequest.StatusHistory.Add(new ReturnStatusHistory
+                _context.ReturnStatusHistories.Add(new ReturnStatusHistory
                 {
+                    ReturnRequestId = returnRequest.Id,
                     FromStatus = previous,
                     ToStatus = ReturnStatus.InTransit,
                     Note = $"Return shipped back to us ({trackingNumber.Trim()}).",
@@ -594,8 +595,9 @@ public sealed class CustomerReturnService : ICustomerReturnService
                 returnRequest.CompletedAtUtc = now;
                 returnRequest.UpdatedAtUtc = now;
 
-                returnRequest.StatusHistory.Add(new ReturnStatusHistory
+                _context.ReturnStatusHistories.Add(new ReturnStatusHistory
                 {
+                    ReturnRequestId = returnRequest.Id,
                     FromStatus = previous,
                     ToStatus = ReturnStatus.Closed,
                     Note = "Return withdrawn by customer.",
@@ -633,6 +635,7 @@ public sealed class CustomerReturnService : ICustomerReturnService
     private async Task<ReturnRequest?> LoadReturnAsync(string returnNumber, CancellationToken cancellationToken) =>
         await _context.ReturnRequests
             .AsNoTracking()
+            .Include(r => r.Order)
             .Include(r => r.Items)
             .Include(r => r.StatusHistory)
             .Include(r => r.Attachments)

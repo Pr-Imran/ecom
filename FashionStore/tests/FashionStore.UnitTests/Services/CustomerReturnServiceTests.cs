@@ -50,6 +50,22 @@ public class CustomerReturnServiceTests
         string? guestEmail = null,
         bool returnable = true)
     {
+        var product = returnable
+            ? new Product
+            {
+                Name = "Cashmere Sweater",
+                Slug = "cashmere-sweater",
+                CategoryId = Guid.NewGuid(),
+                ProductType = "Standard",
+                BaseSku = "SW-1001",
+                BasePrice = 100m,
+                TaxCategory = "Standard",
+                IsActive = true,
+                IsReturnable = true,
+                ReturnWindowDays = null
+            }
+            : null;
+
         var order = new Order
         {
             PublicOrderNumber = number,
@@ -75,7 +91,7 @@ public class CustomerReturnServiceTests
 
         order.Items.Add(new OrderItem
         {
-            ProductId = Guid.NewGuid(),
+            ProductId = product?.Id ?? Guid.NewGuid(),
             ProductVariantId = Guid.NewGuid(),
             ProductName = "Cashmere Sweater",
             ProductSlug = "cashmere-sweater",
@@ -92,34 +108,15 @@ public class CustomerReturnServiceTests
             LineTotal = 200m
         });
 
+        if (product is not null)
+        {
+            context.Products.Add(product);
+        }
+
         context.Orders.Add(order);
         context.SaveChanges();
 
-        if (returnable)
-        {
-            SeedProduct(context, order.Items.First().ProductId!.Value);
-        }
-
         return order;
-    }
-
-    private static void SeedProduct(AppDbContext context, Guid productId)
-    {
-        context.Products.Add(new Product
-        {
-            Id = productId,
-            Name = "Cashmere Sweater",
-            Slug = "cashmere-sweater",
-            CategoryId = Guid.NewGuid(),
-            ProductType = "Standard",
-            BaseSku = "SW-1001",
-            BasePrice = 100m,
-            TaxCategory = "Standard",
-            IsActive = true,
-            IsReturnable = true,
-            ReturnWindowDays = null
-        });
-        context.SaveChanges();
     }
 
     private static ReturnRequest SeedReturn(
@@ -257,10 +254,10 @@ public class CustomerReturnServiceTests
 
         Assert.Equal(ReturnStatus.Requested, saved.Status);
         Assert.Single(saved.Items);
-        Assert.Equal(1, saved.Items[0].Quantity);
+        Assert.Equal(1, saved.Items.Single().Quantity);
         Assert.Equal(102.5m, saved.RefundableAmount);
         Assert.Single(saved.StatusHistory);
-        Assert.Equal(ReturnStatus.Requested, saved.StatusHistory[0].ToStatus);
+        Assert.Equal(ReturnStatus.Requested, saved.StatusHistory.Single().ToStatus);
     }
 
     [Fact]

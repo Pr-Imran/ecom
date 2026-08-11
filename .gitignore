@@ -42,3 +42,6 @@ Thumbs.db
 
 ## Node
 node_modules/
+
+## Runtime uploads
+FashionStore/src/FashionStore.Web/uploads/

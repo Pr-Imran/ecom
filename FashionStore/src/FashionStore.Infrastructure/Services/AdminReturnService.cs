@@ -183,8 +183,9 @@ public sealed class AdminReturnService : IAdminReturnService
                 returnRequest.RejectionNote = NormalizeOptional(note, 1000);
                 returnRequest.UpdatedAtUtc = now;
 
-                returnRequest.StatusHistory.Add(new ReturnStatusHistory
+                _context.ReturnStatusHistories.Add(new ReturnStatusHistory
                 {
+                    ReturnRequestId = returnRequest.Id,
                     FromStatus = previous,
                     ToStatus = ReturnStatus.Rejected,
                     Note = string.IsNullOrWhiteSpace(note) ? "Return rejected." : $"Return rejected: {note.Trim()}",
@@ -297,8 +298,9 @@ public sealed class AdminReturnService : IAdminReturnService
                 returnRequest.InspectedAtUtc = now;
                 returnRequest.UpdatedAtUtc = now;
 
-                returnRequest.StatusHistory.Add(new ReturnStatusHistory
+                _context.ReturnStatusHistories.Add(new ReturnStatusHistory
                 {
+                    ReturnRequestId = returnRequest.Id,
                     FromStatus = previous,
                     ToStatus = ReturnStatus.Inspected,
                     Note = $"{returnRequest.Items.Count} item(s) inspected; resolved as {(resolution == ReturnResolution.Refund ? "refund" : "exchange")}.",
@@ -605,12 +607,13 @@ public sealed class AdminReturnService : IAdminReturnService
                     CompleteRefund(refund, gatewayResult.ProviderRefundId, now, actorId);
                 }
 
-                returnRequest.Refunds.Add(refund);
+                _context.Refunds.Add(refund);
                 await _context.SaveChangesAsync(cancellationToken);
 
-                var refundedTotal = returnRequest.Refunds
-                    .Where(rf => rf.Status == RefundStatus.Succeeded)
+                var priorRefunded = returnRequest.Refunds
+                    .Where(rf => rf.Id != refund.Id && rf.Status == RefundStatus.Succeeded)
                     .Sum(rf => rf.Amount);
+                var refundedTotal = priorRefunded + (refund.Status == RefundStatus.Succeeded ? refund.Amount : 0m);
                 returnRequest.RefundedAmount = Math.Round(refundedTotal, 2);
                 returnRequest.Status = ReturnStatus.Refunded;
                 returnRequest.RefundedAtUtc = now;
@@ -621,8 +624,9 @@ public sealed class AdminReturnService : IAdminReturnService
                     order.RefundedAmount = Math.Round(order.RefundedAmount + amount, 2);
                 }
 
-                returnRequest.StatusHistory.Add(new ReturnStatusHistory
+                _context.ReturnStatusHistories.Add(new ReturnStatusHistory
                 {
+                    ReturnRequestId = returnRequest.Id,
                     FromStatus = ReturnStatus.Inspected,
                     ToStatus = ReturnStatus.Refunded,
                     Note = $"Refund of {amount:0.00} {returnRequest.Currency} issued ({(request.Manual ? "manual" : "gateway")}) — {refund.ReferenceNumber}.",
@@ -730,12 +734,13 @@ public sealed class AdminReturnService : IAdminReturnService
                     CreatedBy = actorId
                 };
 
-                returnRequest.ExchangeRequests.Add(exchange);
+                _context.ExchangeRequests.Add(exchange);
                 returnRequest.Status = ReturnStatus.Exchanged;
                 returnRequest.UpdatedAtUtc = now;
 
-                returnRequest.StatusHistory.Add(new ReturnStatusHistory
+                _context.ReturnStatusHistories.Add(new ReturnStatusHistory
                 {
+                    ReturnRequestId = returnRequest.Id,
                     FromStatus = previous,
                     ToStatus = ReturnStatus.Exchanged,
                     Note = $"Exchange arranged: {variant.Product.Name} × {request.Quantity}.",
@@ -808,8 +813,9 @@ public sealed class AdminReturnService : IAdminReturnService
                     pending.CompletedBy = actorId;
                 }
 
-                returnRequest.StatusHistory.Add(new ReturnStatusHistory
+                _context.ReturnStatusHistories.Add(new ReturnStatusHistory
                 {
+                    ReturnRequestId = returnRequest.Id,
                     FromStatus = previous,
                     ToStatus = ReturnStatus.Closed,
                     Note = string.IsNullOrWhiteSpace(note) ? "Return closed." : $"Return closed: {note.Trim()}",
@@ -921,8 +927,9 @@ public sealed class AdminReturnService : IAdminReturnService
                 returnRequest.Status = toStatus;
                 returnRequest.UpdatedAtUtc = now;
 
-                returnRequest.StatusHistory.Add(new ReturnStatusHistory
+                _context.ReturnStatusHistories.Add(new ReturnStatusHistory
                 {
+                    ReturnRequestId = returnRequest.Id,
                     FromStatus = previous,
                     ToStatus = toStatus,
                     Note = historyNote,

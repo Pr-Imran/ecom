@@ -9,6 +9,7 @@
         .sidebar { transition: width 0.3s; }
         .admin-min { min-height: calc(100vh - 64px); }
     </style>
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="bg-gray-50">
     <div class="flex min-h-screen">
