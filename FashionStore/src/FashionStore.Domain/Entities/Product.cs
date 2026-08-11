@@ -89,6 +89,20 @@ public class Product : AuditedEntity
     /// </summary>
     public int? ReturnWindowDays { get; set; }
 
+    // ---- Rating summary (denormalized, recomputed on moderation changes) ----
+
+    /// <summary>Average rating across approved reviews, or null when there are none.</summary>
+    public decimal? AverageRating { get; set; }
+
+    /// <summary>Number of approved reviews for this product.</summary>
+    public int ReviewCount { get; set; }
+
+    public int RatingCount1 { get; set; }
+    public int RatingCount2 { get; set; }
+    public int RatingCount3 { get; set; }
+    public int RatingCount4 { get; set; }
+    public int RatingCount5 { get; set; }
+
     public DateTime? PublishedAtUtc { get; set; }
 
     [MaxLength(200)]

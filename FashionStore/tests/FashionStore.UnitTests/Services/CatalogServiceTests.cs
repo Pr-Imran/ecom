@@ -1,6 +1,7 @@
 using FashionStore.Application.DTOs.Catalog;
 using FashionStore.Application.Interfaces;
 using FashionStore.Domain.Entities;
+using FashionStore.Domain.Enums;
 using FashionStore.Infrastructure.Data;
 using FashionStore.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
@@ -200,11 +201,11 @@ public class CatalogServiceTests
         await context.SaveChangesAsync();
 
         context.ProductReviews.AddRange(
-            new ProductReview { ProductId = sweater.Id, Rating = 5, IsApproved = true },
-            new ProductReview { ProductId = sweater.Id, Rating = 4, IsApproved = true },
-            new ProductReview { ProductId = sweater.Id, Rating = 1, IsApproved = false },
-            new ProductReview { ProductId = beanie.Id, Rating = 2, IsApproved = true },
-            new ProductReview { ProductId = shoe.Id, Rating = 5, IsApproved = true });
+            new ProductReview { ProductId = sweater.Id, Rating = 5, Status = ReviewStatus.Approved },
+            new ProductReview { ProductId = sweater.Id, Rating = 4, Status = ReviewStatus.Approved },
+            new ProductReview { ProductId = sweater.Id, Rating = 1, Status = ReviewStatus.Pending },
+            new ProductReview { ProductId = beanie.Id, Rating = 2, Status = ReviewStatus.Approved },
+            new ProductReview { ProductId = shoe.Id, Rating = 5, Status = ReviewStatus.Approved });
 
         context.ProductImages.Add(new ProductImage
         {

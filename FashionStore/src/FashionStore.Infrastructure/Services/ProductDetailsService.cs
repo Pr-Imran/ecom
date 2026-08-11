@@ -2,6 +2,7 @@ using FashionStore.Application.DTOs.Catalog;
 using FashionStore.Application.DTOs.Images;
 using FashionStore.Application.DTOs.Products;
 using FashionStore.Application.Interfaces;
+using FashionStore.Domain.Enums;
 using FashionStore.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -175,7 +176,7 @@ public sealed class ProductDetailsService : IProductDetailsService
     {
         var row = await _context.ProductReviews
             .AsNoTracking()
-            .Where(r => r.IsApproved && r.ProductId == productId)
+            .Where(r => r.Status == ReviewStatus.Approved && r.ProductId == productId)
             .GroupBy(r => r.ProductId)
             .Select(g => new { Average = g.Average(r => (double)r.Rating), Count = g.Count() })
             .FirstOrDefaultAsync(cancellationToken);

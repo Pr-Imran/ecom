@@ -138,6 +138,8 @@ public static class DependencyInjection
         services.AddScoped<IInvoicePdfGenerator, QuestPdfInvoiceGenerator>();
         services.AddScoped<ICustomerReturnService, CustomerReturnService>();
         services.AddScoped<IAdminReturnService, AdminReturnService>();
+        services.AddScoped<IReviewService, ReviewService>();
+        services.AddScoped<IAdminReviewService, AdminReviewService>();
         services.AddScoped<IPaymentProviderFactory, PaymentProviderFactory>();
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<IProfileService, ProfileService>();
@@ -196,6 +198,9 @@ public static class DependencyInjection
             options.AddPolicy(ReturnPolicies.ReturnsComplete, policy =>
                 policy.RequireAuthenticatedUser()
                       .RequireClaim("permission", ApplicationPermissions.Returns.Complete));
+            options.AddPolicy(ReviewPolicies.ReviewsManage, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireClaim("permission", ApplicationPermissions.Reviews.Manage));
         });
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>("database");

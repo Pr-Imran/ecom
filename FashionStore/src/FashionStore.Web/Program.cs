@@ -52,6 +52,8 @@ builder.Services.Configure<OrderSettings>(
     builder.Configuration.GetSection(OrderSettings.SectionName));
 builder.Services.Configure<ReturnSettings>(
     builder.Configuration.GetSection(ReturnSettings.SectionName));
+builder.Services.Configure<ReviewSettings>(
+    builder.Configuration.GetSection(ReviewSettings.SectionName));
 builder.Services.Configure<SecuritySettings>(
     builder.Configuration.GetSection(SecuritySettings.SectionName));
 builder.Services.Configure<BackgroundJobSettings>(

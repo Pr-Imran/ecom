@@ -1,4 +1,5 @@
 using FashionStore.Domain.Entities;
+using FashionStore.Domain.Enums;
 using FashionStore.Infrastructure.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -229,8 +230,8 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
         db.Warehouses.Add(warehouse);
 
         db.ProductReviews.AddRange(
-            new ProductReview { ProductId = product.Id, Rating = 5, IsApproved = true },
-            new ProductReview { ProductId = product.Id, Rating = 4, IsApproved = true });
+            new ProductReview { ProductId = product.Id, Rating = 5, Status = ReviewStatus.Approved },
+            new ProductReview { ProductId = product.Id, Rating = 4, Status = ReviewStatus.Approved });
 
         var usZone = new ShippingZone
         {

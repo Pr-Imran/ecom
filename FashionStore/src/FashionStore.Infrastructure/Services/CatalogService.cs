@@ -2,6 +2,7 @@ using FashionStore.Application.DTOs.Catalog;
 using FashionStore.Application.DTOs.Home;
 using FashionStore.Application.Interfaces;
 using FashionStore.Domain.Entities;
+using FashionStore.Domain.Enums;
 using FashionStore.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -224,8 +225,8 @@ public sealed class CatalogService : ICatalogService
         if (q.MinRating is >= 1 and <= 5)
         {
             var minRating = q.MinRating.Value;
-            query = query.Where(p => p.Reviews.Any(r => r.IsApproved) &&
-                p.Reviews.Where(r => r.IsApproved).Average(r => (double)r.Rating) >= minRating);
+            query = query.Where(p => p.Reviews.Any(r => r.Status == ReviewStatus.Approved) &&
+                p.Reviews.Where(r => r.Status == ReviewStatus.Approved).Average(r => (double)r.Rating) >= minRating);
         }
 
         if (string.Equals(q.ListingType, "new", StringComparison.OrdinalIgnoreCase))
@@ -252,8 +253,8 @@ public sealed class CatalogService : ICatalogService
             ProductSortOrder.Popularity => query.OrderBy(p => p.DisplayOrder).ThenByDescending(p => p.CreatedAtUtc),
             ProductSortOrder.BestSelling => query.OrderByDescending(p => p.IsBestSeller).ThenBy(p => p.DisplayOrder).ThenByDescending(p => p.CreatedAtUtc),
             ProductSortOrder.HighestRated => query
-                .OrderByDescending(p => p.Reviews.Any(r => r.IsApproved)
-                    ? p.Reviews.Where(r => r.IsApproved).Average(r => (double)r.Rating)
+                .OrderByDescending(p => p.Reviews.Any(r => r.Status == ReviewStatus.Approved)
+                    ? p.Reviews.Where(r => r.Status == ReviewStatus.Approved).Average(r => (double)r.Rating)
                     : 0.0)
                 .ThenBy(p => p.Name),
             ProductSortOrder.Discount => query
@@ -346,7 +347,7 @@ public sealed class CatalogService : ICatalogService
 
         var rows = await _context.ProductReviews
             .AsNoTracking()
-            .Where(r => r.IsApproved && productIds.Contains(r.ProductId))
+            .Where(r => r.Status == ReviewStatus.Approved && productIds.Contains(r.ProductId))
             .GroupBy(r => r.ProductId)
             .Select(g => new { ProductId = g.Key, Average = g.Average(r => (double)r.Rating), Count = g.Count() })
             .ToListAsync(cancellationToken);
@@ -611,8 +612,8 @@ public sealed class CatalogService : ICatalogService
         for (var min = 4; min >= 1; min--)
         {
             var count = await filtered
-                .Where(p => p.Reviews.Any(r => r.IsApproved) &&
-                    p.Reviews.Where(r => r.IsApproved).Average(r => (double)r.Rating) >= min)
+                .Where(p => p.Reviews.Any(r => r.Status == ReviewStatus.Approved) &&
+                    p.Reviews.Where(r => r.Status == ReviewStatus.Approved).Average(r => (double)r.Rating) >= min)
                 .CountAsync(cancellationToken);
 
             values.Add(new FacetValueDto(

@@ -31,6 +31,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<InventoryTransaction> InventoryTransactions => Set<InventoryTransaction>();
     public DbSet<StockReservation> StockReservations => Set<StockReservation>();
     public DbSet<ProductReview> ProductReviews => Set<ProductReview>();
+    public DbSet<ReviewImage> ReviewImages => Set<ReviewImage>();
+    public DbSet<ReviewHelpfulVote> ReviewHelpfulVotes => Set<ReviewHelpfulVote>();
     public DbSet<WishlistItem> WishlistItems => Set<WishlistItem>();
     public DbSet<CartItem> CartItems => Set<CartItem>();
     public DbSet<CartCoupon> CartCoupons => Set<CartCoupon>();
@@ -176,6 +178,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             entity.HasIndex(e => e.IsActive);
             entity.HasIndex(e => e.IsFeatured);
             entity.HasIndex(e => e.CreatedAtUtc);
+            entity.Property(e => e.AverageRating).HasPrecision(3, 2);
             
             entity.HasOne(e => e.Category).WithMany().HasForeignKey(e => e.CategoryId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(e => e.Brand).WithMany().HasForeignKey(e => e.BrandId).OnDelete(DeleteBehavior.SetNull);
@@ -260,12 +263,37 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
         {
             entity.ToTable("ProductReviews");
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
             entity.Property(e => e.DisplayName).HasMaxLength(200);
             entity.Property(e => e.Title).HasMaxLength(200);
             entity.Property(e => e.Body).HasMaxLength(4000);
-            entity.HasIndex(e => new { e.ProductId, e.IsApproved });
+            entity.Property(e => e.ModerationNotes).HasMaxLength(2000);
+            entity.HasIndex(e => new { e.ProductId, e.Status });
+            entity.HasIndex(e => new { e.UserId, e.ProductId });
             entity.HasIndex(e => e.Rating);
+            entity.HasIndex(e => e.IsVerifiedPurchase);
             entity.HasOne(e => e.Product).WithMany(p => p.Reviews).HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ReviewImage>(entity =>
+        {
+            entity.ToTable("ReviewImages");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FileName).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.OriginalFileName).HasMaxLength(255);
+            entity.Property(e => e.ContentType).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.StoragePath).IsRequired().HasMaxLength(500);
+            entity.HasIndex(e => e.ReviewId);
+            entity.HasOne(e => e.Review).WithMany(r => r.Images).HasForeignKey(e => e.ReviewId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ReviewHelpfulVote>(entity =>
+        {
+            entity.ToTable("ReviewHelpfulVotes");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.HasIndex(e => new { e.ReviewId, e.UserId }).IsUnique();
+            entity.HasOne(e => e.Review).WithMany(r => r.HelpfulVotes).HasForeignKey(e => e.ReviewId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ProductVariantAttributeValue>(entity =>
