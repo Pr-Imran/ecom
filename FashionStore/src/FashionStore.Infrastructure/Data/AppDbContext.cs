@@ -62,6 +62,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
     public DbSet<PaymentWebhookLog> PaymentWebhookLogs => Set<PaymentWebhookLog>();
     public DbSet<PaymentRefundRecord> PaymentRefundRecords => Set<PaymentRefundRecord>();
+    public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<InvoiceSendLog> InvoiceSendLogs => Set<InvoiceSendLog>();
+    public DbSet<InvoiceNumberSequence> InvoiceNumberSequences => Set<InvoiceNumberSequence>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -730,6 +733,40 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             entity.HasIndex(e => e.PaymentId);
             entity.HasIndex(e => e.ProviderRefundId);
             entity.HasOne(e => e.Payment).WithMany(p => p.Refunds).HasForeignKey(e => e.PaymentId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Invoice>(entity =>
+        {
+            entity.ToTable("Invoices");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.InvoiceNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Currency).IsRequired().HasMaxLength(3);
+            entity.HasIndex(e => e.InvoiceNumber).IsUnique();
+            entity.HasIndex(e => e.OrderId);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.IssueDateUtc);
+            entity.HasOne(e => e.Order).WithOne().HasForeignKey<Invoice>(e => e.OrderId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<InvoiceSendLog>(entity =>
+        {
+            entity.ToTable("InvoiceSendLogs");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.SentTo).IsRequired().HasMaxLength(254);
+            entity.Property(e => e.Subject).HasMaxLength(200);
+            entity.Property(e => e.SentBy).HasMaxLength(200);
+            entity.Property(e => e.ErrorMessage).HasMaxLength(500);
+            entity.HasIndex(e => e.InvoiceId);
+            entity.HasIndex(e => e.SentAtUtc);
+            entity.HasOne(e => e.Invoice).WithMany(i => i.SendLogs).HasForeignKey(e => e.InvoiceId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<InvoiceNumberSequence>(entity =>
+        {
+            entity.ToTable("InvoiceNumberSequences");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Prefix).IsRequired().HasMaxLength(20);
+            entity.HasIndex(e => new { e.Prefix, e.Year }).IsUnique();
         });
 
         // Apply soft delete filter

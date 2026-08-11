@@ -1,9 +1,12 @@
 using System.Security.Claims;
+using FashionStore.Application.Configuration;
 using FashionStore.Application.DTOs.Orders;
 using FashionStore.Application.Interfaces;
 using FashionStore.Domain.Enums;
+using FashionStore.Web.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace FashionStore.Web.Controllers;
 
@@ -19,15 +22,21 @@ public class OrderController : Controller
 {
     private readonly ICustomerOrderService _customerOrderService;
     private readonly IPaymentService _paymentService;
+    private readonly IInvoiceService _invoiceService;
+    private readonly IOptions<InvoiceSettings> _invoiceOptions;
     private readonly ILogger<OrderController> _logger;
 
     public OrderController(
         ICustomerOrderService customerOrderService,
         IPaymentService paymentService,
+        IInvoiceService invoiceService,
+        IOptions<InvoiceSettings> invoiceOptions,
         ILogger<OrderController> logger)
     {
         _customerOrderService = customerOrderService;
         _paymentService = paymentService;
+        _invoiceService = invoiceService;
+        _invoiceOptions = invoiceOptions;
         _logger = logger;
     }
 
@@ -248,8 +257,10 @@ public class OrderController : Controller
     }
 
     /// <summary>
-    /// Placeholder invoice view. Rendering the real PDF is handled in a later phase;
-    /// this confirms the invoice number exists for the order owner.
+    /// Customer invoice view. Ownership is always verified: signed-in customers must
+    /// own the order, guests must present a valid access ticket bound to the order
+    /// number. The invoice is generated on first open (the number is assigned by the
+    /// concurrency-safe sequence) and is rendered entirely from order snapshots.
     /// </summary>
     [AllowAnonymous]
     [HttpGet("invoice/{publicOrderNumber}")]
@@ -258,34 +269,73 @@ public class OrderController : Controller
         [FromQuery] string? t,
         CancellationToken cancellationToken = default)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var order = await VerifyAccessAsync(publicOrderNumber, t, cancellationToken);
+        if (order is null)
+        {
+            return RedirectToAction(nameof(Track));
+        }
 
-        OrderDetailDto? order;
-        string? accessToken = null;
+        var invoice = await _invoiceService.EnsureForOrderAsync(order.OrderId, cancellationToken);
+
+        ViewData["ActiveOrderNav"] = "details";
+        ViewData["GuestAccessToken"] = t;
+
+        return View(new InvoiceViewModel
+        {
+            Invoice = invoice,
+            Branding = _invoiceOptions.Value,
+            IsAdminView = false,
+            GuestAccessToken = t
+        });
+    }
+
+    /// <summary>
+    /// Customer PDF download for an invoice. Ownership is verified exactly as for the
+    /// HTML view before the deterministic A4 PDF is produced.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("invoice/{publicOrderNumber}/pdf")]
+    public async Task<IActionResult> DownloadInvoicePdf(
+        string publicOrderNumber,
+        [FromQuery] string? t,
+        CancellationToken cancellationToken = default)
+    {
+        var order = await VerifyAccessAsync(publicOrderNumber, t, cancellationToken);
+        if (order is null)
+        {
+            return RedirectToAction(nameof(Track));
+        }
+
+        var invoice = await _invoiceService.EnsureForOrderAsync(order.OrderId, cancellationToken);
+        var pdf = await _invoiceService.BuildPdfAsync(invoice, cancellationToken);
+        var fileName = $"invoice-{invoice.InvoiceNumber}.pdf";
+
+        return File(pdf, "application/pdf", fileName);
+    }
+
+    /// <summary>
+    /// Verifies that the caller may view the given order: a signed-in owner, or a
+    /// guest holding a valid access ticket for the order number. Returns null when
+    /// the caller has no access (the caller then redirects to the guest track screen).
+    /// </summary>
+    private async Task<OrderDetailDto?> VerifyAccessAsync(
+        string publicOrderNumber,
+        string? t,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (string.IsNullOrEmpty(userId))
         {
             if (string.IsNullOrWhiteSpace(t) ||
                 _customerOrderService.ValidateGuestToken(t, publicOrderNumber) is null)
             {
-                return RedirectToAction(nameof(Track));
+                return null;
             }
 
-            accessToken = t;
-            order = await _customerOrderService.GetGuestOrderDetailAsync(publicOrderNumber, cancellationToken);
-        }
-        else
-        {
-            order = await _customerOrderService.GetOrderDetailAsync(userId, publicOrderNumber, cancellationToken);
+            return await _customerOrderService.GetGuestOrderDetailAsync(publicOrderNumber, cancellationToken);
         }
 
-        if (order is null)
-        {
-            return NotFound();
-        }
-
-        ViewData["ActiveOrderNav"] = "details";
-        ViewData["GuestAccessToken"] = accessToken;
-        return View(order);
+        return await _customerOrderService.GetOrderDetailAsync(userId, publicOrderNumber, cancellationToken);
     }
 }

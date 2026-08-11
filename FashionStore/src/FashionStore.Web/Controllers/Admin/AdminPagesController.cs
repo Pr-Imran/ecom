@@ -1,6 +1,13 @@
+using System.Security.Claims;
+using FashionStore.Application.Authorization;
+using FashionStore.Application.Configuration;
+using FashionStore.Application.DTOs.Invoices;
+using FashionStore.Application.Interfaces;
 using FashionStore.Application.Services;
+using FashionStore.Web.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace FashionStore.Web.Controllers.Admin;
 
@@ -8,10 +15,17 @@ namespace FashionStore.Web.Controllers.Admin;
 public class AdminPagesController : Controller
 {
     private readonly INavigationService _navigationService;
+    private readonly IInvoiceService _invoiceService;
+    private readonly IOptions<InvoiceSettings> _invoiceOptions;
 
-    public AdminPagesController(INavigationService navigationService)
+    public AdminPagesController(
+        INavigationService navigationService,
+        IInvoiceService invoiceService,
+        IOptions<InvoiceSettings> invoiceOptions)
     {
         _navigationService = navigationService;
+        _invoiceService = invoiceService;
+        _invoiceOptions = invoiceOptions;
     }
 
     [HttpGet("/admin")]
@@ -145,9 +159,49 @@ public class AdminPagesController : Controller
     public async Task<IActionResult> OrderInvoice(Guid id, CancellationToken cancellationToken = default)
     {
         var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        var invoice = await _invoiceService.EnsureForOrderAsync(id, cancellationToken);
+        var history = await _invoiceService.GetSendHistoryAsync(id, cancellationToken);
+
         ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
         ViewData["PageTitle"] = "Invoice";
         ViewData["OrderId"] = id;
-        return View();
+
+        return View(new InvoiceViewModel
+        {
+            Invoice = invoice,
+            Branding = _invoiceOptions.Value,
+            SendHistory = history,
+            IsAdminView = true
+        });
+    }
+
+    [HttpGet("/admin/orders/{id:guid}/invoice.pdf")]
+    [Authorize(Policy = OrderPolicies.OrdersPrintInvoice)]
+    public async Task<IActionResult> DownloadInvoicePdf(Guid id, CancellationToken cancellationToken = default)
+    {
+        var invoice = await _invoiceService.EnsureForOrderAsync(id, cancellationToken);
+        var pdf = await _invoiceService.BuildPdfAsync(invoice, cancellationToken);
+        var fileName = $"invoice-{invoice.InvoiceNumber}.pdf";
+        return File(pdf, "application/pdf", fileName);
+    }
+
+    [HttpPost("/admin/orders/{id:guid}/invoice/regenerate")]
+    [Authorize(Policy = OrderPolicies.OrdersPrintInvoice)]
+    public async Task<IActionResult> RegenerateInvoice(Guid id, CancellationToken cancellationToken = default)
+    {
+        await _invoiceService.RegenerateAsync(id, cancellationToken);
+        return RedirectToAction(nameof(OrderInvoice), new { id });
+    }
+
+    [HttpPost("/admin/orders/{id:guid}/invoice/email")]
+    [Authorize(Policy = OrderPolicies.OrdersPrintInvoice)]
+    public async Task<IActionResult> EmailInvoice(Guid id, CancellationToken cancellationToken = default)
+    {
+        var actor = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var result = await _invoiceService.EmailPdfAsync(id, actor, cancellationToken);
+        TempData["InvoiceEmailMessage"] = result.Success
+            ? $"Invoice emailed to {result.SentTo}."
+            : $"The invoice could not be emailed: {result.ErrorMessage}";
+        return RedirectToAction(nameof(OrderInvoice), new { id });
     }
 }

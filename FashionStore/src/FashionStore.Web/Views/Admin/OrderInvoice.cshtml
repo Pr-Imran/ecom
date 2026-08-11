@@ -1,113 +1,86 @@
+@model FashionStore.Web.Models.InvoiceViewModel
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Invoice";
+    ViewData["Title"] = "Invoice " + Model.Invoice.InvoiceNumber;
     ViewData["PageTitle"] = "Invoice";
-    var orderId = ViewData["OrderId"] as Guid? ?? Guid.Empty;
+    var orderId = ViewData["OrderId"] as Guid? ?? Model.Invoice.OrderId;
 }
 
-<div class="space-y-4" id="invoiceRoot">
+@section Styles {
+    <style>
+        @@media print {
+            body { background: #fff; }
+            .no-print { display: none !important; }
+            .print-actions { display: none !important; }
+            #invoiceBody { border: 0; }
+        }
+    </style>
+}
+
+<div class="space-y-4 pb-28 no-print">
     <div class="flex items-center justify-between gap-3">
-        <a href="/admin/orders/@orderId" class="text-sm text-gray-500 hover:text-brand-primary">← Back to order</a>
-        <button onclick="window.print()" class="px-4 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium">Print</button>
+        <a href="/admin/orders/@orderId" class="text-sm text-gray-500 hover:text-brand-primary flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Back to order
+        </a>
     </div>
-    <div class="bg-white rounded-lg border p-6 sm:p-10" id="invoiceBody">
-        <p class="text-center text-gray-400 py-10">Loading invoice...</p>
+
+    @if (TempData["InvoiceEmailMessage"] is string emailMessage)
+    {
+        <div class="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700">@emailMessage</div>
+    }
+
+    <div class="flex flex-wrap items-center gap-2 no-print">
+        <button onclick="window.print()" class="px-4 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium">
+            Print
+        </button>
+        <a href="/admin/orders/@orderId/invoice.pdf" class="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium">
+            Download PDF
+        </a>
+        <form method="post" action="/admin/orders/@orderId/invoice/email" class="inline">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium">
+                Email PDF
+            </button>
+        </form>
+        <form method="post" action="/admin/orders/@orderId/invoice/regenerate" class="inline">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium">
+                Regenerate
+            </button>
+        </form>
     </div>
 </div>
 
-@section Scripts {
-    <script>
-        (function () {
-            'use strict';
+<partial name="_InvoiceBody" model="Model" />
 
-            function esc(value) {
-                if (value === null || value === undefined) return '';
-                return String(value).replace(/[&<>"']/g, c => ({
-                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-                }[c]));
+@if (Model.SendHistory.Count > 0)
+{
+    <div class="mt-6 bg-white rounded-lg border border-gray-200 p-5 no-print">
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">Email send history</h3>
+        <ul class="divide-y divide-gray-100">
+            @foreach (var log in Model.SendHistory)
+            {
+                <li class="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <div class="text-sm">
+                        <span class="font-medium text-gray-800">@log.SentTo</span>
+                        <span class="text-gray-500"> · @log.Subject</span>
+                    </div>
+                    <div class="text-xs text-gray-500 flex items-center gap-2">
+                        @if (log.Succeeded)
+                        {
+                            <span class="text-green-700 font-medium">Delivered</span>
+                        }
+                        else
+                        {
+                            <span class="text-red-700 font-medium">Failed</span>
+                        }
+                        <span>@log.SentAtUtc.ToLocalTime().ToString("MMM d, yyyy HH:mm")</span>
+                    </div>
+                </li>
             }
-
-            function money(value) {
-                const n = Number(value || 0);
-                return isNaN(n) ? '$0.00' : '$' + n.toFixed(2);
-            }
-
-            fetch('/api/admin/orders/@orderId')
-                .then(res => res.ok ? res.json() : Promise.reject())
-                .then(order => {
-                    const address = order.shippingAddress;
-                    document.getElementById('invoiceBody').innerHTML = `
-                        <div class="border-b pb-6 mb-6 flex flex-col sm:flex-row justify-between gap-4">
-                            <div>
-                                <p class="text-2xl font-bold text-gray-900">FashionStore</p>
-                                <p class="text-sm text-gray-500 mt-1">123 Fashion Ave, New York, NY 10001</p>
-                            </div>
-                            <div class="text-sm sm:text-right">
-                                <p class="font-bold text-lg">INVOICE</p>
-                                <p class="text-gray-500">Order #${esc(order.publicOrderNumber)}</p>
-                                <p class="text-gray-500">${order.invoiceNumber ? 'Invoice #' + esc(order.invoiceNumber) : 'Invoice number pending assignment'}</p>
-                                <p class="text-gray-500">Placed ${new Date(order.createdAtUtc).toLocaleString()}</p>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-                            <div>
-                                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Bill to</p>
-                                <p class="font-medium">${esc(order.customerName || 'Guest')}</p>
-                                <p class="text-sm text-gray-600">${esc(order.guestEmail || '')}</p>
-                                <p class="text-sm text-gray-600">${esc(order.guestPhone || '')}</p>
-                                ${order.billingAddress ? `
-                                    <p class="text-sm text-gray-600 mt-2">${esc(order.billingAddress.addressLine1)}</p>
-                                    <p class="text-sm text-gray-600">${esc(order.billingAddress.city)}${order.billingAddress.region ? ', ' + esc(order.billingAddress.region) : ''} ${esc(order.billingAddress.postalCode)}</p>
-                                    <p class="text-sm text-gray-600">${esc(order.billingAddress.countryCode)}</p>` : ''}
-                            </div>
-                            <div>
-                                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Ship to</p>
-                                ${address ? `
-                                    <p class="font-medium">${esc(address.recipientName)}</p>
-                                    <p class="text-sm text-gray-600">${esc(address.addressLine1)}</p>
-                                    <p class="text-sm text-gray-600">${esc(address.city)}${address.region ? ', ' + esc(address.region) : ''} ${esc(address.postalCode)}</p>
-                                    <p class="text-sm text-gray-600">${esc(address.countryCode)}</p>
-                                    <p class="text-sm text-gray-500 mt-2">${esc(order.shippingMethodName || '')}</p>` : '<p class="text-sm text-gray-500">—</p>'}
-                            </div>
-                        </div>
-                        <table class="w-full text-sm">
-                            <thead>
-                                <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wider">
-                                    <th class="py-2 pr-2">Item</th>
-                                    <th class="py-2 pr-2">SKU</th>
-                                    <th class="py-2 pr-2">Colour / Size</th>
-                                    <th class="py-2 text-right">Qty</th>
-                                    <th class="py-2 text-right">Unit</th>
-                                    <th class="py-2 text-right">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100">
-                                ${order.items.map(i => `
-                                    <tr>
-                                        <td class="py-3 pr-2 font-medium">${esc(i.productName)}</td>
-                                        <td class="py-3 pr-2 text-gray-500 font-mono text-xs">${esc(i.sku)}</td>
-                                        <td class="py-3 pr-2 text-gray-500">${esc(i.colourName || '—')} / ${esc(i.sizeName || '—')}</td>
-                                        <td class="py-3 text-right">${i.quantity}</td>
-                                        <td class="py-3 text-right">${money(i.unitPrice)}</td>
-                                        <td class="py-3 text-right font-medium">${money(i.lineTotal)}</td>
-                                    </tr>`).join('')}
-                            </tbody>
-                        </table>
-                        <div class="mt-6 flex justify-end">
-                            <div class="w-full sm:w-72 space-y-1.5 text-sm">
-                                <div class="flex justify-between"><span class="text-gray-500">Subtotal</span><span>${money(order.subtotal)}</span></div>
-                                ${order.productDiscount > 0 ? `<div class="flex justify-between"><span class="text-gray-500">Product discount</span><span>${money(order.productDiscount)}</span></div>` : ''}
-                                ${order.couponDiscount > 0 ? `<div class="flex justify-between"><span class="text-gray-500">Coupon discount</span><span>${money(order.couponDiscount)}</span></div>` : ''}
-                                <div class="flex justify-between"><span class="text-gray-500">Shipping</span><span>${money(order.shippingCharge)}</span></div>
-                                <div class="flex justify-between"><span class="text-gray-500">Tax</span><span>${money(order.tax)}</span></div>
-                                <div class="border-t pt-2 flex justify-between text-base font-bold"><span>Total</span><span>${money(order.grandTotal)}</span></div>
-                            </div>
-                        </div>
-                        <p class="text-xs text-gray-400 mt-8 border-t pt-4">Thank you for shopping with FashionStore. This document was generated by the admin order panel.</p>`;
-                })
-                .catch(() => {
-                    document.getElementById('invoiceBody').innerHTML = '<p class="text-center text-gray-500 py-10">Could not load the invoice.</p>';
-                });
-        })();
-    </script>
+        </ul>
+    </div>
 }

@@ -6,6 +6,13 @@ namespace FashionStore.Infrastructure.Services;
 public interface IEmailService
 {
     Task<bool> SendEmailAsync(string toEmail, string subject, string body, CancellationToken cancellationToken = default);
+    Task<bool> SendEmailWithAttachmentAsync(
+        string toEmail,
+        string subject,
+        string body,
+        string attachmentFileName,
+        byte[] attachmentBytes,
+        CancellationToken cancellationToken = default);
     Task SendConfirmationEmailAsync(string email, string userId, string token, CancellationToken cancellationToken = default);
     Task SendPasswordResetEmailAsync(string email, string token, CancellationToken cancellationToken = default);
     Task SendWelcomeEmailAsync(string email, string name, CancellationToken cancellationToken = default);
@@ -23,6 +30,33 @@ public class EmailService : IEmailService
     }
 
     public async Task<bool> SendEmailAsync(string toEmail, string subject, string body, CancellationToken cancellationToken = default)
+    {
+        return await SendAsync(toEmail, subject, body, attachment: null, cancellationToken);
+    }
+
+    public async Task<bool> SendEmailWithAttachmentAsync(
+        string toEmail,
+        string subject,
+        string body,
+        string attachmentFileName,
+        byte[] attachmentBytes,
+        CancellationToken cancellationToken = default)
+    {
+        if (attachmentBytes is null || attachmentBytes.Length == 0)
+        {
+            return await SendAsync(toEmail, subject, body, attachment: null, cancellationToken);
+        }
+
+        var attachment = new System.Net.Mail.Attachment(new MemoryStream(attachmentBytes), attachmentFileName, "application/pdf");
+        return await SendAsync(toEmail, subject, body, attachment, cancellationToken);
+    }
+
+    private async Task<bool> SendAsync(
+        string toEmail,
+        string subject,
+        string body,
+        System.Net.Mail.Attachment? attachment,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(toEmail) || !toEmail.Contains("@"))
             return false;
@@ -42,7 +76,7 @@ public class EmailService : IEmailService
 
             try
             {
-                await SendViaSmtpAsync(primaryConfig, toEmail, subject, body, cancellationToken);
+                await SendViaSmtpAsync(primaryConfig, toEmail, subject, body, attachment, cancellationToken);
                 _logger.LogInformation("Email sent to {Email} via primary SMTP", toEmail);
                 return true;
             }
@@ -67,7 +101,7 @@ public class EmailService : IEmailService
 
             try
             {
-                await SendViaSmtpAsync(fallbackConfig, toEmail, subject, body, cancellationToken);
+                await SendViaSmtpAsync(fallbackConfig, toEmail, subject, body, attachment, cancellationToken);
                 _logger.LogInformation("Email sent to {Email} via fallback SMTP", toEmail);
                 return true;
             }
@@ -92,7 +126,7 @@ public class EmailService : IEmailService
 
             try
             {
-                await SendViaSmtpAsync(legacyConfig, toEmail, subject, body, cancellationToken);
+                await SendViaSmtpAsync(legacyConfig, toEmail, subject, body, attachment, cancellationToken);
                 _logger.LogInformation("Email sent to {Email} via legacy SMTP", toEmail);
                 return true;
             }
@@ -109,7 +143,7 @@ public class EmailService : IEmailService
         return false;
     }
 
-    private async Task SendViaSmtpAsync(SmtpConfig config, string toEmail, string subject, string body, CancellationToken cancellationToken)
+    private async Task SendViaSmtpAsync(SmtpConfig config, string toEmail, string subject, string body, System.Net.Mail.Attachment? attachment, CancellationToken cancellationToken)
     {
         using var client = new System.Net.Mail.SmtpClient(config.Host, config.Port);
         client.Credentials = new System.Net.NetworkCredential(config.Username, config.Password);
@@ -118,12 +152,17 @@ public class EmailService : IEmailService
 
         var fromAddress = new System.Net.Mail.MailAddress(config.FromAddress, config.FromName);
         var toAddress = new System.Net.Mail.MailAddress(toEmail);
-        var message = new System.Net.Mail.MailMessage(fromAddress, toAddress)
+        using var message = new System.Net.Mail.MailMessage(fromAddress, toAddress)
         {
             Subject = subject,
             Body = body,
             IsBodyHtml = true
         };
+
+        if (attachment is not null)
+        {
+            message.Attachments.Add(attachment);
+        }
 
         await client.SendMailAsync(message, cancellationToken);
     }
