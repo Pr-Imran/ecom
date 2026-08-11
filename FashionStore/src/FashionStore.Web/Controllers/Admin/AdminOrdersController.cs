@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 using FashionStore.Application.Authorization;
 using FashionStore.Application.DTOs.Orders;
 using FashionStore.Application.Interfaces;
@@ -220,11 +221,11 @@ public class AdminOrdersController : ControllerBase
 }
 
 public sealed record UpdateOrderStatusRequest(
-    OrderStatus ToStatus,
+    [property: JsonConverter(typeof(JsonStringEnumConverter))] OrderStatus ToStatus,
     string? Note);
 
 public sealed record UpdateFulfilmentRequest(
-    FulfilmentStatus ToStatus,
+    [property: JsonConverter(typeof(JsonStringEnumConverter))] FulfilmentStatus ToStatus,
     string? Note);
 
 public sealed record CancelOrderRequest(
