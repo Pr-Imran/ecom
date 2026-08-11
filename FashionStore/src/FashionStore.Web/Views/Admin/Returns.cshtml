@@ -1,0 +1,234 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Returns";
+    ViewData["PageTitle"] = "Returns";
+}
+
+<div class="space-y-4 pb-24">
+    @* Search + actions *@
+    <div class="flex flex-col sm:flex-row gap-3">
+        <div class="flex-1 flex gap-2">
+            <div class="relative flex-1">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <input type="search" id="returnSearch" placeholder="Search return, order, customer, email..."
+                       class="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+            </div>
+            <button id="btnApplySearch" class="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium whitespace-nowrap">Search</button>
+        </div>
+    </div>
+
+    @* Status filter *@
+    <div class="flex gap-2 overflow-x-auto pb-1">
+        <button class="status-chip px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-brand-primary text-white" data-status="">All</button>
+        @foreach (var status in new[]
+        {
+            "Requested", "UnderReview", "Approved", "Rejected", "AwaitingShipment",
+            "InTransit", "Received", "Inspected", "RefundPending", "Refunded",
+            "Exchanged", "Closed"
+        })
+        {
+            <button class="status-chip px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border border-gray-300 text-gray-600 hover:bg-gray-50" data-status="@status">
+                @(status == "AwaitingShipment" ? "Awaiting shipment" : status)
+            </button>
+        }
+    </div>
+
+    @* Results (desktop table) *@
+    <div class="hidden lg:block bg-white rounded-lg shadow-sm border overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-50 border-b">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Return</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requested</th>
+                </tr>
+            </thead>
+            <tbody id="returnsTableBody" class="divide-y divide-gray-200">
+                <tr>
+                    <td colspan="6" class="px-6 py-10 text-center text-gray-500 text-sm">
+                        <p>Loading returns...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    @* Results (mobile cards) *@
+    <div id="returnsCards" class="lg:hidden space-y-3">
+        <div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8">
+            <p>Loading returns...</p>
+        </div>
+    </div>
+
+    @* Pagination *@
+    <div id="pagination" class="hidden items-center justify-between gap-3">
+        <p id="pageInfo" class="text-sm text-gray-500"></p>
+        <div class="flex gap-2">
+            <button id="btnPrevPage" class="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Previous</button>
+            <button id="btnNextPage" class="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Next</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            'use strict';
+
+            const statusColors = {
+                Requested: 'bg-amber-50 text-amber-700',
+                UnderReview: 'bg-amber-50 text-amber-700',
+                Approved: 'bg-blue-50 text-blue-700',
+                Rejected: 'bg-red-50 text-red-600',
+                AwaitingShipment: 'bg-blue-50 text-blue-700',
+                InTransit: 'bg-purple-50 text-purple-700',
+                Received: 'bg-purple-50 text-purple-700',
+                Inspected: 'bg-indigo-50 text-indigo-700',
+                RefundPending: 'bg-indigo-50 text-indigo-700',
+                Refunded: 'bg-emerald-50 text-emerald-700',
+                Exchanged: 'bg-emerald-50 text-emerald-700',
+                Closed: 'bg-emerald-50 text-emerald-700'
+            };
+            const statusLabel = {
+                AwaitingShipment: 'Awaiting shipment'
+            };
+
+            let state = { page: 1, pageSize: 20, status: '', search: '' };
+
+            function api(path, options) {
+                return fetch(path, options).then(async res => {
+                    if (res.ok) return res.json();
+                    let error = 'Request failed';
+                    try {
+                        const body = await res.json();
+                        error = body.error || body.title || error;
+                    } catch (e) { /* ignore */ }
+                    throw new Error(error);
+                });
+            }
+
+            function esc(value) {
+                if (value === null || value === undefined) return '';
+                return String(value).replace(/[&<>"']/g, c => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                }[c]));
+            }
+
+            function money(value, currency) {
+                const n = Number(value || 0);
+                const sym = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '$';
+                return isNaN(n) ? sym + '0.00' : sym + n.toFixed(2);
+            }
+
+            function badge(value) {
+                const label = statusLabel[value] || value;
+                return `<span class="inline-flex px-2 py-1 rounded-full text-xs font-medium ${statusColors[value] || 'bg-gray-100 text-gray-600'}">${esc(label)}</span>`;
+            }
+
+            function customerName(item) {
+                if (item.customerName) return esc(item.customerName);
+                if (item.guestEmail) return esc(item.guestEmail);
+                return 'Guest';
+            }
+
+            function buildQuery() {
+                const params = new URLSearchParams();
+                if (state.search) params.set('search', state.search);
+                if (state.status) params.set('status', state.status);
+                params.set('page', state.page);
+                params.set('pageSize', state.pageSize);
+                return params.toString();
+            }
+
+            async function loadReturns() {
+                const html = await api('/api/admin/returns?' + buildQuery());
+                state.page = html.page;
+                state.pageSize = html.pageSize;
+                state.totalCount = html.totalCount;
+                state.hasMore = html.hasMore;
+                renderReturns(html.items || [], html.totalCount || 0);
+            }
+
+            function renderReturns(items, totalCount) {
+                const tbody = document.getElementById('returnsTableBody');
+                const cards = document.getElementById('returnsCards');
+
+                if (items.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-gray-500 text-sm">No returns found.</td></tr>`;
+                    cards.innerHTML = `<div class="bg-white rounded-lg border p-6 text-center text-gray-500 text-sm">No returns found.</div>`;
+                } else {
+                    tbody.innerHTML = items.map(item => `
+                        <tr class="hover:bg-gray-50 cursor-pointer" data-id="${esc(item.returnId)}">
+                            <td class="px-6 py-4">
+                                <p class="text-sm font-medium text-gray-900">${esc(item.returnNumber)}</p>
+                                <p class="text-xs text-gray-500">Order ${esc(item.orderNumber)}</p>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-700">${customerName(item)}</td>
+                            <td class="px-6 py-4">${badge(item.status)}</td>
+                            <td class="px-6 py-4 text-sm text-gray-700">${money(item.refundableAmount, item.currency)}</td>
+                            <td class="px-6 py-4 text-sm text-gray-700">${esc(item.reasonCode)}${item.isExchange ? ' · Exchange' : ''}</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">${esc(new Date(item.createdAtUtc).toLocaleDateString())}</td>
+                        </tr>`).join('');
+                    cards.innerHTML = items.map(item => `
+                        <a href="/admin/returns/${esc(item.returnId)}" class="block bg-white rounded-lg border hover:border-brand-primary transition-colors p-4">
+                            <div class="flex items-center justify-between gap-2">
+                                <p class="text-sm font-medium text-gray-900">${esc(item.returnNumber)}</p>
+                                ${badge(item.status)}
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">${customerName(item)} · Order ${esc(item.orderNumber)}</p>
+                            <p class="text-xs text-gray-500 mt-1">${money(item.refundableAmount, item.currency)} · ${esc(item.reasonCode)}${item.isExchange ? ' · Exchange' : ''}</p>
+                        </a>`).join('');
+                }
+
+                document.querySelectorAll('#returnsTableBody tr[data-id]').forEach(row => {
+                    row.addEventListener('click', () => window.location = '/admin/returns/' + row.getAttribute('data-id'));
+                });
+
+                const pagination = document.getElementById('pagination');
+                const hasPages = state.page > 1 || state.hasMore;
+                pagination.classList.toggle('hidden', !hasPages);
+                pagination.classList.toggle('flex', hasPages);
+                document.getElementById('pageInfo').textContent = `${totalCount} return(s)`;
+                document.getElementById('btnPrevPage').disabled = state.page <= 1;
+                document.getElementById('btnNextPage').disabled = !state.hasMore;
+            }
+
+            document.getElementById('btnApplySearch').addEventListener('click', () => {
+                state.search = document.getElementById('returnSearch').value.trim();
+                state.page = 1;
+                loadReturns();
+            });
+            document.getElementById('returnSearch').addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    state.search = document.getElementById('returnSearch').value.trim();
+                    state.page = 1;
+                    loadReturns();
+                }
+            });
+            document.querySelectorAll('.status-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    document.querySelectorAll('.status-chip').forEach(c => {
+                        c.className = 'status-chip px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border border-gray-300 text-gray-600 hover:bg-gray-50';
+                    });
+                    chip.className = 'status-chip px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-brand-primary text-white';
+                    state.status = chip.getAttribute('data-status') || '';
+                    state.page = 1;
+                    loadReturns();
+                });
+            });
+            document.getElementById('btnPrevPage').addEventListener('click', () => {
+                if (state.page > 1) { state.page--; loadReturns(); }
+            });
+            document.getElementById('btnNextPage').addEventListener('click', () => {
+                if (state.hasMore) { state.page++; loadReturns(); }
+            });
+
+            loadReturns();
+        })();
+    </script>
+}

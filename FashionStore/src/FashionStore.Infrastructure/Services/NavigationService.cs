@@ -93,6 +93,11 @@ public class NavigationService : INavigationService
             items.Add(new NavigationItem("orders", "Orders", "/admin/orders", "shopping-cart"));
         }
 
+        if (HasAnyPermission(permissions, new[] { "Returns.View" }))
+        {
+            items.Add(new NavigationItem("returns", "Returns", "/admin/returns", "refresh-ccw"));
+        }
+
         if (HasAnyPermission(permissions, new[] { "Customers.View" }))
         {
             items.Add(new NavigationItem("customers", "Customers", "/admin/customers", "users"));
@@ -153,6 +158,7 @@ public class NavigationService : INavigationService
         {
             new NavigationItem("account-overview", "Overview", "/account", "user"),
             new NavigationItem("account-orders", "My Orders", "/account/orders", "shopping-bag"),
+            new NavigationItem("account-returns", "Returns", "/returns", "refresh-ccw"),
             new NavigationItem("account-wishlist", "Wishlist", "/wishlist", "heart"),
             new NavigationItem("account-addresses", "Addresses", "/account/addresses", "map-pin"),
             new NavigationItem("account-reviews", "My Reviews", "/account/reviews", "message-square"),

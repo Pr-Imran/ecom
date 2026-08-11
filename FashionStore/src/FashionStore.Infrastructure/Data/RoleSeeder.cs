@@ -58,6 +58,57 @@ public class RoleSeeder : IRoleSeeder
         {
             _logger.LogWarning("No SuperAdmin user found. Run the seed administrator endpoint in development.");
         }
+
+        await SeedReturnReasonCatalogueAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Seeds the configurable return-reason catalogue with the built-in reason codes.
+    /// Existing rows are updated in place so re-labelling and custom ordering by
+    /// administrators is preserved across seeding runs.
+    /// </summary>
+    private async Task SeedReturnReasonCatalogueAsync(CancellationToken cancellationToken)
+    {
+        var now = DateTime.UtcNow;
+        var catalogue = new[]
+        {
+            (Code: "ChangedMind", Label: "Changed my mind", Description: "The item no longer suits me.", RequiresPhoto: false, AllowShippingRefund: true),
+            (Code: "WrongSize", Label: "Wrong size", Description: "It doesn't fit, please help me exchange or return it.", RequiresPhoto: false, AllowShippingRefund: true),
+            (Code: "NotAsDescribed", Label: "Not as described", Description: "The item looks different from the listing.", RequiresPhoto: true, AllowShippingRefund: true),
+            (Code: "Damaged", Label: "Damaged on arrival", Description: "The item arrived damaged or broken.", RequiresPhoto: true, AllowShippingRefund: true),
+            (Code: "Defective", Label: "Defective or faulty", Description: "The item does not work as it should.", RequiresPhoto: true, AllowShippingRefund: true),
+            (Code: "Unwanted", Label: "No longer wanted", Description: "I changed my mind about this purchase.", RequiresPhoto: false, AllowShippingRefund: false),
+            (Code: "DuplicateOrder", Label: "Duplicate order", Description: "I accidentally ordered this more than once.", RequiresPhoto: false, AllowShippingRefund: true),
+            (Code: "Other", Label: "Another reason", Description: "Something else went wrong.", RequiresPhoto: false, AllowShippingRefund: false)
+        };
+
+        var existing = await _context.ReturnReasons
+            .AsNoTracking()
+            .Select(r => r.Code)
+            .ToListAsync(cancellationToken);
+        var existingSet = existing.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (code, label, description, requiresPhoto, allowShippingRefund) in catalogue)
+        {
+            if (!existingSet.Contains(code))
+            {
+                _context.ReturnReasons.Add(new FashionStore.Domain.Entities.ReturnReason
+                {
+                    Code = code,
+                    Label = label,
+                    Description = description,
+                    RequiresPhoto = requiresPhoto,
+                    AllowShippingRefund = allowShippingRefund,
+                    IsActive = true,
+                    SortOrder = Array.FindIndex(catalogue, c => c.Code == code),
+                    CreatedAtUtc = now,
+                    UpdatedAtUtc = now
+                });
+            }
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation("Seeded return-reason catalogue with {Count} reasons", catalogue.Length);
     }
 
     private List<ApplicationRole> GetDefaultRoles()

@@ -1,0 +1,920 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Return";
+    ViewData["PageTitle"] = "Return";
+    var returnId = ViewData["ReturnId"] as Guid? ?? Guid.Empty;
+}
+
+<div class="space-y-4 pb-28" id="returnDetailRoot">
+    <div class="flex items-center justify-between gap-3">
+        <a href="/admin/returns" class="text-sm text-gray-500 hover:text-brand-primary flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Back to returns
+        </a>
+        <div id="headerActions" class="hidden lg:flex gap-2"></div>
+    </div>
+
+    <div id="returnHeader" class="bg-white rounded-lg border p-5">
+        <div class="text-center py-6">
+            <p class="text-2xl font-bold text-brand-primary font-mono" id="returnNumber">Loading...</p>
+        </div>
+    </div>
+
+    <div id="returnBody" class="space-y-4">
+        <p class="text-center text-gray-400 py-10">Loading return...</p>
+    </div>
+</div>
+
+@* Review modal *@
+<div id="reviewModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-5 py-4 flex items-center justify-between rounded-t-2xl z-10">
+            <h3 class="text-lg font-bold">Start review</h3>
+            <button class="btn-close-modal text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="reviewForm" class="p-5 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Review note</label>
+                <textarea id="reviewNote" maxlength="1000" rows="4" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary" placeholder="Optional note for the status history"></textarea>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-close-modal px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium">Start review</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Approve modal *@
+<div id="approveModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-5 py-4 flex items-center justify-between rounded-t-2xl z-10">
+            <h3 class="text-lg font-bold">Approve return</h3>
+            <button class="btn-close-modal text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="approveForm" class="p-5 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Approval note</label>
+                <textarea id="approveNote" maxlength="1000" rows="4" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary" placeholder="Optional note (shown to the customer)"></textarea>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-close-modal px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium">Approve return</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Reject modal *@
+<div id="rejectModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-5 py-4 flex items-center justify-between rounded-t-2xl z-10">
+            <h3 class="text-lg font-bold text-red-600">Reject return</h3>
+            <button class="btn-close-modal text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="rejectForm" class="p-5 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Rejection reason</label>
+                <select id="rejectReason" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary">
+                    <option value="">Select a reason...</option>
+                    <option value="OutsideReturnWindow">Outside return window</option>
+                    <option value="UsedOrWorn">Item used or worn</option>
+                    <option value="MissingParts">Missing parts or accessories</option>
+                    <option value="EvidenceInsufficient">Insufficient evidence</option>
+                    <option value="PolicyExclusion">Not covered by return policy</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Rejection note</label>
+                <textarea id="rejectNote" maxlength="1000" rows="4" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary" placeholder="Explain to the customer why the return was rejected"></textarea>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-close-modal px-4 py-2 border border-gray-300 rounded-lg text-sm">Keep return</button>
+                <button type="submit" class="px-5 py-2 bg-red-600 text-white rounded-lg text-sm font-medium">Reject return</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Receive modal *@
+<div id="receiveModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-5 py-4 flex items-center justify-between rounded-t-2xl z-10">
+            <h3 class="text-lg font-bold">Mark as received</h3>
+            <button class="btn-close-modal text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="receiveForm" class="p-5 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Receive note</label>
+                <textarea id="receiveNote" maxlength="1000" rows="4" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary" placeholder="Optional note for the status history"></textarea>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-close-modal px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium">Confirm receipt</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Inspect modal *@
+<div id="inspectModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-5 py-4 flex items-center justify-between rounded-t-2xl z-10">
+            <h3 class="text-lg font-bold">Inspect returned items</h3>
+            <button class="btn-close-modal text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="inspectForm" class="p-5 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Resolution</label>
+                <select id="inspectResolution" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary">
+                    <option value="Refund">Refund the customer</option>
+                    <option value="Exchange">Arrange a replacement</option>
+                </select>
+            </div>
+            <div class="space-y-3" id="inspectItems"></div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Inspection note</label>
+                <textarea id="inspectNote" maxlength="1000" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary" placeholder="Optional note for the status history"></textarea>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-close-modal px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium">Save inspection</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Refund modal *@
+<div id="refundModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-5 py-4 flex items-center justify-between rounded-t-2xl z-10">
+            <h3 class="text-lg font-bold">Issue refund</h3>
+            <button class="btn-close-modal text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="refundForm" class="p-5 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Refund type</label>
+                <select id="refundType" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary">
+                    <option value="Full">Full refund</option>
+                    <option value="Item">Selected items</option>
+                    <option value="Shipping">Shipping charge only</option>
+                    <option value="Partial">Custom amount</option>
+                    <option value="Manual">Manual refund (no gateway)</option>
+                </select>
+            </div>
+            <div id="refundItemPicker" class="space-y-2 hidden"></div>
+            <div id="refundAmountRow" class="hidden">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Amount (<span id="refundCurrency">—</span>)</label>
+                <input type="number" id="refundAmount" step="0.01" min="0.01" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary" />
+            </div>
+            <label class="flex items-center gap-2 text-sm text-gray-700" id="refundShippingRow">
+                <input type="checkbox" id="refundShipping" class="w-4 h-4 text-brand-primary rounded" />
+                Include the shipping charge
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" id="refundManual" class="w-4 h-4 text-brand-primary rounded" />
+                Manual refund (offline; never contacts the payment gateway)
+            </label>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Refund note</label>
+                <textarea id="refundNote" maxlength="1000" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary" placeholder="Optional note for the status history"></textarea>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-close-modal px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium">Issue refund</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Exchange modal *@
+<div id="exchangeModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-5 py-4 flex items-center justify-between rounded-t-2xl z-10">
+            <h3 class="text-lg font-bold">Arrange replacement</h3>
+            <button class="btn-close-modal text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="exchangeForm" class="p-5 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Replacement item</label>
+                <div class="flex gap-2">
+                    <input type="search" id="exchangeSearch" placeholder="Search by product name or SKU..." class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary" />
+                    <button type="button" id="btnExchangeSearch" class="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Search</button>
+                </div>
+                <div id="exchangeResults" class="mt-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg hidden"></div>
+            </div>
+            <div id="exchangeVariantRow" class="hidden">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Selected variant</label>
+                <p id="exchangeVariantSummary" class="text-sm text-gray-900"></p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                <input type="number" id="exchangeQuantity" value="1" min="1" max="99" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Exchange note</label>
+                <textarea id="exchangeNote" maxlength="1000" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary" placeholder="Optional note for the status history"></textarea>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-close-modal px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium">Arrange exchange</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Restock modal *@
+<div id="restockModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-5 py-4 flex items-center justify-between rounded-t-2xl z-10">
+            <h3 class="text-lg font-bold">Restock item</h3>
+            <button class="btn-close-modal text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="restockForm" class="p-5 space-y-4">
+            <input type="hidden" id="restockItemId" />
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Warehouse</label>
+                <select id="restockWarehouse" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary">
+                    <option value="">Default warehouse</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Restock note</label>
+                <textarea id="restockNote" maxlength="500" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary" placeholder="Optional note"></textarea>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-close-modal px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium">Restock</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Complete modal *@
+<div id="completeModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-5 py-4 flex items-center justify-between rounded-t-2xl z-10">
+            <h3 class="text-lg font-bold">Close return</h3>
+            <button class="btn-close-modal text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="completeForm" class="p-5 space-y-4">
+            <p class="text-sm text-gray-600">The return is <span id="completeStatusLabel">resolved</span>. Closing it marks the return as complete.</p>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Closing note</label>
+                <textarea id="completeNote" maxlength="1000" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary" placeholder="Optional note for the status history"></textarea>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-close-modal px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium">Close return</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Notes modal *@
+<div id="notesModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-5 py-4 flex items-center justify-between rounded-t-2xl z-10">
+            <h3 class="text-lg font-bold">Admin notes</h3>
+            <button class="btn-close-modal text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="notesForm" class="p-5 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Internal notes (not shown to the customer)</label>
+                <textarea id="notesText" maxlength="2000" rows="5" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary" placeholder="Write internal notes for your team"></textarea>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-close-modal px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium">Save notes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Toast *@
+<div id="toast" class="hidden fixed top-4 right-4 z-[60] px-4 py-3 rounded-lg shadow-lg text-sm font-medium"></div>
+
+@* Sticky action bar (mobile) *@
+<div id="mobileActionBar" class="lg:hidden fixed bottom-0 inset-x-0 bg-white border-t z-40 px-4 py-3">
+    <div class="flex gap-2 overflow-x-auto" id="mobileActionButtons"></div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            'use strict';
+
+            const returnId = '@returnId';
+            const statusColors = {
+                Requested: 'bg-amber-50 text-amber-700',
+                UnderReview: 'bg-amber-50 text-amber-700',
+                Approved: 'bg-blue-50 text-blue-700',
+                Rejected: 'bg-red-50 text-red-600',
+                AwaitingShipment: 'bg-blue-50 text-blue-700',
+                InTransit: 'bg-purple-50 text-purple-700',
+                Received: 'bg-purple-50 text-purple-700',
+                Inspected: 'bg-indigo-50 text-indigo-700',
+                RefundPending: 'bg-indigo-50 text-indigo-700',
+                Refunded: 'bg-emerald-50 text-emerald-700',
+                Exchanged: 'bg-emerald-50 text-emerald-700',
+                Closed: 'bg-emerald-50 text-emerald-700'
+            };
+            const statusLabel = {
+                AwaitingShipment: 'Awaiting shipment'
+            };
+
+            let data = null;
+            let warehouses = [];
+
+            function api(path, options) {
+                return fetch(path, options).then(async res => {
+                    if (res.ok) return res.json();
+                    let error = 'Request failed';
+                    try {
+                        const body = await res.json();
+                        error = body.error || body.title || error;
+                    } catch (e) { /* ignore */ }
+                    throw new Error(error);
+                });
+            }
+
+            function esc(value) {
+                if (value === null || value === undefined) return '';
+                return String(value).replace(/[&<>"']/g, c => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                }[c]));
+            }
+
+            function money(value, currency) {
+                const n = Number(value || 0);
+                const sym = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '$';
+                return isNaN(n) ? sym + '0.00' : sym + n.toFixed(2);
+            }
+
+            function badge(value) {
+                const label = statusLabel[value] || value;
+                return `<span class="inline-flex px-2 py-1 rounded-full text-xs font-medium ${statusColors[value] || 'bg-gray-100 text-gray-600'}">${esc(label)}</span>`;
+            }
+
+            function dateTime(value) {
+                return value ? new Date(value).toLocaleString() : '—';
+            }
+
+            function toast(message, isError) {
+                const el = document.getElementById('toast');
+                el.textContent = message;
+                el.className = 'fixed top-4 right-4 z-[60] px-4 py-3 rounded-lg shadow-lg text-sm font-medium ' +
+                    (isError ? 'bg-red-600 text-white' : 'bg-gray-900 text-white');
+                el.classList.remove('hidden');
+                clearTimeout(el._timer);
+                el._timer = setTimeout(() => el.classList.add('hidden'), 3500);
+            }
+
+            function modalVisible(id) {
+                return !document.getElementById(id).classList.contains('hidden');
+            }
+
+            function openModal(id) {
+                document.getElementById(id).classList.remove('hidden');
+            }
+
+            function closeModal(id) {
+                document.getElementById(id).classList.add('hidden');
+            }
+
+            document.querySelectorAll('.btn-close-modal').forEach(btn => {
+                btn.addEventListener('click', () => btn.closest('[id$="Modal"]').classList.add('hidden'));
+            });
+
+            function section(title, body, open) {
+                return `<details class="bg-white rounded-lg border" ${open ? 'open' : ''}>
+                    <summary class="px-5 py-4 flex items-center justify-between cursor-pointer select-none list-none">
+                        <h2 class="text-sm font-bold text-gray-900">${esc(title)}</h2>
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </summary>
+                    <div class="px-5 pb-5">${body}</div>
+                </details>`;
+            }
+
+            function reasonLabel(code) {
+                const map = {
+                    ChangedMind: 'Changed mind', WrongSize: 'Wrong size',
+                    NotAsDescribed: 'Not as described', Damaged: 'Damaged',
+                    Defective: 'Defective', Unwanted: 'Unwanted',
+                    DuplicateOrder: 'Duplicate order', Other: 'Other'
+                };
+                return map[code] || code;
+            }
+
+            async function load() {
+                data = await api('/api/admin/returns/' + returnId);
+                renderHeader();
+                renderBody();
+                renderActions();
+            }
+
+            function renderHeader() {
+                document.getElementById('returnNumber').textContent = data.returnNumber;
+                const header = document.getElementById('returnHeader');
+                header.innerHTML = `
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div>
+                            <p class="text-xl font-bold text-brand-primary font-mono">${esc(data.returnNumber)}</p>
+                            <p class="text-sm text-gray-500 mt-1">
+                                ${esc(data.customerName || data.guestEmail || 'Guest')}${data.isGuest ? ' · <span class="text-amber-600 font-medium">Guest</span>' : ''}
+                                · order <a href="/admin/orders/${esc(data.orderId)}" class="text-brand-primary hover:underline">${esc(data.orderNumber)}</a>
+                                · requested ${dateTime(data.createdAtUtc)}
+                            </p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 justify-center">
+                            ${badge(data.status)}
+                            ${data.isExchange ? `<span class="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700">Exchange</span>` : `<span class="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">Refund</span>`}
+                            ${data.resolution === 'Exchange' ? `<span class="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">Resolved: exchange</span>` : (data.resolution === 'Refund' ? `<span class="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">Resolved: refund</span>` : '')}
+                        </div>
+                    </div>`;
+            }
+
+            function renderBody() {
+                const body = document.getElementById('returnBody');
+                body.innerHTML = `
+                    ${section('Items', itemsHtml(), true)}
+                    ${section('Financial summary', financialHtml(), data.status === 'Refunded')}
+                    ${section('Customer & shipping', customerHtml(), false)}
+                    ${section('Refunds', refundsHtml(), (data.refunds || []).length > 0)}
+                    ${section('Exchanges', exchangesHtml(), (data.exchanges || []).length > 0)}
+                    ${section('Attachments', attachmentsHtml(), (data.attachments || []).length > 0)}
+                    ${section('Status history', timelineHtml(), true)}
+                `;
+            }
+
+            function itemsHtml() {
+                return `
+                    <div class="space-y-3">
+                        ${data.items.map(i => `
+                            <div class="flex gap-3">
+                                <div class="w-16 h-16 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden">
+                                    ${i.imageUrl ? `<img src="${esc(i.imageUrl)}" alt="${esc(i.productName)}" class="w-full h-full object-cover" />` : '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">IMG</div>'}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-gray-900">${esc(i.productName)}</p>
+                                    <p class="text-xs text-gray-500">${esc(i.sku)}${i.colourName ? ' · ' + esc(i.colourName) : ''}${i.sizeName ? ' · ' + esc(i.sizeName) : ''}</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">Qty ${i.quantity} · ${money(i.refundableAmount, data.currency)}</p>
+                                    <div class="flex flex-wrap gap-1.5 mt-1.5">
+                                        ${conditionBadge(i.condition)}
+                                        ${i.isRestocked ? '<span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700">Restocked</span>' : ''}
+                                        ${restockButton(i)}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>`;
+            }
+
+            function conditionBadge(condition) {
+                const map = {
+                    Undetermined: 'bg-gray-100 text-gray-600',
+                    Sellable: 'bg-emerald-50 text-emerald-700',
+                    Damaged: 'bg-red-50 text-red-600'
+                };
+                return `<span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium ${map[condition] || 'bg-gray-100 text-gray-600'}">${esc(condition)}</span>`;
+            }
+
+            function restockButton(item) {
+                if (item.condition !== 'Sellable' || item.isRestocked || data.status !== 'Inspected') return '';
+                return `<button type="button" class="restock-btn text-[11px] px-2 py-0.5 rounded-lg border border-emerald-300 text-emerald-700 hover:bg-emerald-50" data-item-id="${esc(item.id)}" data-item-name="${esc(item.productName)}">Restock</button>`;
+            }
+
+            function financialHtml() {
+                return `
+                    <div class="space-y-1.5 text-sm">
+                        <div class="flex justify-between"><span class="text-gray-500">Refundable amount</span><span class="font-medium">${money(data.refundableAmount, data.currency)}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">Refunded</span><span class="font-medium text-emerald-600">${money(data.refundedAmount, data.currency)}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">Outstanding</span><span class="font-medium ${(data.refundableAmount - data.refundedAmount) > 0 ? 'text-amber-600' : 'text-gray-500'}">${money(Math.max(0, data.refundableAmount - data.refundedAmount), data.currency)}</span></div>
+                    </div>`;
+            }
+
+            function customerHtml() {
+                const rows = [];
+                if (data.customerName) rows.push(['Name', esc(data.customerName)]);
+                if (data.guestEmail) rows.push(['Email', esc(data.guestEmail)]);
+                rows.push(['Reason', esc(reasonLabel(data.reasonCode))]);
+                if (data.customerNotes) rows.push(['Customer note', esc(data.customerNotes)]);
+                if (data.trackingNumber) rows.push(['Tracking', esc(data.trackingNumber) + (data.carrierCode ? ' (' + esc(data.carrierCode) + ')' : '')]);
+                if (data.rejectionNote) rows.push(['Rejection note', esc(data.rejectionNote)]);
+                if (data.adminNotes) rows.push(['Admin notes', esc(data.adminNotes)]);
+                return `
+                    <dl class="space-y-2 text-sm">
+                        ${rows.map(([k, v]) => `
+                            <div class="flex gap-3">
+                                <dt class="w-32 flex-shrink-0 text-gray-500">${k}</dt>
+                                <dd class="flex-1 text-gray-900">${v}</dd>
+                            </div>`).join('') || '<p class="text-gray-500">No additional details.</p>'}
+                    </dl>`;
+            }
+
+            function refundsHtml() {
+                const list = data.refunds || [];
+                if (list.length === 0) return '<p class="text-sm text-gray-500">No refunds have been issued yet.</p>';
+                return `
+                    <div class="space-y-3">
+                        ${list.map(rf => `
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center justify-between gap-2">
+                                    <p class="text-sm font-medium text-gray-900">${esc(rf.referenceNumber)}</p>
+                                    <span class="inline-flex px-2 py-1 rounded-full text-xs font-medium ${refundStatusColor(rf.status)}">${esc(rf.status)}</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">${money(rf.amount, rf.currency)} · ${esc(rf.type)} · ${rf.isGatewayRefund ? 'Gateway' : 'Manual'}</p>
+                                ${rf.reason ? `<p class="text-xs text-gray-500 mt-1">${esc(rf.reason)}</p>` : ''}
+                                ${rf.failureReason ? `<p class="text-xs text-red-600 mt-1">${esc(rf.failureReason)}</p>` : ''}
+                                <div class="mt-2 space-y-1">
+                                    ${(rf.transactions || []).map(t => `
+                                        <p class="text-[11px] text-gray-500">· ${esc(t.type)}${t.succeeded ? ' ✓' : ''} — ${esc(t.resultMessage || t.resultCode || '')} (${dateTime(t.createdAtUtc)})</p>`).join('')}
+                                </div>
+                            </div>`).join('')}
+                    </div>`;
+            }
+
+            function refundStatusColor(status) {
+                return { Succeeded: 'bg-emerald-50 text-emerald-700', Failed: 'bg-red-50 text-red-600', Pending: 'bg-amber-50 text-amber-700', Voided: 'bg-gray-100 text-gray-600' }[status] || 'bg-gray-100 text-gray-600';
+            }
+
+            function exchangesHtml() {
+                const list = data.exchanges || [];
+                if (list.length === 0) return '<p class="text-sm text-gray-500">No exchanges have been arranged.</p>';
+                return `
+                    <div class="space-y-3">
+                        ${list.map(e => `
+                            <div class="border border-gray-200 rounded-lg p-4 flex items-center justify-between gap-2">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900">${esc(e.productName)} × ${e.quantity}</p>
+                                    <p class="text-xs text-gray-500 mt-1">${esc(e.sku)} · ${money(e.unitPrice, data.currency)} each</p>
+                                    ${e.notes ? `<p class="text-xs text-gray-500 mt-1">${esc(e.notes)}</p>` : ''}
+                                </div>
+                                <span class="inline-flex px-2 py-1 rounded-full text-xs font-medium ${exchangeStatusColor(e.status)}">${esc(e.status)}</span>
+                            </div>`).join('')}
+                    </div>`;
+            }
+
+            function exchangeStatusColor(status) {
+                return { Pending: 'bg-amber-50 text-amber-700', Completed: 'bg-emerald-50 text-emerald-700', Cancelled: 'bg-gray-100 text-gray-600' }[status] || 'bg-gray-100 text-gray-600';
+            }
+
+            function attachmentsHtml() {
+                const list = data.attachments || [];
+                if (list.length === 0) return '<p class="text-sm text-gray-500">No photos were attached.</p>';
+                return `
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        ${list.map(a => `
+                            <a href="${esc(a.url)}" target="_blank" rel="noopener" class="block border border-gray-200 rounded-lg overflow-hidden group">
+                                <div class="aspect-square bg-gray-100 overflow-hidden">
+                                    ${a.contentType && a.contentType.startsWith('image/')
+                                        ? `<img src="${esc(a.url)}" alt="${esc(a.originalFileName || a.fileName)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" />`
+                                        : '<div class="w-full h-full flex items-center justify-center text-gray-400">FILE</div>'}
+                                </div>
+                                <p class="text-[11px] text-gray-500 px-2 py-1.5 truncate">${esc(a.originalFileName || a.fileName)}</p>
+                            </a>`).join('')}
+                    </div>`;
+            }
+
+            function timelineHtml() {
+                const list = data.timeline || [];
+                if (list.length === 0) return '<p class="text-sm text-gray-500">No status changes recorded.</p>';
+                return `
+                    <ol class="relative border-l border-gray-200 ml-3 space-y-5">
+                        ${list.map(entry => `
+                            <li class="ml-5">
+                                <span class="absolute -left-[9px] mt-1 w-4 h-4 rounded-full border-2 border-white bg-brand-primary"></span>
+                                <p class="text-sm font-medium text-gray-900">${esc(entry.fromStatus)} → ${esc(entry.toStatus)}</p>
+                                ${entry.note ? `<p class="text-xs text-gray-600 mt-0.5">${esc(entry.note)}</p>` : ''}
+                                <p class="text-[11px] text-gray-400 mt-0.5">${dateTime(entry.createdAtUtc)}${entry.actor ? ' · by ' + esc(entry.actor) : ''}</p>
+                            </li>`).join('')}
+                    </ol>`;
+            }
+
+            function actionBtn(label, id, style) {
+                const styles = {
+                    primary: 'bg-brand-primary text-white hover:bg-brand-primary/90',
+                    success: 'bg-emerald-600 text-white hover:bg-emerald-700',
+                    danger: 'bg-red-600 text-white hover:bg-red-700',
+                    outline: 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                };
+                return `<button id="${id}" class="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${styles[style] || styles.outline}">${esc(label)}</button>`;
+            }
+
+            function renderActions() {
+                const status = data.status;
+                const buttons = [];
+                const add = (label, id, style) => buttons.push(actionBtn(label, id, style));
+
+                if (status === 'Requested') add('Start review', 'btnReview', 'outline');
+                if (status === 'Requested' || status === 'UnderReview') {
+                    add('Approve', 'btnApprove', 'success');
+                    add('Reject', 'btnReject', 'danger');
+                }
+                if (status === 'InTransit') add('Mark received', 'btnReceive', 'primary');
+                if (status === 'Received') add('Inspect', 'btnInspect', 'primary');
+                if (status === 'Inspected') {
+                    if (data.resolution === 'Refund' || data.resolution === 'None') add('Issue refund', 'btnRefund', 'success');
+                    if (data.resolution === 'Exchange') add('Arrange exchange', 'btnExchange', 'primary');
+                }
+                if (status === 'Refunded' || status === 'Exchanged') add('Close return', 'btnComplete', 'primary');
+                if (status !== 'Closed' && status !== 'Rejected') add('Admin notes', 'btnNotes', 'outline');
+
+                const header = document.getElementById('headerActions');
+                header.innerHTML = buttons.map(b => b).join('');
+                const mobile = document.getElementById('mobileActionBar');
+                if (buttons.length > 0) {
+                    document.getElementById('mobileActionButtons').innerHTML = buttons.map(b => b).join('');
+                    mobile.classList.remove('hidden');
+                } else {
+                    mobile.classList.add('hidden');
+                }
+                wireActionButtons();
+            }
+
+            function wireActionButtons() {
+                const status = data.status;
+                if (status === 'Requested') {
+                    const el = document.getElementById('btnReview');
+                    if (el) el.addEventListener('click', () => openModal('reviewModal'));
+                }
+                if (status === 'Requested' || status === 'UnderReview') {
+                    const app = document.getElementById('btnApprove');
+                    if (app) app.addEventListener('click', () => openModal('approveModal'));
+                    const rej = document.getElementById('btnReject');
+                    if (rej) rej.addEventListener('click', () => openModal('rejectModal'));
+                }
+                if (status === 'InTransit') {
+                    const el = document.getElementById('btnReceive');
+                    if (el) el.addEventListener('click', () => openModal('receiveModal'));
+                }
+                if (status === 'Received') {
+                    const el = document.getElementById('btnInspect');
+                    if (el) el.addEventListener('click', () => {
+                        document.getElementById('inspectItems').innerHTML = data.items.map((item, idx) => `
+                            <div class="border border-gray-200 rounded-lg p-3">
+                                <p class="text-sm font-medium text-gray-900">${esc(item.productName)}</p>
+                                <p class="text-xs text-gray-500">${esc(item.sku)} · Qty ${item.quantity}</p>
+                                <div class="mt-2 flex gap-3">
+                                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                                        <input type="radio" name="cond-${idx}" value="Sellable" class="w-4 h-4 text-emerald-600" />
+                                        Sellable
+                                    </label>
+                                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                                        <input type="radio" name="cond-${idx}" value="Damaged" class="w-4 h-4 text-red-600" />
+                                        Damaged
+                                    </label>
+                                </div>
+                                <input type="text" data-inspect-note="${idx}" maxlength="1000" placeholder="Inspection note (optional)" class="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-brand-primary" />
+                            </div>`).join('');
+                        openModal('inspectModal');
+                    });
+                }
+                if (status === 'Inspected') {
+                    const ref = document.getElementById('btnRefund');
+                    if (ref) ref.addEventListener('click', () => {
+                        document.getElementById('refundCurrency').textContent = data.currency;
+                        document.getElementById('refundAmount').value = '';
+                        document.getElementById('refundShipping').checked = false;
+                        document.getElementById('refundManual').checked = false;
+                        document.getElementById('refundNote').value = '';
+                        document.getElementById('refundType').value = data.resolution === 'Exchange' ? 'Manual' : 'Full';
+                        updateRefundFields();
+                        const picker = document.getElementById('refundItemPicker');
+                        picker.innerHTML = data.items.map(item => `
+                            <label class="flex items-center gap-2 text-sm text-gray-700 border border-gray-200 rounded-lg px-3 py-2">
+                                <input type="checkbox" value="${esc(item.id)}" class="refund-item-cb w-4 h-4 text-brand-primary rounded" checked />
+                                <span class="flex-1">${esc(item.productName)}</span>
+                                <span class="text-xs text-gray-500">${money(item.refundableAmount, data.currency)}</span>
+                            </label>`).join('');
+                        openModal('refundModal');
+                    });
+                    const exc = document.getElementById('btnExchange');
+                    if (exc) exc.addEventListener('click', () => {
+                        document.getElementById('exchangeSearch').value = '';
+                        document.getElementById('exchangeResults').classList.add('hidden');
+                        document.getElementById('exchangeResults').innerHTML = '';
+                        document.getElementById('exchangeVariantRow').classList.add('hidden');
+                        document.getElementById('exchangeVariantRow').removeAttribute('data-variant-id');
+                        document.getElementById('exchangeQuantity').value = '1';
+                        document.getElementById('exchangeNote').value = '';
+                        openModal('exchangeModal');
+                    });
+                }
+                if (status === 'Refunded' || status === 'Exchanged') {
+                    const el = document.getElementById('btnComplete');
+                    if (el) el.addEventListener('click', () => {
+                        document.getElementById('completeStatusLabel').textContent = status === 'Refunded' ? 'fully refunded' : 'resolved with a replacement';
+                        document.getElementById('completeNote').value = '';
+                        openModal('completeModal');
+                    });
+                }
+                if (status !== 'Closed' && status !== 'Rejected') {
+                    const el = document.getElementById('btnNotes');
+                    if (el) el.addEventListener('click', () => {
+                        document.getElementById('notesText').value = data.adminNotes || '';
+                        openModal('notesModal');
+                    });
+                }
+                document.querySelectorAll('.restock-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.getElementById('restockItemId').value = btn.getAttribute('data-item-id');
+                        document.getElementById('restockNote').value = '';
+                        openModal('restockModal');
+                    });
+                });
+            }
+
+            function updateRefundFields() {
+                const type = document.getElementById('refundType').value;
+                document.getElementById('refundItemPicker').classList.toggle('hidden', type !== 'Item');
+                document.getElementById('refundAmountRow').classList.toggle('hidden', !(type === 'Partial' || type === 'Manual'));
+                document.getElementById('refundShippingRow').classList.toggle('hidden', type === 'Item' || type === 'Partial' || type === 'Manual');
+            }
+
+            function postAction(path, body) {
+                return api(path, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                }).then(res => {
+                    toast('Done.');
+                    closeOpenModals();
+                    return load();
+                });
+            }
+
+            function closeOpenModals() {
+                ['reviewModal', 'approveModal', 'rejectModal', 'receiveModal', 'inspectModal',
+                 'refundModal', 'exchangeModal', 'restockModal', 'completeModal', 'notesModal']
+                    .forEach(id => document.getElementById(id).classList.add('hidden'));
+            }
+
+            document.getElementById('reviewForm').addEventListener('submit', e => {
+                e.preventDefault();
+                postAction(`/api/admin/returns/${returnId}/review`, { note: document.getElementById('reviewNote').value });
+            });
+            document.getElementById('approveForm').addEventListener('submit', e => {
+                e.preventDefault();
+                postAction(`/api/admin/returns/${returnId}/approve`, { note: document.getElementById('approveNote').value });
+            });
+            document.getElementById('rejectForm').addEventListener('submit', e => {
+                e.preventDefault();
+                postAction(`/api/admin/returns/${returnId}/reject`, {
+                    reasonCode: document.getElementById('rejectReason').value || null,
+                    note: document.getElementById('rejectNote').value
+                });
+            });
+            document.getElementById('receiveForm').addEventListener('submit', e => {
+                e.preventDefault();
+                postAction(`/api/admin/returns/${returnId}/receive`, { note: document.getElementById('receiveNote').value });
+            });
+            document.getElementById('inspectForm').addEventListener('submit', e => {
+                e.preventDefault();
+                const items = data.items.map((item, idx) => ({
+                    returnItemId: item.id,
+                    condition: document.querySelector(`input[name="cond-${idx}"]:checked`)?.value || 'Undetermined',
+                    note: document.querySelector(`[data-inspect-note="${idx}"]`)?.value || null
+                }));
+                postAction(`/api/admin/returns/${returnId}/inspect`, {
+                    resolution: document.getElementById('inspectResolution').value,
+                    items,
+                    note: document.getElementById('inspectNote').value
+                });
+            });
+            document.getElementById('refundType').addEventListener('change', updateRefundFields);
+            document.getElementById('refundForm').addEventListener('submit', e => {
+                e.preventDefault();
+                const type = document.getElementById('refundType').value;
+                const returnItemIds = Array.from(document.querySelectorAll('.refund-item-cb:checked')).map(cb => cb.value);
+                postAction(`/api/admin/returns/${returnId}/refund`, {
+                    refundType: type,
+                    amount: (type === 'Partial' || type === 'Manual') ? document.getElementById('refundAmount').value : null,
+                    returnItemIds: type === 'Item' ? returnItemIds : null,
+                    refundShipping: document.getElementById('refundShipping').checked,
+                    note: document.getElementById('refundNote').value,
+                    manual: document.getElementById('refundManual').checked,
+                    idempotencyKey: null
+                });
+            });
+
+            document.getElementById('btnExchangeSearch').addEventListener('click', searchProducts);
+            document.getElementById('exchangeSearch').addEventListener('keydown', e => {
+                if (e.key === 'Enter') { e.preventDefault(); searchProducts(); }
+            });
+            document.getElementById('exchangeForm').addEventListener('submit', e => {
+                e.preventDefault();
+                const variantId = document.getElementById('exchangeVariantRow').getAttribute('data-variant-id');
+                if (!variantId) { toast('Choose a replacement variant.', true); return; }
+                postAction(`/api/admin/returns/${returnId}/exchange`, {
+                    productVariantId: variantId,
+                    quantity: Number(document.getElementById('exchangeQuantity').value) || 1,
+                    note: document.getElementById('exchangeNote').value
+                });
+            });
+
+            function searchProducts() {
+                const term = document.getElementById('exchangeSearch').value.trim();
+                const results = document.getElementById('exchangeResults');
+                if (!term) return;
+                api('/api/admin/returns/variants?search=' + encodeURIComponent(term)).then(items => {
+                    const list = items || [];
+                    if (list.length === 0) {
+                        results.innerHTML = '<p class="text-sm text-gray-500 p-3">No matching items found.</p>';
+                    } else {
+                        results.innerHTML = list.map(v => `
+                            <button type="button" class="variant-result w-full text-left px-3 py-2.5 hover:bg-gray-50 border-b border-gray-100 flex items-center justify-between gap-2" data-variant-id="${esc(v.id)}" data-variant-label="${esc(v.productName + ' — ' + v.sku)}">
+                                <span class="text-sm text-gray-900">${esc(v.productName)}</span>
+                                <span class="text-xs text-gray-500">${esc(v.sku)} · ${money(v.price, data.currency)}</span>
+                            </button>`).join('');
+                        results.querySelectorAll('.variant-result').forEach(btn => {
+                            btn.addEventListener('click', () => {
+                                const row = document.getElementById('exchangeVariantRow');
+                                row.setAttribute('data-variant-id', btn.getAttribute('data-variant-id'));
+                                document.getElementById('exchangeVariantSummary').textContent = btn.getAttribute('data-variant-label');
+                                row.classList.remove('hidden');
+                                results.classList.add('hidden');
+                            });
+                        });
+                    }
+                    results.classList.remove('hidden');
+                }).catch(err => toast(err.message, true));
+            }
+
+            document.getElementById('restockForm').addEventListener('submit', e => {
+                e.preventDefault();
+                const itemId = document.getElementById('restockItemId').value;
+                const warehouseId = document.getElementById('restockWarehouse').value || null;
+                postAction(`/api/admin/returns/${returnId}/restock`, {
+                    returnItemId: itemId,
+                    warehouseId,
+                    note: document.getElementById('restockNote').value
+                });
+            });
+
+            document.getElementById('completeForm').addEventListener('submit', e => {
+                e.preventDefault();
+                postAction(`/api/admin/returns/${returnId}/complete`, { note: document.getElementById('completeNote').value });
+            });
+            document.getElementById('notesForm').addEventListener('submit', e => {
+                e.preventDefault();
+                postAction(`/api/admin/returns/${returnId}/notes`, { note: document.getElementById('notesText').value });
+            });
+
+            // Load warehouses once for the restock modal
+            api('/api/admin/inventory/warehouses?includeInactive=false').then(list => {
+                warehouses = list || [];
+                const select = document.getElementById('restockWarehouse');
+                select.innerHTML = '<option value="">Default warehouse</option>' + warehouses.map(w =>
+                    `<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('');
+            }).catch(() => { /* optional dropdown */ });
+
+            load();
+        })();
+    </script>
+}

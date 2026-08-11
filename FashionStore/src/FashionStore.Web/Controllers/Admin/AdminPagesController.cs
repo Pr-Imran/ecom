@@ -155,6 +155,25 @@ public class AdminPagesController : Controller
         return View();
     }
 
+    [HttpGet("/admin/returns")]
+    public async Task<IActionResult> Returns(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Returns";
+        return View();
+    }
+
+    [HttpGet("/admin/returns/{id:guid}")]
+    public async Task<IActionResult> ReturnDetail(Guid id, CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Return";
+        ViewData["ReturnId"] = id;
+        return View();
+    }
+
     [HttpGet("/admin/orders/{id:guid}/invoice")]
     public async Task<IActionResult> OrderInvoice(Guid id, CancellationToken cancellationToken = default)
     {

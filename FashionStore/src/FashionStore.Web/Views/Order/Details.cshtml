@@ -368,15 +368,19 @@
         </section>
     }
 
-    <!-- Return request placeholder -->
+    <!-- Return request -->
     @if (Model.OrderStatus is "Delivered" or "Completed" && Model.OrderStatus != "Cancelled")
     {
         <section class="detail-section mt-4 p-4">
             <h2 class="text-sm font-bold text-brand-text-primary mb-1">Need to return an item?</h2>
-            <p class="text-xs text-brand-text-muted">Returns are currently handled by our support team.</p>
-            <button type="button" class="w-full mt-3 py-3 rounded-brand-sm border border-brand-border text-brand-text-primary text-sm font-semibold hover:border-brand-primary transition-colors" data-return-button>
+            <p class="text-xs text-brand-text-muted">Start a return or exchange in a few simple steps.</p>
+            <a asp-controller="Returns" asp-action="Start"
+               asp-route-publicOrderNumber="@Model.PublicOrderNumber"
+               asp-route-t="@(ViewData["GuestAccessToken"])"
+               class="w-full mt-3 py-3 rounded-brand-sm border border-brand-border text-brand-text-primary text-sm font-semibold hover:border-brand-primary hover:bg-gray-50 transition-colors inline-block text-center"
+               data-return-button>
                 Request a return
-            </button>
+            </a>
         </section>
     }
 
@@ -490,14 +494,6 @@
             if (supportBtn) {
                 supportBtn.addEventListener('click', function () {
                     if (window.showToast) window.showToast('Support chat is coming soon.', 'info');
-                });
-            }
-
-            // Return request placeholder
-            var returnBtn = document.querySelector('[data-return-button]');
-            if (returnBtn) {
-                returnBtn.addEventListener('click', function () {
-                    if (window.showToast) window.showToast('Please contact support to start a return.', 'info');
                 });
             }
         })();
