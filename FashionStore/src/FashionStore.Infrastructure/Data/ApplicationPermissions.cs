@@ -36,6 +36,17 @@ public static class ApplicationPermissions
         public const string AddNote = "Orders.AddNote";
     }
 
+    public static class Returns
+    {
+        public const string View = "Returns.View";
+        public const string Review = "Returns.Review";
+        public const string Inspect = "Returns.Inspect";
+        public const string Restock = "Returns.Restock";
+        public const string Refund = "Returns.Refund";
+        public const string Exchange = "Returns.Exchange";
+        public const string Complete = "Returns.Complete";
+    }
+
     public static class Customers
     {
         public const string View = "Customers.View";
@@ -99,6 +110,7 @@ public static class ApplicationPermissions
         Categories.Manage,
         Brands.Manage,
         Orders.View, Orders.UpdateStatus, Orders.Cancel, Orders.Refund, Orders.PrintInvoice, Orders.AddNote,
+        Returns.View, Returns.Review, Returns.Inspect, Returns.Restock, Returns.Refund, Returns.Exchange, Returns.Complete,
         Customers.View, Customers.Update,
         Reviews.Manage,
         Promotions.Manage,

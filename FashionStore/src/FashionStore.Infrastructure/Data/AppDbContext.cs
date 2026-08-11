@@ -65,6 +65,14 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceSendLog> InvoiceSendLogs => Set<InvoiceSendLog>();
     public DbSet<InvoiceNumberSequence> InvoiceNumberSequences => Set<InvoiceNumberSequence>();
+    public DbSet<ReturnRequest> ReturnRequests => Set<ReturnRequest>();
+    public DbSet<ReturnItem> ReturnItems => Set<ReturnItem>();
+    public DbSet<ReturnStatusHistory> ReturnStatusHistories => Set<ReturnStatusHistory>();
+    public DbSet<ExchangeRequest> ExchangeRequests => Set<ExchangeRequest>();
+    public DbSet<Refund> Refunds => Set<Refund>();
+    public DbSet<RefundTransaction> RefundTransactions => Set<RefundTransaction>();
+    public DbSet<ReturnReason> ReturnReasons => Set<ReturnReason>();
+    public DbSet<ReturnAttachment> ReturnAttachments => Set<ReturnAttachment>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -767,6 +775,133 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Prefix).IsRequired().HasMaxLength(20);
             entity.HasIndex(e => new { e.Prefix, e.Year }).IsUnique();
+        });
+
+        modelBuilder.Entity<ReturnRequest>(entity =>
+        {
+            entity.ToTable("ReturnRequests");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ReturnNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.UserId).HasMaxLength(450);
+            entity.Property(e => e.GuestEmail).HasMaxLength(254);
+            entity.Property(e => e.CustomerName).HasMaxLength(200);
+            entity.Property(e => e.GuestPhone).HasMaxLength(30);
+            entity.Property(e => e.Currency).IsRequired().HasMaxLength(3);
+            entity.Property(e => e.CustomerNotes).HasMaxLength(2000);
+            entity.Property(e => e.TrackingNumber).HasMaxLength(100);
+            entity.Property(e => e.CarrierCode).HasMaxLength(50);
+            entity.Property(e => e.AdminNotes).HasMaxLength(1000);
+            entity.Property(e => e.RejectionReasonCode).HasMaxLength(50);
+            entity.Property(e => e.RejectionNote).HasMaxLength(1000);
+            entity.HasIndex(e => e.ReturnNumber).IsUnique();
+            entity.HasIndex(e => e.OrderId);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.GuestEmail);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.CreatedAtUtc);
+            entity.HasOne(e => e.Order).WithMany(o => o.ReturnRequests).HasForeignKey(e => e.OrderId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ReturnItem>(entity =>
+        {
+            entity.ToTable("ReturnItems");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ProductName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Sku).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.ColourName).HasMaxLength(100);
+            entity.Property(e => e.ColourValue).HasMaxLength(50);
+            entity.Property(e => e.SizeName).HasMaxLength(100);
+            entity.Property(e => e.ImageUrl).HasMaxLength(500);
+            entity.Property(e => e.InspectionNote).HasMaxLength(1000);
+            entity.HasIndex(e => e.ReturnRequestId);
+            entity.HasIndex(e => e.OrderItemId);
+            entity.HasIndex(e => e.ProductVariantId);
+            entity.HasOne(e => e.ReturnRequest).WithMany(r => r.Items).HasForeignKey(e => e.ReturnRequestId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ReturnStatusHistory>(entity =>
+        {
+            entity.ToTable("ReturnStatusHistories");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Note).HasMaxLength(500);
+            entity.Property(e => e.CreatedBy).HasMaxLength(450);
+            entity.HasIndex(e => e.ReturnRequestId);
+            entity.HasIndex(e => e.CreatedAtUtc);
+            entity.HasOne(e => e.ReturnRequest).WithMany(r => r.StatusHistory).HasForeignKey(e => e.ReturnRequestId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ExchangeRequest>(entity =>
+        {
+            entity.ToTable("ExchangeRequests");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ProductName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Sku).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+            entity.Property(e => e.CompletedBy).HasMaxLength(450);
+            entity.HasIndex(e => e.ReturnRequestId);
+            entity.HasIndex(e => e.OrderId);
+            entity.HasIndex(e => e.ProductVariantId);
+            entity.HasIndex(e => e.Status);
+            entity.HasOne(e => e.ReturnRequest).WithMany(r => r.ExchangeRequests).HasForeignKey(e => e.ReturnRequestId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Refund>(entity =>
+        {
+            entity.ToTable("Refunds");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ReferenceNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Currency).IsRequired().HasMaxLength(3);
+            entity.Property(e => e.ProviderRefundId).HasMaxLength(128);
+            entity.Property(e => e.IdempotencyKey).IsRequired().HasMaxLength(128);
+            entity.Property(e => e.FailureCode).HasMaxLength(50);
+            entity.Property(e => e.FailureReason).HasMaxLength(500);
+            entity.Property(e => e.Reason).HasMaxLength(1000);
+            entity.Property(e => e.InitiatedBy).HasMaxLength(450);
+            entity.HasIndex(e => e.ReferenceNumber).IsUnique();
+            entity.HasIndex(e => e.IdempotencyKey).IsUnique();
+            entity.HasIndex(e => e.ReturnRequestId);
+            entity.HasIndex(e => e.OrderId);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.ProviderRefundId);
+            entity.HasOne(e => e.ReturnRequest).WithMany(r => r.Refunds).HasForeignKey(e => e.ReturnRequestId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RefundTransaction>(entity =>
+        {
+            entity.ToTable("RefundTransactions");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Type).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ResultCode).HasMaxLength(50);
+            entity.Property(e => e.ResultMessage).HasMaxLength(500);
+            entity.Property(e => e.CreatedBy).HasMaxLength(450);
+            entity.HasIndex(e => e.RefundId);
+            entity.HasIndex(e => e.CreatedAtUtc);
+            entity.HasOne(e => e.Refund).WithMany(r => r.Transactions).HasForeignKey(e => e.RefundId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ReturnReason>(entity =>
+        {
+            entity.ToTable("ReturnReasons");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Label).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.HasIndex(e => e.Code).IsUnique();
+            entity.HasIndex(e => e.IsActive);
+            entity.HasIndex(e => e.SortOrder);
+        });
+
+        modelBuilder.Entity<ReturnAttachment>(entity =>
+        {
+            entity.ToTable("ReturnAttachments");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FileName).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.OriginalFileName).HasMaxLength(255);
+            entity.Property(e => e.ContentType).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.StoragePath).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.UploadedBy).HasMaxLength(450);
+            entity.HasIndex(e => e.ReturnRequestId);
+            entity.HasOne(e => e.ReturnRequest).WithMany(r => r.Attachments).HasForeignKey(e => e.ReturnRequestId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // Apply soft delete filter

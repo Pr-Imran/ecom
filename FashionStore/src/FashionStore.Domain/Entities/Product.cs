@@ -77,6 +77,18 @@ public class Product : AuditedEntity
     public bool AllowReviews { get; set; } = true;
     public int DisplayOrder { get; set; }
 
+    /// <summary>
+    /// Whether this product can be returned. Product-level return restrictions are
+    /// enforced when the return request is created.
+    /// </summary>
+    public bool IsReturnable { get; set; } = true;
+
+    /// <summary>
+    /// Optional per-product return window in days; when null the global return
+    /// window configured in <c>ReturnSettings</c> is used.
+    /// </summary>
+    public int? ReturnWindowDays { get; set; }
+
     public DateTime? PublishedAtUtc { get; set; }
 
     [MaxLength(200)]

@@ -138,4 +138,6 @@ public class Order : Entity
     public virtual ICollection<OrderStatusHistory> StatusHistory { get; set; } = new List<OrderStatusHistory>();
 
     public virtual ICollection<OrderNote> Notes { get; set; } = new List<OrderNote>();
+
+    public virtual ICollection<ReturnRequest> ReturnRequests { get; set; } = new List<ReturnRequest>();
 }

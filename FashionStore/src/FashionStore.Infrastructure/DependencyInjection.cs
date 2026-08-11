@@ -136,6 +136,8 @@ public static class DependencyInjection
         services.AddScoped<IOrderAdministrationService, OrderAdministrationService>();
         services.AddScoped<IInvoiceService, InvoiceService>();
         services.AddScoped<IInvoicePdfGenerator, QuestPdfInvoiceGenerator>();
+        services.AddScoped<ICustomerReturnService, CustomerReturnService>();
+        services.AddScoped<IAdminReturnService, AdminReturnService>();
         services.AddScoped<IPaymentProviderFactory, PaymentProviderFactory>();
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<IProfileService, ProfileService>();
@@ -173,6 +175,27 @@ public static class DependencyInjection
             options.AddPolicy(OrderPolicies.OrdersPrintInvoice, policy =>
                 policy.RequireAuthenticatedUser()
                       .RequireClaim("permission", ApplicationPermissions.Orders.PrintInvoice));
+            options.AddPolicy(ReturnPolicies.ReturnsView, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireClaim("permission", ApplicationPermissions.Returns.View));
+            options.AddPolicy(ReturnPolicies.ReturnsReview, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireClaim("permission", ApplicationPermissions.Returns.Review));
+            options.AddPolicy(ReturnPolicies.ReturnsInspect, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireClaim("permission", ApplicationPermissions.Returns.Inspect));
+            options.AddPolicy(ReturnPolicies.ReturnsRestock, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireClaim("permission", ApplicationPermissions.Returns.Restock));
+            options.AddPolicy(ReturnPolicies.ReturnsRefund, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireClaim("permission", ApplicationPermissions.Returns.Refund));
+            options.AddPolicy(ReturnPolicies.ReturnsExchange, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireClaim("permission", ApplicationPermissions.Returns.Exchange));
+            options.AddPolicy(ReturnPolicies.ReturnsComplete, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireClaim("permission", ApplicationPermissions.Returns.Complete));
         });
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>("database");

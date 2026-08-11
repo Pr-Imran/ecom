@@ -161,6 +161,7 @@ public class RoleSeeder : IRoleSeeder
                 Products.View, Products.Create, Products.Update, Products.Delete, Products.ManageInventory,
                 Categories.Manage, Brands.Manage,
                 Orders.View, Orders.UpdateStatus, Orders.Cancel, Orders.Refund, Orders.PrintInvoice, Orders.AddNote,
+                Returns.View, Returns.Review, Returns.Inspect, Returns.Restock, Returns.Refund, Returns.Exchange, Returns.Complete,
                 Customers.View, Customers.Update,
                 Reviews.Manage, Promotions.Manage, Coupons.Manage, Shipping.Manage, Content.Manage,
                 Reports.View,
@@ -178,6 +179,7 @@ public class RoleSeeder : IRoleSeeder
             {
                 Dashboard.View,
                 Orders.View, Orders.UpdateStatus, Orders.Cancel, Orders.Refund, Orders.PrintInvoice, Orders.AddNote,
+                Returns.View, Returns.Review, Returns.Inspect, Returns.Restock, Returns.Refund, Returns.Exchange, Returns.Complete,
                 Customers.View, Customers.Update,
                 Reviews.Manage,
                 Reports.View
@@ -186,12 +188,14 @@ public class RoleSeeder : IRoleSeeder
             {
                 Dashboard.View,
                 Products.View, Products.ManageInventory,
+                Returns.View, Returns.Restock,
                 Reports.View
             },
             "CustomerSupport" => new[]
             {
                 Dashboard.View,
                 Orders.View, Orders.AddNote,
+                Returns.View, Returns.Review, Returns.Complete,
                 Customers.View,
                 Products.View,
                 Reports.View
