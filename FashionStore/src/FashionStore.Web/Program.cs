@@ -2,8 +2,10 @@ using FashionStore.Application;
 using FashionStore.Application.Configuration;
 using FashionStore.Application.Interfaces;
 using FashionStore.Infrastructure;
+using FashionStore.Web.Infrastructure;
 using FashionStore.Web.Middleware;
 using Hangfire;
+using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi.Models;
@@ -65,6 +67,11 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddControllersWithViews();
+
+builder.Services.Configure<RazorViewEngineOptions>(options =>
+{
+    options.ViewLocationExpanders.Add(new AdminPagesViewLocationExpander());
+});
 
 builder.Services.AddSwaggerGen(options =>
 {

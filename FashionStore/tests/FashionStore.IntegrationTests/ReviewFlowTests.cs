@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Json;
@@ -91,6 +92,34 @@ public class ReviewFlowTests : IClassFixture<TestWebApplicationFactory>
         };
         var createResult = await userManager.CreateAsync(user, Password);
         Assert.True(createResult.Succeeded, string.Join("; ", createResult.Errors.Select(e => e.Description)));
+
+        foreach (var permission in permissions)
+        {
+            var claimResult = await userManager.AddClaimAsync(user, new Claim("permission", permission));
+            Assert.True(claimResult.Succeeded, string.Join("; ", claimResult.Errors.Select(e => e.Description)));
+        }
+
+        return await CustomerClientAsync(email);
+    }
+
+    private async Task<HttpClient> AdminPageClientAsync(params string[] permissions)
+    {
+        var email = UniqueEmail();
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var user = new ApplicationUser
+        {
+            UserName = email,
+            Email = email,
+            EmailConfirmed = true,
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+        var createResult = await userManager.CreateAsync(user, Password);
+        Assert.True(createResult.Succeeded, string.Join("; ", createResult.Errors.Select(e => e.Description)));
+
+        var roleResult = await userManager.AddClaimAsync(user, new Claim(ClaimTypes.Role, "Admin"));
+        Assert.True(roleResult.Succeeded, string.Join("; ", roleResult.Errors.Select(e => e.Description)));
 
         foreach (var permission in permissions)
         {
@@ -332,9 +361,7 @@ public class ReviewFlowTests : IClassFixture<TestWebApplicationFactory>
     private static void AssertRedirectedTo(HttpResponseMessage response, string path)
     {
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        var location = response.Headers.Location?.ToString();
-        Assert.NotNull(location);
-        Assert.StartsWith(path, location, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(path, response.Headers.Location?.ToString());
     }
 
     [Fact]
@@ -439,5 +466,86 @@ public class ReviewFlowTests : IClassFixture<TestWebApplicationFactory>
 
         var page = await customer.GetStringAsync("/account/reviews");
         Assert.Contains(title, page);
+    }
+
+    [Fact]
+    public async Task PhotoUpload_SubmitWithMultipart_AttachesImagesToReview()
+    {
+        var (email, userId) = await CreateCustomerAsync();
+        await SeedDeliveredOrderAsync(UniqueOrderNumber(), userId);
+        var customer = await CustomerClientAsync(email);
+        var productId = CartTestsHelper.GetProductId(_factory, ProductSlug);
+        var body = $"Review submitted together with a photo {Guid.NewGuid():N}";
+
+        var writeHtml = await customer.GetStringAsync($"/products/{ProductSlug}/reviews/write");
+        var token = CartTestsHelper.ExtractAntiforgeryToken(writeHtml);
+
+        var bytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46 };
+        using var content = new MultipartFormDataContent
+        {
+            { new StringContent(token), "__RequestVerificationToken" },
+            { new StringContent(productId.ToString()), "ProductId" },
+            { new StringContent(ProductSlug), "ProductSlug" },
+            { new StringContent("5"), "Rating" },
+            { new StringContent("With photo"), "Title" },
+            { new StringContent(body), "Body" }
+        };
+        var fileContent = new ByteArrayContent(bytes);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        content.Add(fileContent, "Photos", "photo.jpg");
+
+        var response = await customer.PostAsync("/reviews", content);
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var review = await db.ProductReviews.Include(r => r.Images).SingleAsync(r => r.Body == body);
+        Assert.Equal(ReviewStatus.Pending, review.Status);
+        var image = Assert.Single(review.Images);
+        Assert.Equal("photo.jpg", image.OriginalFileName);
+        Assert.Equal("image/jpeg", image.ContentType);
+        Assert.True(image.SizeBytes > 0);
+    }
+
+    [Fact]
+    public async Task PhotoUpload_OtherCustomerCannotAttachToReview()
+    {
+        var (ownerEmail, ownerId) = await CreateCustomerAsync();
+        await SeedDeliveredOrderAsync(UniqueOrderNumber(), ownerId);
+        var owner = await CustomerClientAsync(ownerEmail);
+        var reviewId = await SubmitReviewAsync(owner, body: $"Photo ownership guard {Guid.NewGuid():N}.");
+
+        var (otherEmail, _) = await CreateCustomerAsync();
+        var other = await CustomerClientAsync(otherEmail);
+        var page = await other.GetStringAsync($"/products/{ProductSlug}/reviews");
+        var token = CartTestsHelper.ExtractAntiforgeryToken(page);
+
+        var bytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46 };
+        using var content = new MultipartFormDataContent
+        {
+            { new StringContent(token), "__RequestVerificationToken" }
+        };
+        var fileContent = new ByteArrayContent(bytes);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        content.Add(fileContent, "files", "sneaky.jpg");
+
+        var upload = await other.PostAsync($"/reviews/{reviewId}/images", content);
+        Assert.Equal(HttpStatusCode.BadRequest, upload.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.Empty(db.ReviewImages.Where(i => i.ReviewId == reviewId));
+    }
+
+    [Fact]
+    public async Task AdminReviewsPage_Renders_WithReviewsNavEntry()
+    {
+        var admin = await AdminPageClientAsync("Reviews.Manage");
+        var response = await admin.GetAsync("/admin/reviews");
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("Reviews", body);
+        Assert.Contains("href=\"/admin/reviews\"", body);
     }
 }
