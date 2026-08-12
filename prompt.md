@@ -457,7 +457,7 @@ Follow this order exactly:
 23. Invoice and PDF generation
 24. Returns, exchanges and refunds
 25. Reviews and ratings
-26. Email notifications and background jobs
+. Email notifications and background jobs
 27. Content management and settings
 28. Reports and dashboard
 29. SEO, accessibility and performance
@@ -3303,6 +3303,8 @@ Create:
 * Development email provider
 * SMTP-ready provider
 * Future API-provider abstraction
+* optiton for adding gmail,outlook, hotmail etc provider add option
+* option for custom provider add option like own domain mail with receive and send emal from application with host, port ect what need 
 
 ## Email templates
 
