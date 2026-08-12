@@ -174,9 +174,27 @@ public class AdminPagesController : Controller
         return View();
     }
 
-    [HttpGet("/admin/orders/{id:guid}/invoice")]
-    public async Task<IActionResult> OrderInvoice(Guid id, CancellationToken cancellationToken = default)
+    [HttpGet("/admin/reviews")]
+    public async Task<IActionResult> Reviews(CancellationToken cancellationToken = default)
     {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Reviews";
+        return View();
+    }
+
+    [HttpGet("/admin/reviews/{id:guid}")]
+    public async Task<IActionResult> ReviewDetail(Guid id, CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Review";
+        ViewData["ReviewId"] = id;
+        return View();
+    }
+
+    [HttpGet("/admin/orders/{id:guid}/invoice")]
+    public async Task<IActionResult> OrderInvoice(Guid id, CancellationToken cancellationToken = default)    {
         var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
         var invoice = await _invoiceService.EnsureForOrderAsync(id, cancellationToken);
         var history = await _invoiceService.GetSendHistoryAsync(id, cancellationToken);

@@ -1,0 +1,251 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Reviews";
+    ViewData["PageTitle"] = "Reviews";
+}
+
+<div class="space-y-4 pb-24">
+    @* Search + actions *@
+    <div class="flex flex-col sm:flex-row gap-3">
+        <div class="flex-1 flex gap-2">
+            <div class="relative flex-1">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <input type="search" id="reviewSearch" placeholder="Search review, product, customer..."
+                       class="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+            </div>
+            <button id="btnApplySearch" class="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium whitespace-nowrap">Search</button>
+        </div>
+    </div>
+
+    @* Status + filter chips *@
+    <div class="flex gap-2 overflow-x-auto pb-1 items-center">
+        <button class="status-chip px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-brand-primary text-white" data-status="">All</button>
+        @foreach (var status in new[] { "Pending", "Approved", "Rejected", "Hidden" })
+        {
+            <button class="status-chip px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border border-gray-300 text-gray-600 hover:bg-gray-50" data-status="@status">@status</button>
+        }
+        <span class="w-px h-6 bg-gray-300 mx-1 hidden sm:block"></span>
+        <button id="btnVerified" class="filter-chip px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border border-gray-300 text-gray-600 hover:bg-gray-50">Verified only</button>
+        <button id="btnFlagged" class="filter-chip px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border border-gray-300 text-gray-600 hover:bg-gray-50">Flagged only</button>
+        <select id="ratingFilter" class="px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border border-gray-300 text-gray-600 bg-white">
+            <option value="">Any rating</option>
+            <option value="5">5 stars</option>
+            <option value="4">4 stars</option>
+            <option value="3">3 stars</option>
+            <option value="2">2 stars</option>
+            <option value="1">1 star</option>
+        </select>
+    </div>
+
+    @* Results (desktop table) *@
+    <div class="hidden lg:block bg-white rounded-lg shadow-sm border overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-50 border-b">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Review</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rating</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Verified</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted</th>
+                </tr>
+            </thead>
+            <tbody id="reviewsTableBody" class="divide-y divide-gray-200">
+                <tr>
+                    <td colspan="7" class="px-6 py-10 text-center text-gray-500 text-sm">
+                        <p>Loading reviews...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    @* Results (mobile cards) *@
+    <div id="reviewsCards" class="lg:hidden space-y-3">
+        <div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8">
+            <p>Loading reviews...</p>
+        </div>
+    </div>
+
+    @* Pagination *@
+    <div id="pagination" class="hidden items-center justify-between gap-3">
+        <p id="pageInfo" class="text-sm text-gray-500"></p>
+        <div class="flex gap-2">
+            <button id="btnPrevPage" class="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Previous</button>
+            <button id="btnNextPage" class="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Next</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            'use strict';
+
+            const statusColors = {
+                Pending: 'bg-amber-50 text-amber-700',
+                Approved: 'bg-emerald-50 text-emerald-700',
+                Rejected: 'bg-red-50 text-red-600',
+                Hidden: 'bg-gray-100 text-gray-600'
+            };
+
+            let state = { page: 1, pageSize: 20, status: '', search: '', rating: '', verified: false, flagged: false };
+
+            function api(path, options) {
+                return fetch(path, options).then(async res => {
+                    if (res.ok) return res.json();
+                    let error = 'Request failed';
+                    try {
+                        const body = await res.json();
+                        error = body.error || body.title || error;
+                    } catch (e) { /* ignore */ }
+                    throw new Error(error);
+                });
+            }
+
+            function esc(value) {
+                if (value === null || value === undefined) return '';
+                return String(value).replace(/[&<>"']/g, c => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                }[c]));
+            }
+
+            function stars(rating) {
+                let html = '<span class="flex items-center gap-0.5">';
+                for (let i = 1; i <= 5; i++) {
+                    html += i <= rating
+                        ? '<svg class="w-3.5 h-3.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.958a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.448a1 1 0 00-.363 1.118l1.287 3.958c.3.922-.755 1.688-1.539 1.118l-3.368-2.448a1 1 0 00-1.175 0l-3.368 2.448c-.783.57-1.838-.196-1.538-1.118l1.286-3.958a1 1 0 00-.363-1.118L2.235 9.385c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.951-.69l1.286-3.958z"/></svg>'
+                        : '<svg class="w-3.5 h-3.5 text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.958a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.448a1 1 0 00-.363 1.118l1.287 3.958c.3.922-.755 1.688-1.539 1.118l-3.368-2.448a1 1 0 00-1.175 0l-3.368 2.448c-.783.57-1.838-.196-1.538-1.118l1.286-3.958a1 1 0 00-.363-1.118L2.235 9.385c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.951-.69l1.286-3.958z"/></svg>';
+                }
+                return html + '</span>';
+            }
+
+            function badge(value) {
+                return `<span class="inline-flex px-2 py-1 rounded-full text-xs font-medium ${statusColors[value] || 'bg-gray-100 text-gray-600'}">${esc(value)}</span>`;
+            }
+
+            function buildQuery() {
+                const params = new URLSearchParams();
+                if (state.search) params.set('search', state.search);
+                if (state.status) params.set('status', state.status);
+                if (state.rating) params.set('rating', state.rating);
+                if (state.verified) params.set('verifiedOnly', 'true');
+                if (state.flagged) params.set('flaggedOnly', 'true');
+                params.set('page', state.page);
+                params.set('pageSize', state.pageSize);
+                return params.toString();
+            }
+
+            async function loadReviews() {
+                const html = await api('/api/admin/reviews?' + buildQuery());
+                state.page = html.page;
+                state.pageSize = html.pageSize;
+                state.totalCount = html.totalCount;
+                state.hasMore = html.hasMore;
+                renderReviews(html.items || [], html.totalCount || 0);
+            }
+
+            function renderReviews(items, totalCount) {
+                const tbody = document.getElementById('reviewsTableBody');
+                const cards = document.getElementById('reviewsCards');
+
+                if (items.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-10 text-center text-gray-500 text-sm">No reviews found.</td></tr>`;
+                    cards.innerHTML = `<div class="bg-white rounded-lg border p-6 text-center text-gray-500 text-sm">No reviews found.</div>`;
+                } else {
+                    tbody.innerHTML = items.map(item => `
+                        <tr class="hover:bg-gray-50 cursor-pointer" data-id="${esc(item.reviewId)}">
+                            <td class="px-6 py-4">
+                                <p class="text-sm font-medium text-gray-900 max-w-[280px] truncate">${esc(item.title || 'Untitled review')}</p>
+                                <p class="text-xs text-gray-500 max-w-[280px] truncate">${esc(item.body || item.title || '')}</p>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-700">${esc(item.productName)}</td>
+                            <td class="px-6 py-4 text-sm text-gray-700">${esc(item.customerDisplayName)}</td>
+                            <td class="px-6 py-4">${stars(item.rating)}</td>
+                            <td class="px-6 py-4">${badge(item.status)}</td>
+                            <td class="px-6 py-4 text-sm text-gray-700">${item.isVerifiedPurchase ? 'Verified' : '—'}${item.isFlagged ? ' <span class="text-amber-600 font-semibold">Flagged</span>' : ''}</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">${esc(new Date(item.createdAtUtc).toLocaleDateString())}</td>
+                        </tr>`).join('');
+                    cards.innerHTML = items.map(item => `
+                        <a href="/admin/reviews/${esc(item.reviewId)}" class="block bg-white rounded-lg border hover:border-brand-primary transition-colors p-4">
+                            <div class="flex items-center justify-between gap-2">
+                                <p class="text-sm font-medium text-gray-900 truncate">${esc(item.title || 'Untitled review')}</p>
+                                ${badge(item.status)}
+                            </div>
+                            <div class="flex items-center gap-2 mt-1">
+                                ${stars(item.rating)}
+                                <span class="text-xs text-gray-500">${esc(item.productName)}</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">${esc(item.customerDisplayName)} · ${esc(new Date(item.createdAtUtc).toLocaleDateString())}</p>
+                            <p class="text-xs text-gray-500 mt-0.5">${item.isVerifiedPurchase ? 'Verified purchase' : 'Not verified'}${item.isFlagged ? ' · <span class="text-amber-600 font-semibold">Flagged</span>' : ''}</p>
+                        </a>`).join('');
+                }
+
+                document.querySelectorAll('#reviewsTableBody tr[data-id]').forEach(row => {
+                    row.addEventListener('click', () => window.location = '/admin/reviews/' + row.getAttribute('data-id'));
+                });
+
+                const pagination = document.getElementById('pagination');
+                const hasPages = state.page > 1 || state.hasMore;
+                pagination.classList.toggle('hidden', !hasPages);
+                pagination.classList.toggle('flex', hasPages);
+                document.getElementById('pageInfo').textContent = `${totalCount} review(s)`;
+                document.getElementById('btnPrevPage').disabled = state.page <= 1;
+                document.getElementById('btnNextPage').disabled = !state.hasMore;
+            }
+
+            function refresh() {
+                state.page = 1;
+                loadReviews();
+            }
+
+            document.getElementById('btnApplySearch').addEventListener('click', () => {
+                state.search = document.getElementById('reviewSearch').value.trim();
+                refresh();
+            });
+            document.getElementById('reviewSearch').addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    state.search = document.getElementById('reviewSearch').value.trim();
+                    refresh();
+                }
+            });
+            document.querySelectorAll('.status-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    document.querySelectorAll('.status-chip').forEach(c => {
+                        c.className = 'status-chip px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border border-gray-300 text-gray-600 hover:bg-gray-50';
+                    });
+                    chip.className = 'status-chip px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-brand-primary text-white';
+                    state.status = chip.getAttribute('data-status') || '';
+                    refresh();
+                });
+            });
+            document.getElementById('btnVerified').addEventListener('click', function () {
+                state.verified = !state.verified;
+                this.classList.toggle('bg-brand-primary', state.verified);
+                this.classList.toggle('text-white', state.verified);
+                refresh();
+            });
+            document.getElementById('btnFlagged').addEventListener('click', function () {
+                state.flagged = !state.flagged;
+                this.classList.toggle('bg-brand-primary', state.flagged);
+                this.classList.toggle('text-white', state.flagged);
+                refresh();
+            });
+            document.getElementById('ratingFilter').addEventListener('change', e => {
+                state.rating = e.target.value;
+                refresh();
+            });
+            document.getElementById('btnPrevPage').addEventListener('click', () => {
+                if (state.page > 1) { state.page--; loadReviews(); }
+            });
+            document.getElementById('btnNextPage').addEventListener('click', () => {
+                if (state.hasMore) { state.page++; loadReviews(); }
+            });
+
+            loadReviews();
+        })();
+    </script>
+}

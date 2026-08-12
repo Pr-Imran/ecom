@@ -1,0 +1,95 @@
+@model FashionStore.Application.DTOs.Reviews.MyReviewsResultDto
+@{
+    Layout = "_AccountLayout";
+    ViewData["Title"] = "My Reviews";
+}
+
+<div class="space-y-4">
+    @if (TempData["ReviewMessage"] != null)
+    {
+        <div class="alert-success mb-4" role="alert">
+            <p class="text-sm">@TempData["ReviewMessage"]</p>
+        </div>
+    }
+
+    <div class="flex items-center justify-between">
+        <h1 class="text-xl font-bold text-brand-text-primary">My Reviews</h1>
+        @if (Model.TotalCount > 0)
+        {
+            <span class="text-sm text-brand-text-muted">@Model.TotalCount total</span>
+        }
+    </div>
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="card">
+            <div class="card-body text-center py-10">
+                <p class="text-sm text-brand-text-muted">You have not written any reviews yet.</p>
+                <p class="text-xs text-brand-text-muted mt-1">Reviewed a delivered purchase? Find it in your orders to leave a review.</p>
+                <a asp-controller="Order" asp-action="Index" class="btn-outline mt-4 text-sm">View my orders</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="space-y-3">
+            @foreach (var review in Model.Items)
+            {
+                <article class="card">
+                    <div class="card-body">
+                        <div class="flex items-start gap-3">
+                            @if (!string.IsNullOrEmpty(review.ProductImageUrl))
+                            {
+                                <img src="@review.ProductImageUrl" alt="@review.ProductName" class="w-16 h-16 rounded-lg object-cover flex-shrink-0" loading="lazy" />
+                            }
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-2">
+                                    <a asp-controller="Products" asp-action="Details" asp-route-slug="@review.ProductSlug"
+                                       class="text-sm font-semibold text-brand-text-primary hover:text-brand-primary truncate">@review.ProductName</a>
+                                    <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold @(review.Status == "Approved" ? "bg-emerald-50 text-emerald-700" : review.Status == "Pending" ? "bg-amber-50 text-amber-700" : review.Status == "Rejected" ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-600")">@review.Status</span>
+                                </div>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <div class="flex items-center gap-0.5">
+                                        @for (var s = 1; s <= 5; s++)
+                                        {
+                                            <svg class="w-3.5 h-3.5 @(s <= review.Rating ? "text-brand-accent" : "text-gray-300")" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.958a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.448a1 1 0 00-.363 1.118l1.287 3.958c.3.922-.755 1.688-1.539 1.118l-3.368-2.448a1 1 0 00-1.175 0l-3.368 2.448c-.783.57-1.838-.196-1.538-1.118l1.286-3.958a1 1 0 00-.363-1.118L2.235 9.385c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.951-.69l1.286-3.958z"/>
+                                            </svg>
+                                        }
+                                    </div>
+                                    <span class="text-xs text-brand-text-muted">@review.CreatedAtUtc.ToLocalTime().ToString("MMM d, yyyy")</span>
+                                </div>
+                                @if (!string.IsNullOrEmpty(review.Title))
+                                {
+                                    <p class="text-sm font-medium text-brand-text-primary mt-1">@review.Title</p>
+                                }
+                                <p class="text-xs text-brand-text-muted mt-0.5">
+                                    @(review.IsVerifiedPurchase ? "Verified purchase" : "Not verified") · @review.HelpfulCount helpful vote@(review.HelpfulCount == 1 ? "" : "s")
+                                </p>
+                                @if (review.Status == "Rejected")
+                                {
+                                    <a asp-controller="Reviews" asp-action="Write" asp-route-slug="@review.ProductSlug"
+                                       class="inline-block mt-2 text-xs font-semibold text-brand-primary hover:underline">Write a new review</a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            }
+        </div>
+
+        <nav class="flex items-center justify-between gap-3 pt-2" aria-label="Pagination">
+            <p class="text-sm text-brand-text-muted">Page @Model.Page of @(Model.HasMore ? (Model.Page + 1).ToString() : Model.Page.ToString())</p>
+            <div class="flex gap-2">
+                @if (Model.Page > 1)
+                {
+                    <a asp-action="MyReviews" asp-route-page="@(Model.Page - 1)" asp-route-pageSize="@Model.PageSize" class="btn-outline text-sm py-2 px-3">Previous</a>
+                }
+                @if (Model.HasMore)
+                {
+                    <a asp-action="MyReviews" asp-route-page="@(Model.Page + 1)" asp-route-pageSize="@Model.PageSize" class="btn-primary text-sm py-2 px-3">Next</a>
+                }
+            </div>
+        </nav>
+    }
+</div>

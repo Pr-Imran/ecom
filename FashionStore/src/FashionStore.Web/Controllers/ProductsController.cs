@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using FashionStore.Application.DTOs.Catalog;
 using FashionStore.Application.DTOs.Products;
+using FashionStore.Application.DTOs.Reviews;
 using FashionStore.Application.Interfaces;
 using FashionStore.Web.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +15,7 @@ public class ProductsController : Controller
     private readonly IProductDetailsService _productDetailsService;
     private readonly IAddToCartService _addToCartService;
     private readonly ICartService _cartService;
+    private readonly IReviewService _reviewService;
     private readonly ILogger<ProductsController> _logger;
 
     public ProductsController(
@@ -21,12 +23,14 @@ public class ProductsController : Controller
         IProductDetailsService productDetailsService,
         IAddToCartService addToCartService,
         ICartService cartService,
+        IReviewService reviewService,
         ILogger<ProductsController> logger)
     {
         _catalogService = catalogService;
         _productDetailsService = productDetailsService;
         _addToCartService = addToCartService;
         _cartService = cartService;
+        _reviewService = reviewService;
         _logger = logger;
     }
 
@@ -179,6 +183,30 @@ public class ProductsController : Controller
         RecentlyViewedCookie.Append(HttpContext, data.Id);
 
         ViewData["CanonicalUrl"] = $"{Request.Scheme}://{Request.Host}{Request.Path}";
+
+        if (data.AllowReviews)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var reviews = await _reviewService.GetReviewsAsync(
+                data.Id,
+                new ReviewQueryRequest(1, 3, "recent", null, null),
+                userId,
+                cancellationToken);
+
+            ReviewEligibilityDto? eligibility = null;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                eligibility = await _reviewService.GetEligibilityAsync(userId, data.Id, cancellationToken);
+            }
+
+            ViewData["ProductReviews"] = reviews;
+            ViewData["ReviewEligibility"] = eligibility;
+            ViewData["IsAuthenticated"] = !string.IsNullOrEmpty(userId);
+        }
+
+        ViewData["ProductSlug"] = data.Slug;
+        ViewData["ProductName"] = data.Name;
+
         return View(data);
     }
 
