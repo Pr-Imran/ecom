@@ -143,6 +143,8 @@ app.UseRouting();
 app.UseRateLimiter();
 app.UseAuthorization();
 
+app.UseMiddleware<MaintenanceModeMiddleware>();
+
 app.UseStaticFiles();
 
 var uploadsBasePath = Path.Combine(app.Environment.ContentRootPath, builder.Configuration["FileStorage:BasePath"] ?? "uploads");

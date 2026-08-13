@@ -1,0 +1,57 @@
+@model IEnumerable<FashionStore.Web.Controllers.FaqGroupViewModel>
+@{
+    ViewData["Title"] = "Frequently Asked Questions";
+    var groups = Model.ToList();
+}
+
+<!-- Page header -->
+<section class="listing-header bg-white border-b border-brand-border">
+    <div class="container mx-auto px-4 py-4 md:py-8">
+        <nav aria-label="Breadcrumb" class="text-xs text-brand-text-muted mb-1">
+            <a href="/" class="hover:text-brand-primary">Home</a>
+            <span class="mx-1">/</span>
+            <span class="text-brand-text-primary">FAQ</span>
+        </nav>
+        <h1 class="text-2xl md:text-3xl font-bold text-brand-text-primary">Frequently Asked Questions</h1>
+    </div>
+</section>
+
+<!-- FAQ content -->
+<section class="container mx-auto px-4 py-8 md:py-12">
+    @if (groups.Count == 0)
+    {
+        <div class="max-w-2xl mx-auto text-center bg-white rounded-lg border border-brand-border p-8">
+            <p class="text-brand-text-muted">No frequently asked questions yet. Check back soon.</p>
+        </div>
+    }
+    else
+    {
+        <div class="max-w-3xl mx-auto space-y-10">
+            @foreach (var group in groups)
+            {
+                <div>
+                    <h2 class="text-lg font-semibold text-brand-text-primary mb-4">@group.Category</h2>
+                    <div class="space-y-3">
+                        @foreach (var item in group.Items)
+                        {
+                            <details class="group bg-white rounded-lg border border-brand-border">
+                                <summary class="cursor-pointer px-5 py-4 font-medium text-brand-text-primary flex items-center justify-between gap-4 select-none">
+                                    <span>@item.Question</span>
+                                    <svg class="w-4 h-4 text-brand-text-muted shrink-0 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </summary>
+                                <div class="px-5 pb-4 text-sm text-brand-text-muted leading-relaxed">
+                                    @if (!string.IsNullOrEmpty(item.Answer))
+                                    {
+                                        @Html.Raw(item.Answer)
+                                    }
+                                </div>
+                            </details>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</section>

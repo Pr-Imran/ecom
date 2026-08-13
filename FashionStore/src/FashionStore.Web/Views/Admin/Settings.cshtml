@@ -1,0 +1,378 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Store Settings";
+    ViewData["PageTitle"] = "Store Settings";
+    var isSuperAdmin = (bool)ViewData["IsSuperAdmin"]!;
+}
+
+<div class="space-y-4 pb-28">
+    @if (!isSuperAdmin)
+    {
+        <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            You have view/edit access to general settings. Protected settings (business registration,
+            currency, timezone, invoice/return prefixes and maintenance mode) can only be changed by a
+            SuperAdmin.
+        </div>
+    }
+
+    <div id="settingsForm" class="space-y-4">
+        <div class="bg-white rounded-lg border p-6 text-center text-gray-500 text-sm">
+            <p>Loading settings...</p>
+        </div>
+    </div>
+
+    @* Sticky save bar *@
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t p-4 z-40">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-3">
+            <p id="saveMessage" class="text-xs text-gray-500"></p>
+            <button id="btnSaveSettings" class="px-6 py-2.5 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium">
+                Save Changes
+            </button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            'use strict';
+
+            const isSuperAdmin = @(isSuperAdmin ? "true" : "false");
+
+            function api(path, options) {
+                return fetch(path, options).then(async res => {
+                    if (res.ok) return res.json();
+                    let error = 'Request failed';
+                    try {
+                        const body = await res.json();
+                        error = body.error || body.title || error;
+                    } catch (e) { /* ignore */ }
+                    throw new Error(error);
+                });
+            }
+
+            function esc(value) {
+                if (value === null || value === undefined) return '';
+                return String(value).replace(/[&<>"']/g, c => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                }[c]));
+            }
+
+            function field(section, name, label, value, options) {
+                options = options || {};
+                const disabled = options.disabled ? ' disabled' : '';
+                const hint = options.hint ? `<p class="text-xs text-gray-500 mt-1">${esc(options.hint)}</p>` : '';
+                const input = options.type === 'textarea'
+                    ? `<textarea id="${section}_${name}" rows="${options.rows || 3}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"${disabled}>${esc(value)}</textarea>`
+                    : `<input type="${options.type || 'text'}" id="${section}_${name}" value="${esc(value)}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"${disabled} />`;
+                return `
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="${section}_${name}">${esc(label)}</label>
+                        ${input}
+                        ${hint}
+                    </div>`;
+            }
+
+            function toggleField(section, name, label, value, disabled) {
+                return `
+                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                        <input type="checkbox" id="${section}_${name}" class="rounded border-gray-300" ${value ? 'checked' : ''} ${disabled ? 'disabled' : ''} />
+                        ${esc(label)}
+                    </label>`;
+            }
+
+            function card(title, content) {
+                return `
+                    <div class="bg-white rounded-lg border shadow-sm overflow-hidden">
+                        <div class="px-6 py-4 border-b bg-gray-50">
+                            <h2 class="font-semibold text-gray-900">${esc(title)}</h2>
+                        </div>
+                        <div class="p-6">${content}</div>
+                    </div>`;
+            }
+
+            function buildForm(s) {
+                const protectedDisabled = !isSuperAdmin;
+                const protectedHint = isSuperAdmin ? '' : 'Protected setting — SuperAdmin only.';
+
+                const store = card('Store', `
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        ${field('store', 'storeName', 'Store name', s.store.storeName)}
+                        ${field('store', 'tagline', 'Tagline', s.store.tagline)}
+                    </div>
+                    <div class="mt-4">
+                        ${field('store', 'businessRegistration', 'Business registration', s.store.businessRegistration, { disabled: protectedDisabled, hint: protectedHint })}
+                    </div>
+                `);
+
+                const branding = card('Branding', `
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="branding_logoUrl">Logo URL</label>
+                            <div class="flex gap-3 items-start">
+                                <div class="flex-1">
+                                    <div class="flex gap-2">
+                                        <input type="text" id="branding_logoUrl" value="${esc(s.branding.logoUrl)}" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                                        <input type="file" id="branding_logoUpload" accept="image/jpeg,image/png,image/webp,image/avif" class="hidden" />
+                                        <button type="button" id="btnUploadLogo" class="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 whitespace-nowrap">Upload</button>
+                                    </div>
+                                </div>
+                                <div id="logoPreview" class="w-14 h-14 rounded-lg border bg-gray-100 flex items-center justify-center overflow-hidden text-gray-400">
+                                    ${s.branding.logoUrl ? `<img src="${esc(s.branding.logoUrl)}" class="w-full h-full object-contain" alt="Logo preview" />` : 'Logo'}
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="branding_faviconUrl">Favicon URL</label>
+                            <div class="flex gap-3 items-start">
+                                <div class="flex-1">
+                                    <div class="flex gap-2">
+                                        <input type="text" id="branding_faviconUrl" value="${esc(s.branding.faviconUrl)}" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                                        <input type="file" id="branding_faviconUpload" accept="image/jpeg,image/png,image/webp,image/avif" class="hidden" />
+                                        <button type="button" id="btnUploadFavicon" class="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 whitespace-nowrap">Upload</button>
+                                    </div>
+                                </div>
+                                <div id="faviconPreview" class="w-10 h-10 rounded-lg border bg-gray-100 flex items-center justify-center overflow-hidden text-gray-400">
+                                    ${s.branding.faviconUrl ? `<img src="${esc(s.branding.faviconUrl)}" class="w-full h-full object-contain" alt="Favicon preview" />` : 'Favicon'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="branding_accentColour">Accent colour</label>
+                            <div class="flex gap-3 items-center">
+                                <input type="color" id="branding_accentColour" value="${esc(s.branding.accentColour || '#000000')}" class="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer" />
+                                <input type="text" id="branding_accentColourHex" value="${esc(s.branding.accentColour)}" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="#000000" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                        ${field('branding', 'facebookUrl', 'Facebook URL', s.branding.facebookUrl)}
+                        ${field('branding', 'instagramUrl', 'Instagram URL', s.branding.instagramUrl)}
+                        ${field('branding', 'twitterUrl', 'Twitter / X URL', s.branding.twitterUrl)}
+                        ${field('branding', 'youTubeUrl', 'YouTube URL', s.branding.youTubeUrl)}
+                    </div>
+                `);
+
+                const contact = card('Contact', `
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        ${field('contact', 'contactEmail', 'Contact email', s.contact.contactEmail, { type: 'email' })}
+                        ${field('contact', 'contactPhone', 'Contact phone', s.contact.contactPhone)}
+                    </div>
+                    <div class="mt-4">
+                        ${field('contact', 'address', 'Address', s.contact.address, { type: 'textarea', rows: 2 })}
+                    </div>
+                `);
+
+                const commerce = card('Commerce', `
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        ${field('commerce', 'currencyCode', 'Currency code', s.commerce.currencyCode, { disabled: protectedDisabled, hint: protectedHint })}
+                        ${field('commerce', 'currencySymbol', 'Currency symbol', s.commerce.currencySymbol, { disabled: protectedDisabled, hint: protectedHint })}
+                        ${field('commerce', 'timezone', 'Timezone', s.commerce.timezone, { disabled: protectedDisabled, hint: protectedHint })}
+                        ${field('commerce', 'returnWindowDays', 'Return window (days)', s.commerce.returnWindowDays)}
+                        ${field('commerce', 'invoicePrefix', 'Invoice prefix', s.commerce.invoicePrefix, { disabled: protectedDisabled, hint: protectedHint })}
+                        ${field('commerce', 'lowStockThreshold', 'Low stock threshold', s.commerce.lowStockThreshold)}
+                    </div>
+                    <div class="mt-4">
+                        ${field('commerce', 'lowStockAlertEmail', 'Low stock alert email', s.commerce.lowStockAlertEmail, { type: 'email' })}
+                    </div>
+                `);
+
+                const checkout = card('Checkout', `
+                    <div class="space-y-3">
+                        ${toggleField('checkout', 'guestCheckoutEnabled', 'Enable guest checkout', s.checkout.guestCheckoutEnabled)}
+                        ${toggleField('checkout', 'requiresTermsAcceptance', 'Require terms acceptance', s.checkout.requiresTermsAcceptance)}
+                        ${toggleField('checkout', 'requireGuestPhone', 'Require guest phone number', s.checkout.requireGuestPhone)}
+                    </div>
+                `);
+
+                const orders = card('Orders', `
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        ${field('orders', 'orderNumberPrefix', 'Order number prefix', s.orders.orderNumberPrefix)}
+                        ${field('orders', 'returnNumberPrefix', 'Return number prefix', s.orders.returnNumberPrefix, { disabled: protectedDisabled, hint: protectedHint })}
+                    </div>
+                `);
+
+                const seo = card('SEO', `
+                    <div class="space-y-4">
+                        ${field('seo', 'defaultMetaTitle', 'Default meta title', s.seo.defaultMetaTitle)}
+                        ${field('seo', 'defaultMetaDescription', 'Default meta description', s.seo.defaultMetaDescription, { type: 'textarea', rows: 2 })}
+                    </div>
+                `);
+
+                const maintenance = card('Maintenance', `
+                    <div class="space-y-4">
+                        ${toggleField('maintenance', 'maintenanceMode', 'Enable maintenance mode', s.maintenance.maintenanceMode, protectedDisabled)}
+                        ${field('maintenance', 'maintenanceMessage', 'Maintenance message', s.maintenance.maintenanceMessage, { disabled: protectedDisabled, hint: protectedHint })}
+                    </div>
+                `);
+
+                const reviews = card('Reviews', `
+                    <div class="space-y-3">
+                        ${toggleField('reviews', 'autoApproveReviews', 'Auto-approve new reviews', s.reviews.autoApproveReviews)}
+                        ${toggleField('reviews', 'enableAnonymousReviews', 'Allow anonymous reviews', s.reviews.enableAnonymousReviews)}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="reviews_maxImagesPerReview">Max images per review</label>
+                            <input type="number" id="reviews_maxImagesPerReview" value="${s.reviews.maxImagesPerReview}" class="w-full sm:w-40 border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                        </div>
+                    </div>
+                `);
+
+                return store + branding + contact + commerce + checkout + orders + seo + maintenance + reviews;
+            }
+
+            function bindPreview() {
+                const logoInput = document.getElementById('branding_logoUrl');
+                const faviconInput = document.getElementById('branding_faviconUrl');
+                const colorInput = document.getElementById('branding_accentColour');
+                const colorHex = document.getElementById('branding_accentColourHex');
+
+                logoInput.addEventListener('input', () => {
+                    const url = logoInput.value.trim();
+                    document.getElementById('logoPreview').innerHTML = url
+                        ? `<img src="${esc(url)}" class="w-full h-full object-contain" alt="Logo preview" />`
+                        : 'Logo';
+                });
+                faviconInput.addEventListener('input', () => {
+                    const url = faviconInput.value.trim();
+                    document.getElementById('faviconPreview').innerHTML = url
+                        ? `<img src="${esc(url)}" class="w-full h-full object-contain" alt="Favicon preview" />`
+                        : 'Favicon';
+                });
+                colorInput.addEventListener('input', () => {
+                    colorHex.value = colorInput.value;
+                });
+                colorHex.addEventListener('input', () => {
+                    const v = colorHex.value.trim();
+                    if (/^#[0-9a-fA-F]{6}$/.test(v)) colorInput.value = v;
+                });
+
+                const bindUpload = (btnId, fileId, targetId, previewId) => {
+                    const btn = document.getElementById(btnId);
+                    const fileInput = document.getElementById(fileId);
+                    btn.addEventListener('click', () => fileInput.click());
+                    fileInput.addEventListener('change', async e => {
+                        const file = e.target.files && e.target.files[0];
+                        if (!file) return;
+                        const data = new FormData();
+                        data.append('file', file);
+                        try {
+                            const result = await api('/api/admin/content/media', { method: 'POST', body: data });
+                            document.getElementById(targetId).value = result.url;
+                            const url = result.url;
+                            document.getElementById(previewId).innerHTML = `<img src="${esc(url)}" class="w-full h-full object-contain" alt="Preview" />`;
+                        } catch (err) { alert(err.message); }
+                        e.target.value = '';
+                    });
+                };
+                bindUpload('btnUploadLogo', 'branding_logoUpload', 'branding_logoUrl', 'logoPreview');
+                bindUpload('btnUploadFavicon', 'branding_faviconUpload', 'branding_faviconUrl', 'faviconPreview');
+            }
+
+            async function loadSettings() {
+                const s = await api('/api/admin/settings');
+                document.getElementById('settingsForm').innerHTML = buildForm(s);
+                bindPreview();
+            }
+
+            function sectionPayload(s, obj) {
+                return obj || null;
+            }
+
+            function collect() {
+                const g = id => document.getElementById(id).value;
+                const ck = id => document.getElementById(id).checked;
+
+                const sections = {
+                    store: isSuperAdmin ? {
+                        storeName: g('store_storeName'),
+                        tagline: g('store_tagline'),
+                        businessRegistration: g('store_businessRegistration')
+                    } : null,
+                    branding: {
+                        logoUrl: g('branding_logoUrl'),
+                        faviconUrl: g('branding_faviconUrl'),
+                        accentColour: g('branding_accentColourHex'),
+                        facebookUrl: g('branding_facebookUrl'),
+                        instagramUrl: g('branding_instagramUrl'),
+                        twitterUrl: g('branding_twitterUrl'),
+                        youTubeUrl: g('branding_youTubeUrl')
+                    },
+                    contact: {
+                        contactEmail: g('contact_contactEmail'),
+                        contactPhone: g('contact_contactPhone'),
+                        address: g('contact_address')
+                    },
+                    commerce: isSuperAdmin ? {
+                        currencyCode: g('commerce_currencyCode'),
+                        currencySymbol: g('commerce_currencySymbol'),
+                        timezone: g('commerce_timezone'),
+                        returnWindowDays: parseInt(g('commerce_returnWindowDays') || '30', 10),
+                        invoicePrefix: g('commerce_invoicePrefix'),
+                        lowStockThreshold: parseInt(g('commerce_lowStockThreshold') || '5', 10),
+                        lowStockAlertEmail: g('commerce_lowStockAlertEmail')
+                    } : {
+                        returnWindowDays: parseInt(g('commerce_returnWindowDays') || '30', 10),
+                        lowStockThreshold: parseInt(g('commerce_lowStockThreshold') || '5', 10),
+                        lowStockAlertEmail: g('commerce_lowStockAlertEmail')
+                    },
+                    checkout: {
+                        guestCheckoutEnabled: ck('checkout_guestCheckoutEnabled'),
+                        requiresTermsAcceptance: ck('checkout_requiresTermsAcceptance'),
+                        requireGuestPhone: ck('checkout_requireGuestPhone')
+                    },
+                    orders: isSuperAdmin ? {
+                        orderNumberPrefix: g('orders_orderNumberPrefix'),
+                        returnNumberPrefix: g('orders_returnNumberPrefix')
+                    } : {
+                        orderNumberPrefix: g('orders_orderNumberPrefix')
+                    },
+                    seo: {
+                        defaultMetaTitle: g('seo_defaultMetaTitle'),
+                        defaultMetaDescription: g('seo_defaultMetaDescription')
+                    },
+                    maintenance: isSuperAdmin ? {
+                        maintenanceMode: ck('maintenance_maintenanceMode'),
+                        maintenanceMessage: g('maintenance_maintenanceMessage')
+                    } : null,
+                    reviews: {
+                        autoApproveReviews: ck('reviews_autoApproveReviews'),
+                        enableAnonymousReviews: ck('reviews_enableAnonymousReviews'),
+                        maxImagesPerReview: parseInt(g('reviews_maxImagesPerReview') || '6', 10)
+                    }
+                };
+
+                return {
+                    store: sectionPayload('store', sections.store),
+                    branding: sections.branding,
+                    contact: sections.contact,
+                    commerce: sections.commerce,
+                    checkout: sections.checkout,
+                    orders: sections.orders,
+                    seo: sections.seo,
+                    maintenance: sectionPayload('maintenance', sections.maintenance),
+                    reviews: sections.reviews
+                };
+            }
+
+            document.getElementById('btnSaveSettings').addEventListener('click', async () => {
+                const message = document.getElementById('saveMessage');
+                message.textContent = 'Saving...';
+                try {
+                    await api('/api/admin/settings', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(collect())
+                    });
+                    message.textContent = 'Settings saved.';
+                    setTimeout(() => { message.textContent = ''; }, 3000);
+                } catch (err) {
+                    message.textContent = err.message;
+                }
+            });
+
+            loadSettings();
+        })();
+    </script>
+}

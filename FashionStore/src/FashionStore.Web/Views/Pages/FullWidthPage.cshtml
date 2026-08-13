@@ -1,0 +1,18 @@
+@model FashionStore.Application.DTOs.Content.ContentPageDto
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<!-- Full-width landing page body -->
+<article class="full-width-page">
+    @if (!string.IsNullOrEmpty(Model.BodyHtml))
+    {
+        @Html.Raw(Model.BodyHtml)
+    }
+    else
+    {
+        <div class="container mx-auto px-4 py-12 text-brand-text-muted">
+            <p>This page does not have any content yet.</p>
+        </div>
+    }
+</article>

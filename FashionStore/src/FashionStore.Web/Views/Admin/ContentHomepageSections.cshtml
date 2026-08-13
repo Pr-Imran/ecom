@@ -1,0 +1,306 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Homepage Sections";
+    ViewData["PageTitle"] = "Homepage Sections";
+}
+
+<div class="space-y-4 pb-28">
+    @* Header actions *@
+    <div class="flex justify-end">
+        <button id="btnNewSection" class="px-4 py-2.5 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium whitespace-nowrap">
+            Add Section
+        </button>
+    </div>
+
+    @* Reordering hint *@
+    <p class="text-xs text-gray-500">Sections render on the homepage in display order. Use the arrows to reorder.</p>
+
+    @* Preview cards with reorder controls *@
+    <div id="sectionsList" class="space-y-3">
+        <div class="bg-white rounded-lg border p-6 text-center text-gray-500 text-sm">
+            <p>Loading sections...</p>
+        </div>
+    </div>
+</div>
+
+@* Editor modal *@
+<div id="sectionModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 bg-black/40" data-close-modal></div>
+    <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center p-0 sm:p-6">
+        <div class="bg-white w-full sm:max-w-2xl rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between px-6 py-4 border-b">
+                <h3 id="modalTitle" class="text-lg font-semibold text-gray-900">New Section</h3>
+                <button class="btn-icon" data-close-modal aria-label="Close">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Section Type</label>
+                        <select id="fSectionType" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+                            <option value="custom">Custom</option>
+                            <option value="promo">Promo</option>
+                            <option value="benefits">Benefits</option>
+                            <option value="lookbook">Lookbook</option>
+                            <option value="newsletter">Newsletter</option>
+                            <option value="hero">Hero</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <select id="fStatus" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+                            <option value="Draft">Draft</option>
+                            <option value="Published">Published</option>
+                            <option value="Archived">Archived</option>
+                        </select>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                        <input type="text" id="fTitle" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Subtitle</label>
+                        <input type="text" id="fSubtitle" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Display Order</label>
+                        <input type="number" id="fOrder" value="0" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Start Date (UTC)</label>
+                        <input type="datetime-local" id="fStart" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">End Date (UTC)</label>
+                        <input type="datetime-local" id="fEnd" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Custom HTML</label>
+                        <textarea id="fHtml" rows="6" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-brand-primary" placeholder="<h3>Your custom content</h3>"></textarea>
+                        <p class="text-xs text-gray-500 mt-1">HTML is sanitized on save. Scripts and unsafe markup are stripped.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center justify-between px-6 py-4 border-t">
+                <span id="deleteSectionBtnWrap" class="hidden">
+                    <button id="btnDeleteSection" class="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700">Delete</button>
+                </span>
+                <div class="flex gap-2 ml-auto">
+                    <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50" data-close-modal>Cancel</button>
+                    <button id="btnSaveSection" class="px-4 py-2 text-sm font-medium bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            'use strict';
+
+            const statusColors = {
+                Published: 'bg-emerald-50 text-emerald-700',
+                Draft: 'bg-amber-50 text-amber-700',
+                Archived: 'bg-gray-100 text-gray-600'
+            };
+
+            let editingId = null;
+            let sections = [];
+
+            function api(path, options) {
+                return fetch(path, options).then(async res => {
+                    if (res.ok) return res.json();
+                    let error = 'Request failed';
+                    try {
+                        const body = await res.json();
+                        error = body.error || body.title || error;
+                    } catch (e) { /* ignore */ }
+                    throw new Error(error);
+                });
+            }
+
+            function esc(value) {
+                if (value === null || value === undefined) return '';
+                return String(value).replace(/[&<>"']/g, c => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                }[c]));
+            }
+
+            function badge(value) {
+                return `<span class="inline-flex px-2 py-1 rounded-full text-xs font-medium ${statusColors[value] || 'bg-gray-100 text-gray-600'}">${esc(value)}</span>`;
+            }
+
+            async function loadSections() {
+                sections = await api('/api/admin/content/homepage-sections');
+                const container = document.getElementById('sectionsList');
+
+                if (sections.length === 0) {
+                    container.innerHTML = `<div class="bg-white rounded-lg border p-6 text-center text-gray-500 text-sm"><p>No homepage sections yet.</p></div>`;
+                    return;
+                }
+
+                container.innerHTML = sections.map((section, index) => `
+                    <div class="bg-white rounded-lg border shadow-sm overflow-hidden cursor-pointer hover:border-brand-primary/50 transition-colors" data-section-id="${section.id}">
+                        <div class="flex items-center gap-3 p-4">
+                            <div class="flex flex-col gap-1 shrink-0">
+                                <button class="reorder-up p-1 text-gray-400 hover:text-brand-primary ${index === 0 ? 'opacity-30 pointer-events-none' : ''}" data-id="${section.id}" aria-label="Move up">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+                                </button>
+                                <button class="reorder-down p-1 text-gray-400 hover:text-brand-primary ${index === sections.length - 1 ? 'opacity-30 pointer-events-none' : ''}" data-id="${section.id}" aria-label="Move down">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </button>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h3 class="font-semibold text-gray-900 truncate">${esc(section.title)}</h3>
+                                    ${badge(section.status)}
+                                </div>
+                                <p class="text-sm text-gray-500 mt-0.5">${esc(section.sectionType)} &middot; Order ${section.displayOrder}</p>
+                            </div>
+                            <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </div>
+                    </div>
+                `).join('');
+
+                container.querySelectorAll('[data-section-id]').forEach(el => {
+                    el.addEventListener('click', e => {
+                        if (e.target.closest('.reorder-up') || e.target.closest('.reorder-down')) return;
+                        openEditor(el.dataset.sectionId);
+                    });
+                });
+
+                container.querySelectorAll('.reorder-up').forEach(btn => {
+                    btn.addEventListener('click', e => { e.stopPropagation(); reorder(btn.dataset.id, -1); });
+                });
+                container.querySelectorAll('.reorder-down').forEach(btn => {
+                    btn.addEventListener('click', e => { e.stopPropagation(); reorder(btn.dataset.id, 1); });
+                });
+            }
+
+            async function reorder(id, delta) {
+                const index = sections.findIndex(s => s.id === id);
+                const target = index + delta;
+                if (index < 0 || target < 0 || target >= sections.length) return;
+
+                const current = sections[index];
+                const other = sections[target];
+
+                await api('/api/admin/content/homepage-sections/' + current.id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(toPayload({ ...current, displayOrder: other.displayOrder }))
+                });
+                await api('/api/admin/content/homepage-sections/' + other.id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(toPayload({ ...other, displayOrder: current.displayOrder }))
+                });
+                await loadSections();
+            }
+
+            function toPayload(section) {
+                return {
+                    sectionType: section.sectionType,
+                    title: section.title,
+                    subtitle: section.subtitle,
+                    contentJson: section.contentJson,
+                    html: section.html,
+                    displayOrder: section.displayOrder,
+                    status: section.status,
+                    startAtUtc: section.startAtUtc,
+                    endAtUtc: section.endAtUtc
+                };
+            }
+
+            function openEditor(id) {
+                editingId = id || null;
+                document.getElementById('modalTitle').textContent = id ? 'Edit Section' : 'New Section';
+                document.getElementById('deleteSectionBtnWrap').classList.toggle('hidden', !id);
+
+                const empty = () => {
+                    document.getElementById('fSectionType').value = 'custom';
+                    document.getElementById('fTitle').value = '';
+                    document.getElementById('fSubtitle').value = '';
+                    document.getElementById('fHtml').value = '';
+                    document.getElementById('fOrder').value = '0';
+                    document.getElementById('fStatus').value = 'Draft';
+                    document.getElementById('fStart').value = '';
+                    document.getElementById('fEnd').value = '';
+                    document.getElementById('sectionModal').classList.remove('hidden');
+                };
+
+                if (id) {
+                    const section = sections.find(s => s.id === id);
+                    if (!section) { empty(); return; }
+                    document.getElementById('fSectionType').value = section.sectionType || 'custom';
+                    document.getElementById('fTitle').value = section.title || '';
+                    document.getElementById('fSubtitle').value = section.subtitle || '';
+                    document.getElementById('fHtml').value = section.html || '';
+                    document.getElementById('fOrder').value = section.displayOrder ?? 0;
+                    document.getElementById('fStatus').value = section.status || 'Draft';
+                    document.getElementById('fStart').value = toLocal(section.startAtUtc);
+                    document.getElementById('fEnd').value = toLocal(section.endAtUtc);
+                    document.getElementById('sectionModal').classList.remove('hidden');
+                } else {
+                    empty();
+                }
+            }
+
+            function toLocal(iso) {
+                if (!iso) return '';
+                const d = new Date(iso);
+                const pad = n => String(n).padStart(2, '0');
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            }
+
+            function payload() {
+                return JSON.stringify({
+                    sectionType: document.getElementById('fSectionType').value,
+                    title: document.getElementById('fTitle').value,
+                    subtitle: document.getElementById('fSubtitle').value,
+                    contentJson: null,
+                    html: document.getElementById('fHtml').value,
+                    displayOrder: parseInt(document.getElementById('fOrder').value || '0', 10),
+                    status: document.getElementById('fStatus').value,
+                    startAtUtc: document.getElementById('fStart').value ? new Date(document.getElementById('fStart').value).toISOString() : null,
+                    endAtUtc: document.getElementById('fEnd').value ? new Date(document.getElementById('fEnd').value).toISOString() : null
+                });
+            }
+
+            function bindModal() {
+                const modal = document.getElementById('sectionModal');
+                modal.querySelectorAll('[data-close-modal]').forEach(el => el.addEventListener('click', () => modal.classList.add('hidden')));
+
+                document.getElementById('btnSaveSection').addEventListener('click', async () => {
+                    const options = {
+                        method: editingId ? 'PUT' : 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: payload()
+                    };
+                    const path = editingId ? '/api/admin/content/homepage-sections/' + editingId : '/api/admin/content/homepage-sections';
+                    try {
+                        await api(path, options);
+                        modal.classList.add('hidden');
+                        await loadSections();
+                    } catch (err) { alert(err.message); }
+                });
+
+                document.getElementById('btnDeleteSection').addEventListener('click', async () => {
+                    if (!editingId) return;
+                    if (!confirm('Delete this homepage section?')) return;
+                    try {
+                        await api('/api/admin/content/homepage-sections/' + editingId, { method: 'DELETE' });
+                        modal.classList.add('hidden');
+                        await loadSections();
+                    } catch (err) { alert(err.message); }
+                });
+            }
+
+            document.getElementById('btnNewSection').addEventListener('click', () => openEditor(null));
+            bindModal();
+            loadSections();
+        })();
+    </script>
+}

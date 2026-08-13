@@ -1,0 +1,39 @@
+@model IReadOnlyList<HomeBannerDto>
+
+@if (Model.Count == 0)
+{
+    return;
+}
+
+<section class="container mx-auto px-4 mt-6 md:mt-10">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-5">
+        @foreach (var banner in Model)
+        {
+            <a href="@(banner.LinkUrl ?? "#")"
+               class="@(banner.Style == "secondary" ? "bg-brand-secondary" : banner.Style == "dark" ? "bg-gray-900" : "bg-brand-primary") relative rounded-brand overflow-hidden text-white block group">
+                @if (!string.IsNullOrEmpty(banner.ImageUrl))
+                {
+                    <img src="@banner.ImageUrl" alt="@banner.Title" class="absolute inset-0 w-full h-full object-cover opacity-20" />
+                }
+                <div class="relative p-6 md:p-8 min-h-[140px] flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-lg md:text-xl font-bold">@banner.Title</h3>
+                        @if (!string.IsNullOrEmpty(banner.Subtitle))
+                        {
+                            <p class="text-white/80 text-sm mt-1">@banner.Subtitle</p>
+                        }
+                    </div>
+                    @if (!string.IsNullOrEmpty(banner.LinkText))
+                    {
+                        <span class="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold group-hover:underline underline-offset-4">
+                            @banner.LinkText
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                            </svg>
+                        </span>
+                    }
+                </div>
+            </a>
+        }
+    </div>
+</section>

@@ -1,0 +1,327 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Banners";
+    ViewData["PageTitle"] = "Banners";
+}
+
+<div class="space-y-4 pb-28">
+    @* Header actions *@
+    <div class="flex justify-end">
+        <button id="btnNewBanner" class="px-4 py-2.5 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium whitespace-nowrap">
+            Add Banner
+        </button>
+    </div>
+
+    @* Preview cards *@
+    <div id="bannersList" class="space-y-3">
+        <div class="bg-white rounded-lg border p-6 text-center text-gray-500 text-sm">
+            <p>Loading banners...</p>
+        </div>
+    </div>
+</div>
+
+@* Editor modal *@
+<div id="bannerModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 bg-black/40" data-close-modal></div>
+    <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center p-0 sm:p-6">
+        <div class="bg-white w-full sm:max-w-2xl rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between px-6 py-4 border-b">
+                <h3 id="modalTitle" class="text-lg font-semibold text-gray-900">New Banner</h3>
+                <button class="btn-icon" data-close-modal aria-label="Close">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4">
+                @* Image preview *@
+                <div class="flex items-center gap-4">
+                    <img id="imagePreview" src="" alt="Banner preview" class="hidden w-24 h-16 object-cover rounded-lg border border-gray-200 bg-gray-100" />
+                    <div class="text-sm text-gray-500">Image preview appears here when an image URL is set.</div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                        <input type="text" id="fName" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Placement</label>
+                        <select id="fPlacement" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+                            <option value="Homepage">Homepage</option>
+                            <option value="Announcement">Announcement</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                        <input type="text" id="fTitle" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Subtitle</label>
+                        <input type="text" id="fSubtitle" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
+                        <div class="flex gap-2">
+                            <input type="url" id="fImageUrl" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                            <input type="file" id="fImageUpload" accept="image/jpeg,image/png,image/webp,image/avif" class="hidden" />
+                            <button type="button" id="btnUploadImage" class="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 whitespace-nowrap">Upload</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Link URL</label>
+                        <input type="url" id="fLinkUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Link Text</label>
+                        <input type="text" id="fLinkText" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Style</label>
+                        <select id="fStyle" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+                            <option value="primary">Primary</option>
+                            <option value="secondary">Secondary</option>
+                            <option value="dark">Dark</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <select id="fStatus" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+                            <option value="Draft">Draft</option>
+                            <option value="Published">Published</option>
+                            <option value="Archived">Archived</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Display Order</label>
+                        <input type="number" id="fOrder" value="0" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Start Date (UTC)</label>
+                        <input type="datetime-local" id="fStart" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">End Date (UTC)</label>
+                        <input type="datetime-local" id="fEnd" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center justify-between px-6 py-4 border-t">
+                <span id="deleteBannerBtnWrap" class="hidden">
+                    <button id="btnDeleteBanner" class="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700">Delete</button>
+                </span>
+                <div class="flex gap-2 ml-auto">
+                    <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50" data-close-modal>Cancel</button>
+                    <button id="btnSaveBanner" class="px-4 py-2 text-sm font-medium bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            'use strict';
+
+            const statusColors = {
+                Published: 'bg-emerald-50 text-emerald-700',
+                Draft: 'bg-amber-50 text-amber-700',
+                Archived: 'bg-gray-100 text-gray-600'
+            };
+
+            let editingId = null;
+
+            function api(path, options) {
+                return fetch(path, options).then(async res => {
+                    if (res.ok) return res.json();
+                    let error = 'Request failed';
+                    try {
+                        const body = await res.json();
+                        error = body.error || body.title || error;
+                    } catch (e) { /* ignore */ }
+                    throw new Error(error);
+                });
+            }
+
+            function esc(value) {
+                if (value === null || value === undefined) return '';
+                return String(value).replace(/[&<>"']/g, c => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                }[c]));
+            }
+
+            function badge(value) {
+                return `<span class="inline-flex px-2 py-1 rounded-full text-xs font-medium ${statusColors[value] || 'bg-gray-100 text-gray-600'}">${esc(value)}</span>`;
+            }
+
+            function inSchedule(banner) {
+                const now = Date.now();
+                const start = banner.startAtUtc ? new Date(banner.startAtUtc).getTime() : null;
+                const end = banner.endAtUtc ? new Date(banner.endAtUtc).getTime() : null;
+                return (!start || start <= now) && (!end || end > now);
+            }
+
+            async function loadBanners() {
+                const banners = await api('/api/admin/content/banners');
+                const container = document.getElementById('bannersList');
+
+                if (banners.length === 0) {
+                    container.innerHTML = `<div class="bg-white rounded-lg border p-6 text-center text-gray-500 text-sm"><p>No banners yet. Add one to get started.</p></div>`;
+                    return;
+                }
+
+                container.innerHTML = banners.map(banner => `
+                    <div class="bg-white rounded-lg border shadow-sm overflow-hidden cursor-pointer hover:border-brand-primary/50 transition-colors" data-banner-id="${banner.id}">
+                        <div class="flex items-center gap-4 p-4">
+                            ${banner.imageUrl
+                                ? `<img src="${esc(banner.imageUrl)}" alt="" class="w-24 h-16 object-cover rounded-lg border border-gray-200" />`
+                                : `<div class="w-24 h-16 rounded-lg bg-${banner.style === 'secondary' ? 'brand-secondary' : 'brand-primary'} flex items-center justify-center text-white text-2xs font-semibold uppercase">Banner</div>`}
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h3 class="font-semibold text-gray-900 truncate">${esc(banner.title || banner.name)}</h3>
+                                    ${badge(banner.status)}
+                                </div>
+                                <p class="text-sm text-gray-500 mt-0.5">${esc(banner.name)} &middot; ${esc(banner.placement)}</p>
+                                <p class="text-xs text-gray-400 mt-1">
+                                    Order ${banner.displayOrder} &middot; ${banner.status === 'Published' ? (inSchedule(banner) ? 'Active' : 'Scheduled') : 'Hidden'}
+                                </p>
+                            </div>
+                            <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </div>
+                    </div>
+                `).join('');
+
+                container.querySelectorAll('[data-banner-id]').forEach(el => {
+                    el.addEventListener('click', () => openEditor(el.dataset.bannerId));
+                });
+            }
+
+            function openEditor(id) {
+                editingId = id || null;
+                document.getElementById('modalTitle').textContent = id ? 'Edit Banner' : 'New Banner';
+                document.getElementById('deleteBannerBtnWrap').classList.toggle('hidden', !id);
+
+                const empty = () => {
+                    document.getElementById('fName').value = '';
+                    document.getElementById('fTitle').value = '';
+                    document.getElementById('fSubtitle').value = '';
+                    document.getElementById('fImageUrl').value = '';
+                    document.getElementById('fLinkUrl').value = '';
+                    document.getElementById('fLinkText').value = '';
+                    document.getElementById('fStyle').value = 'primary';
+                    document.getElementById('fPlacement').value = 'Homepage';
+                    document.getElementById('fOrder').value = '0';
+                    document.getElementById('fStatus').value = 'Draft';
+                    document.getElementById('fStart').value = '';
+                    document.getElementById('fEnd').value = '';
+                    updatePreview();
+                    document.getElementById('bannerModal').classList.remove('hidden');
+                };
+
+                if (id) {
+                    api('/api/admin/content/banners').then(all => {
+                        const banner = all.find(b => b.id === id);
+                        if (!banner) { empty(); return; }
+                        document.getElementById('fName').value = banner.name || '';
+                        document.getElementById('fTitle').value = banner.title || '';
+                        document.getElementById('fSubtitle').value = banner.subtitle || '';
+                        document.getElementById('fImageUrl').value = banner.imageUrl || '';
+                        document.getElementById('fLinkUrl').value = banner.linkUrl || '';
+                        document.getElementById('fLinkText').value = banner.linkText || '';
+                        document.getElementById('fStyle').value = banner.style || 'primary';
+                        document.getElementById('fPlacement').value = banner.placement || 'Homepage';
+                        document.getElementById('fOrder').value = banner.displayOrder ?? 0;
+                        document.getElementById('fStatus').value = banner.status || 'Draft';
+                        document.getElementById('fStart').value = toLocal(banner.startAtUtc);
+                        document.getElementById('fEnd').value = toLocal(banner.endAtUtc);
+                        updatePreview();
+                        document.getElementById('bannerModal').classList.remove('hidden');
+                    }).catch(err => alert(err.message));
+                } else {
+                    empty();
+                }
+            }
+
+            function toLocal(iso) {
+                if (!iso) return '';
+                const d = new Date(iso);
+                const pad = n => String(n).padStart(2, '0');
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            }
+
+            function updatePreview() {
+                const url = document.getElementById('fImageUrl').value;
+                const img = document.getElementById('imagePreview');
+                if (url) {
+                    img.src = url;
+                    img.classList.remove('hidden');
+                } else {
+                    img.classList.add('hidden');
+                    img.src = '';
+                }
+            }
+
+            function payload() {
+                return JSON.stringify({
+                    name: document.getElementById('fName').value,
+                    title: document.getElementById('fTitle').value,
+                    subtitle: document.getElementById('fSubtitle').value,
+                    imageUrl: document.getElementById('fImageUrl').value,
+                    linkUrl: document.getElementById('fLinkUrl').value,
+                    linkText: document.getElementById('fLinkText').value,
+                    style: document.getElementById('fStyle').value,
+                    placement: document.getElementById('fPlacement').value,
+                    displayOrder: parseInt(document.getElementById('fOrder').value || '0', 10),
+                    status: document.getElementById('fStatus').value,
+                    startAtUtc: document.getElementById('fStart').value ? new Date(document.getElementById('fStart').value).toISOString() : null,
+                    endAtUtc: document.getElementById('fEnd').value ? new Date(document.getElementById('fEnd').value).toISOString() : null
+                });
+            }
+
+            function bindModal() {
+                const modal = document.getElementById('bannerModal');
+                modal.querySelectorAll('[data-close-modal]').forEach(el => el.addEventListener('click', () => modal.classList.add('hidden')));
+                document.getElementById('fImageUrl').addEventListener('input', updatePreview);
+                document.getElementById('btnUploadImage').addEventListener('click', () => document.getElementById('fImageUpload').click());
+                document.getElementById('fImageUpload').addEventListener('change', async e => {
+                    const file = e.target.files && e.target.files[0];
+                    if (!file) return;
+                    const data = new FormData();
+                    data.append('file', file);
+                    try {
+                        const result = await api('/api/admin/content/media', { method: 'POST', body: data });
+                        document.getElementById('fImageUrl').value = result.url;
+                        updatePreview();
+                    } catch (err) { alert(err.message); }
+                    e.target.value = '';
+                });
+
+                document.getElementById('btnSaveBanner').addEventListener('click', async () => {
+                    const options = {
+                        method: editingId ? 'PUT' : 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: payload()
+                    };
+                    const path = editingId ? '/api/admin/content/banners/' + editingId : '/api/admin/content/banners';
+                    try {
+                        await api(path, options);
+                        modal.classList.add('hidden');
+                        await loadBanners();
+                    } catch (err) { alert(err.message); }
+                });
+
+                document.getElementById('btnDeleteBanner').addEventListener('click', async () => {
+                    if (!editingId) return;
+                    if (!confirm('Delete this banner?')) return;
+                    try {
+                        await api('/api/admin/content/banners/' + editingId, { method: 'DELETE' });
+                        modal.classList.add('hidden');
+                        await loadBanners();
+                    } catch (err) { alert(err.message); }
+                });
+            }
+
+            document.getElementById('btnNewBanner').addEventListener('click', () => openEditor(null));
+            bindModal();
+            loadBanners();
+        })();
+    </script>
+}

@@ -15,17 +15,20 @@ public class AdminController : ControllerBase
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<ApplicationRole> _roleManager;
     private readonly IRoleSeeder _roleSeeder;
+    private readonly IContentSeeder _contentSeeder;
     private readonly ILogger<AdminController> _logger;
 
     public AdminController(
         UserManager<ApplicationUser> userManager,
         RoleManager<ApplicationRole> roleManager,
         IRoleSeeder roleSeeder,
+        IContentSeeder contentSeeder,
         ILogger<AdminController> logger)
     {
         _userManager = userManager;
         _roleManager = roleManager;
         _roleSeeder = roleSeeder;
+        _contentSeeder = contentSeeder;
         _logger = logger;
     }
 
@@ -42,6 +45,22 @@ public class AdminController : ControllerBase
         {
             _logger.LogError(ex, "Failed to seed roles");
             return StatusCode(500, new { error = "Failed to seed roles", details = ex.Message });
+        }
+    }
+
+    [HttpPost("seed-content")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SeedContent(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _contentSeeder.SeedAsync(cancellationToken);
+            return Ok(new { message = "Default content seeded successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to seed default content");
+            return StatusCode(500, new { error = "Failed to seed default content", details = ex.Message });
         }
     }
 

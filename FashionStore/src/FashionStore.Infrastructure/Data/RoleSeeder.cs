@@ -216,6 +216,7 @@ public class RoleSeeder : IRoleSeeder
                 Customers.View, Customers.Update,
                 Reviews.Manage, Promotions.Manage, Coupons.Manage, Shipping.Manage, Content.Manage,
                 ApplicationPermissions.Emails.Manage,
+                Settings.Manage,
                 Reports.View,
                 Users.Manage,
                 AuditLogs.View

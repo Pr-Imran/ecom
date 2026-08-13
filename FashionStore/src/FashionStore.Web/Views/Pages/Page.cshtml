@@ -1,0 +1,34 @@
+@model FashionStore.Application.DTOs.Content.ContentPageDto
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<!-- Page header -->
+<section class="listing-header bg-white border-b border-brand-border">
+    <div class="container mx-auto px-4 py-4 md:py-8">
+        <nav aria-label="Breadcrumb" class="text-xs text-brand-text-muted mb-1">
+            <a href="/" class="hover:text-brand-primary">Home</a>
+            <span class="mx-1">/</span>
+            <span class="text-brand-text-primary">@Model.Title</span>
+        </nav>
+        <h1 class="text-2xl md:text-3xl font-bold text-brand-text-primary">@Model.Title</h1>
+        @if (!string.IsNullOrEmpty(Model.Summary))
+        {
+            <p class="text-sm text-brand-text-muted mt-1">@Model.Summary</p>
+        }
+    </div>
+</section>
+
+<!-- Page body -->
+<section class="container mx-auto px-4 py-8 md:py-12">
+    <article class="prose prose-brand max-w-3xl mx-auto text-brand-text-primary leading-relaxed">
+        @if (!string.IsNullOrEmpty(Model.BodyHtml))
+        {
+            @Html.Raw(Model.BodyHtml)
+        }
+        else
+        {
+            <p class="text-brand-text-muted">This page does not have any content yet.</p>
+        }
+    </article>
+</section>

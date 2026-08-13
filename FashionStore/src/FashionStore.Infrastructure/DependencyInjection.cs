@@ -63,6 +63,10 @@ public static class DependencyInjection
             .GetSection(EmailSettings.SectionName)
             .Get<EmailSettings>() ?? new EmailSettings();
 
+        var storeSettings = configuration
+            .GetSection(StoreSettings.SectionName)
+            .Get<StoreSettings>() ?? new StoreSettings();
+
         services.AddSingleton(cacheSettings);
         services.AddSingleton(fileStorageSettings);
         services.AddSingleton(imageSettings);
@@ -70,6 +74,7 @@ public static class DependencyInjection
         services.AddSingleton(inventorySettings);
         services.AddSingleton(homePageSettings);
         services.AddSingleton(emailSettings);
+        services.AddSingleton(storeSettings);
         services.AddDistributedMemoryCache();
 
         services.AddDbContext<AppDbContext>(options =>
@@ -118,6 +123,7 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IRoleSeeder, RoleSeeder>();
+        services.AddScoped<IContentSeeder, ContentSeeder>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<FashionStore.Application.Services.INavigationService, NavigationService>();
         services.AddScoped<ICategoryService, CategoryService>();
@@ -169,6 +175,8 @@ public static class DependencyInjection
         services.AddScoped<IEmailTemplateRenderer, RazorEmailTemplateRenderer>();
         services.AddScoped<IEmailNotificationService, EmailNotificationService>();
         services.AddScoped<IEmailAdminService, EmailAdminService>();
+        services.AddScoped<IContentManagementService, ContentManagementService>();
+        services.AddScoped<IWebsiteSettingsService, WebsiteSettingsService>();
         services.AddTransient<SendQueuedEmailsJob>();
         services.AddTransient<ExpireUnpaidOrdersJob>();
         services.AddTransient<ScheduledPromotionsJob>();
@@ -224,6 +232,12 @@ public static class DependencyInjection
             options.AddPolicy(EmailPolicies.EmailsManage, policy =>
                 policy.RequireAuthenticatedUser()
                       .RequireClaim("permission", ApplicationPermissions.Emails.Manage));
+            options.AddPolicy(ContentPolicies.ContentManage, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireClaim("permission", ApplicationPermissions.Content.Manage));
+            options.AddPolicy(SettingsPolicies.SettingsManage, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireClaim("permission", ApplicationPermissions.Settings.Manage));
         });
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>("database");

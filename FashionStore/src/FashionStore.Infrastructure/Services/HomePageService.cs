@@ -7,6 +7,7 @@ using FashionStore.Application.DTOs.Navigation;
 using FashionStore.Application.Interfaces;
 using FashionStore.Application.Services;
 using FashionStore.Domain.Entities;
+using FashionStore.Domain.Enums;
 using FashionStore.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
@@ -25,6 +26,7 @@ public sealed class HomePageService : IHomePageService
     private readonly IDistributedCache _cache;
     private readonly IFileStorageService _storage;
     private readonly INavigationService _navigation;
+    private readonly IContentManagementService _content;
     private readonly HomePageSettings _settings;
     private readonly CacheSettings _cacheSettings;
     private readonly ILogger<HomePageService> _logger;
@@ -34,6 +36,7 @@ public sealed class HomePageService : IHomePageService
         IDistributedCache cache,
         IFileStorageService storage,
         INavigationService navigation,
+        IContentManagementService content,
         HomePageSettings settings,
         CacheSettings cacheSettings,
         ILogger<HomePageService> logger)
@@ -42,6 +45,7 @@ public sealed class HomePageService : IHomePageService
         _cache = cache;
         _storage = storage;
         _navigation = navigation;
+        _content = content;
         _settings = settings;
         _cacheSettings = cacheSettings;
         _logger = logger;
@@ -122,6 +126,27 @@ public sealed class HomePageService : IHomePageService
             ? await GetBrandsAsync(cancellationToken)
             : new List<HomeBrandDto>();
 
+        var dbBanners = await _content.GetActiveBannersAsync(BannerPlacement.Homepage, cancellationToken);
+        var banners = dbBanners
+            .Select(b => new HomeBannerDto(
+                b.Title ?? b.Name,
+                b.Subtitle,
+                b.ImageUrl,
+                b.LinkUrl,
+                b.LinkText,
+                b.Style))
+            .ToList();
+
+        var dbSections = await _content.GetActiveHomepageSectionsAsync(cancellationToken);
+        var sections = dbSections
+            .Select(s => new HomePageSectionData(
+                s.SectionType,
+                s.Title,
+                s.Subtitle,
+                s.ContentJson,
+                s.Html))
+            .ToList();
+
         return new HomePageData(
             announcements,
             hero,
@@ -135,7 +160,9 @@ public sealed class HomePageService : IHomePageService
             brands,
             benefits,
             lookbook,
-            _settings.EnableNewsletter);
+            _settings.EnableNewsletter,
+            banners,
+            sections);
     }
 
     private LookbookDto? BuildLookbook()

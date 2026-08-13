@@ -21,8 +21,27 @@ public sealed record HomePageData(
     IReadOnlyList<HomeBrandDto> Brands,
     IReadOnlyList<BenefitDto> Benefits,
     LookbookDto? Lookbook,
-    bool ShowNewsletter
+    bool ShowNewsletter,
+    IReadOnlyList<HomeBannerDto> Banners,
+    IReadOnlyList<HomePageSectionData> HomepageSections
 );
+
+/// <summary>A DB-driven banner shown on the homepage.</summary>
+public sealed record HomeBannerDto(
+    string Title,
+    string? Subtitle,
+    string? ImageUrl,
+    string? LinkUrl,
+    string? LinkText,
+    string Style);
+
+/// <summary>A DB-driven homepage section (custom HTML or structured content).</summary>
+public sealed record HomePageSectionData(
+    string SectionType,
+    string Title,
+    string? Subtitle,
+    string? ContentJson,
+    string? Html);
 
 public sealed record HeroBannerDto(
     string Title,

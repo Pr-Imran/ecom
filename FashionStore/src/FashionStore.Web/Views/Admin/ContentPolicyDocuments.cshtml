@@ -1,0 +1,156 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Policy Documents";
+    ViewData["PageTitle"] = "Policy Documents";
+}
+
+<div class="space-y-4 pb-28">
+    @* Preview cards *@
+    <div id="docsList" class="space-y-3">
+        <div class="bg-white rounded-lg border p-6 text-center text-gray-500 text-sm">
+            <p>Loading policy documents...</p>
+        </div>
+    </div>
+</div>
+
+@* Editor modal *@
+<div id="docModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 bg-black/40" data-close-modal></div>
+    <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center p-0 sm:p-6">
+        <div class="bg-white w-full sm:max-w-2xl rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between px-6 py-4 border-b">
+                <h3 id="modalTitle" class="text-lg font-semibold text-gray-900">Edit Policy</h3>
+                <button class="btn-icon" data-close-modal aria-label="Close">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                    <input type="text" id="fTitle" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Code</label>
+                    <input type="text" id="fCode" disabled class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500" />
+                    <p class="text-xs text-gray-500 mt-1">Codes are fixed and used by storefront routes.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Summary</label>
+                    <input type="text" id="fSummary" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Body</label>
+                    <textarea id="fBody" rows="12" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-brand-primary"></textarea>
+                    <p class="text-xs text-gray-500 mt-1">HTML is sanitized on save.</p>
+                </div>
+                <div>
+                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                        <input type="checkbox" id="fActive" checked class="rounded border-gray-300" />
+                        Published (visible on the storefront)
+                    </label>
+                </div>
+            </div>
+            <div class="flex items-center justify-end px-6 py-4 border-t gap-2">
+                <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50" data-close-modal>Cancel</button>
+                <button id="btnSaveDoc" class="px-4 py-2 text-sm font-medium bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            'use strict';
+
+            let docs = [];
+            let editingId = null;
+
+            function api(path, options) {
+                return fetch(path, options).then(async res => {
+                    if (res.ok) return res.json();
+                    let error = 'Request failed';
+                    try {
+                        const body = await res.json();
+                        error = body.error || body.title || error;
+                    } catch (e) { /* ignore */ }
+                    throw new Error(error);
+                });
+            }
+
+            function esc(value) {
+                if (value === null || value === undefined) return '';
+                return String(value).replace(/[&<>"']/g, c => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                }[c]));
+            }
+
+            async function loadDocs() {
+                docs = await api('/api/admin/content/policy-documents');
+                const container = document.getElementById('docsList');
+
+                if (docs.length === 0) {
+                    container.innerHTML = `<div class="bg-white rounded-lg border p-6 text-center text-gray-500 text-sm"><p>No policy documents.</p></div>`;
+                    return;
+                }
+
+                container.innerHTML = docs.map(doc => `
+                    <div class="bg-white rounded-lg border shadow-sm p-4 cursor-pointer hover:border-brand-primary/50 transition-colors" data-doc-id="${doc.id}">
+                        <div class="flex items-start gap-3">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h3 class="font-semibold text-gray-900">${esc(doc.title)}</h3>
+                                    ${doc.status === 1
+                                        ? '<span class="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">Published</span>'
+                                        : '<span class="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Draft</span>'}
+                                </div>
+                                <p class="text-xs text-gray-400 mt-1"><code>${esc(doc.code)}</code></p>
+                            </div>
+                            <svg class="w-4 h-4 text-gray-400 mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </div>
+                    </div>
+                `).join('');
+
+                container.querySelectorAll('[data-doc-id]').forEach(el => {
+                    el.addEventListener('click', () => openEditor(el.dataset.docId));
+                });
+            }
+
+            function openEditor(id) {
+                editingId = id;
+                const doc = docs.find(d => d.id === id);
+                if (!doc) return;
+                document.getElementById('modalTitle').textContent = 'Edit Policy';
+                document.getElementById('fTitle').value = doc.title || '';
+                document.getElementById('fCode').value = doc.code || '';
+                document.getElementById('fSummary').value = doc.summary || '';
+                document.getElementById('fBody').value = doc.bodyHtml || '';
+                document.getElementById('fActive').checked = doc.status === 1;
+                document.getElementById('docModal').classList.remove('hidden');
+            }
+
+            document.getElementById('btnSaveDoc').addEventListener('click', async () => {
+                const options = {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: document.getElementById('fTitle').value,
+                        summary: document.getElementById('fSummary').value,
+                        bodyHtml: document.getElementById('fBody').value,
+                        status: document.getElementById('fActive').checked ? 1 : 0
+                    })
+                };
+                try {
+                    await api('/api/admin/content/policy-documents/' + editingId, options);
+                    document.getElementById('docModal').classList.add('hidden');
+                    await loadDocs();
+                } catch (err) { alert(err.message); }
+            });
+
+            const modal = document.getElementById('docModal');
+            modal.querySelectorAll('[data-close-modal]').forEach(el => el.addEventListener('click', () => modal.classList.add('hidden')));
+
+            loadDocs();
+        })();
+    </script>
+}

@@ -1,0 +1,59 @@
+@model FashionStore.Web.Controllers.ContactPageViewModel
+@{
+    ViewData["Title"] = Model.Page.Title;
+}
+
+<!-- Page header -->
+<section class="listing-header bg-white border-b border-brand-border">
+    <div class="container mx-auto px-4 py-4 md:py-8">
+        <nav aria-label="Breadcrumb" class="text-xs text-brand-text-muted mb-1">
+            <a href="/" class="hover:text-brand-primary">Home</a>
+            <span class="mx-1">/</span>
+            <span class="text-brand-text-primary">@Model.Page.Title</span>
+        </nav>
+        <h1 class="text-2xl md:text-3xl font-bold text-brand-text-primary">@Model.Page.Title</h1>
+        @if (!string.IsNullOrEmpty(Model.Page.Summary))
+        {
+            <p class="text-sm text-brand-text-muted mt-1">@Model.Page.Summary</p>
+        }
+    </div>
+</section>
+
+<!-- Contact content -->
+<section class="container mx-auto px-4 py-8 md:py-12">
+    <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div>
+            @if (!string.IsNullOrEmpty(Model.Page.BodyHtml))
+            {
+                @Html.Raw(Model.Page.BodyHtml)
+            }
+        </div>
+        <div class="space-y-6">
+            @if (!string.IsNullOrEmpty(Model.Contact.ContactEmail))
+            {
+                <div class="bg-white rounded-lg border border-brand-border p-6">
+                    <h2 class="font-semibold text-brand-text-primary mb-2">Email us</h2>
+                    <a href="mailto:@Model.Contact.ContactEmail" class="text-brand-primary hover:underline">
+                        @Model.Contact.ContactEmail
+                    </a>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.Contact.ContactPhone))
+            {
+                <div class="bg-white rounded-lg border border-brand-border p-6">
+                    <h2 class="font-semibold text-brand-text-primary mb-2">Call us</h2>
+                    <a href="tel:@Model.Contact.ContactPhone" class="text-brand-primary hover:underline">
+                        @Model.Contact.ContactPhone
+                    </a>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.Contact.Address))
+            {
+                <div class="bg-white rounded-lg border border-brand-border p-6">
+                    <h2 class="font-semibold text-brand-text-primary mb-2">Visit us</h2>
+                    <p class="text-brand-text-muted whitespace-pre-line">@Model.Contact.Address</p>
+                </div>
+            }
+        </div>
+    </div>
+</section>

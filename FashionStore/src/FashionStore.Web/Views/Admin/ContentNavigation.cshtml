@@ -1,0 +1,225 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Navigation";
+    ViewData["PageTitle"] = "Navigation";
+}
+
+<div class="space-y-4 pb-28">
+    <p class="text-xs text-gray-500">
+        Manage the main storefront navigation menu. The main menu is used on the public header;
+        children render as dropdown items under their parent.
+    </p>
+
+    @* Menu selector *@
+    <div class="flex flex-col sm:flex-row gap-3">
+        <select id="menuSelect" class="w-full sm:w-72 border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white"></select>
+        <button id="btnAddItem" class="px-4 py-2.5 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium whitespace-nowrap">
+            Add Item
+        </button>
+    </div>
+
+    @* Items list *@
+    <div id="itemsList" class="space-y-3">
+        <div class="bg-white rounded-lg border p-6 text-center text-gray-500 text-sm">
+            <p>Loading navigation...</p>
+        </div>
+    </div>
+
+    @* Save bar (sticky) *@
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t p-4 z-40">
+        <div class="max-w-7xl mx-auto flex justify-end">
+            <button id="btnSaveMenu" class="px-6 py-2.5 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium">
+                Save Menu
+            </button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            'use strict';
+
+            let menus = [];
+            let currentMenu = null;
+
+            function api(path, options) {
+                return fetch(path, options).then(async res => {
+                    if (res.ok) return res.json();
+                    let error = 'Request failed';
+                    try {
+                        const body = await res.json();
+                        error = body.error || body.title || error;
+                    } catch (e) { /* ignore */ }
+                    throw new Error(error);
+                });
+            }
+
+            function esc(value) {
+                if (value === null || value === undefined) return '';
+                return String(value).replace(/[&<>"']/g, c => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                }[c]));
+            }
+
+            async function loadMenus() {
+                menus = await api('/api/admin/content/navigation');
+                const select = document.getElementById('menuSelect');
+                select.innerHTML = menus.map(m => `<option value="${m.id}">${esc(m.name)} (${esc(m.code)})</option>`).join('') || '<option value="">No menus</option>';
+                if (menus.length > 0) {
+                    select.value = menus[0].id;
+                    currentMenu = menus[0];
+                    renderItems();
+                } else {
+                    document.getElementById('itemsList').innerHTML = '<div class="bg-white rounded-lg border p-6 text-center text-gray-500 text-sm"><p>No navigation menus configured.</p></div>';
+                }
+            }
+
+            function renderItems() {
+                if (!currentMenu) return;
+                const items = currentMenu.items || [];
+                const container = document.getElementById('itemsList');
+
+                if (items.length === 0) {
+                    container.innerHTML = `<div class="bg-white rounded-lg border p-6 text-center text-gray-500 text-sm"><p>No navigation items yet.</p></div>`;
+                    return;
+                }
+
+                container.innerHTML = items.map((item, index) => `
+                    <div class="bg-white rounded-lg border shadow-sm p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="flex flex-col gap-1 shrink-0">
+                                <button class="move-up p-1 text-gray-400 hover:text-brand-primary ${index === 0 ? 'opacity-30 pointer-events-none' : ''}" data-index="${index}" aria-label="Move up">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+                                </button>
+                                <button class="move-down p-1 text-gray-400 hover:text-brand-primary ${index === items.length - 1 ? 'opacity-30 pointer-events-none' : ''}" data-index="${index}" aria-label="Move down">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </button>
+                            </div>
+                            <div class="flex-1 min-w-0 space-y-2">
+                                <input type="text" class="item-label w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value="${esc(item.label)}" placeholder="Label" data-id="${item.id}" />
+                                <input type="text" class="item-url w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value="${esc(item.url)}" placeholder="/products" data-id="${item.id}" />
+                                <div class="flex gap-2 flex-wrap">
+                                    <select class="item-parent border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white" data-id="${item.id}">
+                                        <option value="">Parent (top level)</option>
+                                        ${items.filter(i => i.id !== item.id && i.parentId !== item.id).map(i => `<option value="${i.id}" ${i.id === item.parentId ? 'selected' : ''}>${esc(i.label)}</option>`).join('')}
+                                    </select>
+                                    <label class="inline-flex items-center gap-1.5 text-xs text-gray-600">
+                                        <input type="checkbox" class="item-active" data-id="${item.id}" ${item.isActive ? 'checked' : ''} /> Active
+                                    </label>
+                                    <label class="inline-flex items-center gap-1.5 text-xs text-gray-600">
+                                        <input type="checkbox" class="item-newtab" data-id="${item.id}" ${item.target === '_blank' ? 'checked' : ''} /> New tab
+                                    </label>
+                                    <button class="item-remove text-xs text-red-600 hover:text-red-700 ml-auto" data-id="${item.id}">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                container.querySelectorAll('.move-up').forEach(btn => btn.addEventListener('click', () => move(parseInt(btn.dataset.index), -1)));
+                container.querySelectorAll('.move-down').forEach(btn => btn.addEventListener('click', () => move(parseInt(btn.dataset.index), 1)));
+                container.querySelectorAll('.item-remove').forEach(btn => btn.addEventListener('click', () => removeItem(btn.dataset.id)));
+
+                // Re-render parent dropdowns when labels change so they stay in sync.
+                container.querySelectorAll('.item-label').forEach(input => {
+                    input.addEventListener('input', () => {
+                        const id = input.dataset.id;
+                        const item = currentMenu.items.find(i => i.id === id);
+                        if (item) item.label = input.value;
+                    });
+                });
+                container.querySelectorAll('.item-url').forEach(input => {
+                    input.addEventListener('input', () => {
+                        const item = currentMenu.items.find(i => i.id === input.dataset.id);
+                        if (item) item.url = input.value;
+                    });
+                });
+                container.querySelectorAll('.item-active').forEach(chk => {
+                    chk.addEventListener('change', () => {
+                        const item = currentMenu.items.find(i => i.id === chk.dataset.id);
+                        if (item) item.isActive = chk.checked;
+                    });
+                });
+                container.querySelectorAll('.item-newtab').forEach(chk => {
+                    chk.addEventListener('change', () => {
+                        const item = currentMenu.items.find(i => i.id === chk.dataset.id);
+                        if (item) item.target = chk.checked ? '_blank' : null;
+                    });
+                });
+                container.querySelectorAll('.item-parent').forEach(sel => {
+                    sel.addEventListener('change', () => {
+                        const item = currentMenu.items.find(i => i.id === sel.dataset.id);
+                        if (item) item.parentId = sel.value || null;
+                    });
+                });
+            }
+
+            function move(index, delta) {
+                const target = index + delta;
+                const items = currentMenu.items;
+                if (target < 0 || target >= items.length) return;
+                const copy = [...items];
+                const [removed] = copy.splice(index, 1);
+                copy.splice(target, 0, removed);
+                currentMenu = { ...currentMenu, items: copy.map((i, n) => ({ ...i, displayOrder: n })) };
+                renderItems();
+            }
+
+            function removeItem(id) {
+                currentMenu = { ...currentMenu, items: currentMenu.items.filter(i => i.id !== id) };
+                renderItems();
+            }
+
+            document.getElementById('btnAddItem').addEventListener('click', () => {
+                if (!currentMenu) return;
+                const items = currentMenu.items || [];
+                const item = {
+                    id: null,
+                    parentId: null,
+                    label: 'New item',
+                    url: '/',
+                    target: null,
+                    displayOrder: items.length,
+                    isActive: true
+                };
+                currentMenu = { ...currentMenu, items: [...items, item] };
+                renderItems();
+            });
+
+            document.getElementById('btnSaveMenu').addEventListener('click', async () => {
+                if (!currentMenu) return;
+                try {
+                    await api('/api/admin/content/navigation/' + currentMenu.id, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: currentMenu.name,
+                            code: currentMenu.code,
+                            description: currentMenu.description,
+                            isActive: currentMenu.isActive,
+                            items: currentMenu.items.map(i => ({
+                                id: i.id,
+                                parentId: i.parentId,
+                                label: i.label,
+                                url: i.url,
+                                target: i.target,
+                                displayOrder: i.displayOrder,
+                                isActive: i.isActive
+                            }))
+                        })
+                    });
+                    alert('Navigation saved.');
+                    await loadMenus();
+                } catch (err) { alert(err.message); }
+            });
+
+            document.getElementById('menuSelect').addEventListener('change', e => {
+                currentMenu = menus.find(m => m.id === e.target.value) || null;
+                renderItems();
+            });
+
+            loadMenus();
+        })();
+    </script>
+}

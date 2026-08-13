@@ -76,6 +76,15 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<ReturnReason> ReturnReasons => Set<ReturnReason>();
     public DbSet<ReturnAttachment> ReturnAttachments => Set<ReturnAttachment>();
     public DbSet<EmailMessage> EmailMessages => Set<EmailMessage>();
+    public DbSet<ContentPage> ContentPages => Set<ContentPage>();
+    public DbSet<Banner> Banners => Set<Banner>();
+    public DbSet<HomepageSection> HomepageSections => Set<HomepageSection>();
+    public DbSet<NavigationMenu> NavigationMenus => Set<NavigationMenu>();
+    public DbSet<NavigationItem> NavigationItems => Set<NavigationItem>();
+    public DbSet<FaqItem> FaqItems => Set<FaqItem>();
+    public DbSet<BlogPost> BlogPosts => Set<BlogPost>();
+    public DbSet<PolicyDocument> PolicyDocuments => Set<PolicyDocument>();
+    public DbSet<SiteSetting> SiteSettings => Set<SiteSetting>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -962,6 +971,119 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             entity.HasIndex(e => e.DeduplicationKey)
                 .IsUnique()
                 .HasFilter("[DeduplicationKey] IS NOT NULL");
+        });
+
+        modelBuilder.Entity<ContentPage>(entity =>
+        {
+            entity.ToTable("ContentPages");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Summary).HasMaxLength(500);
+            entity.Property(e => e.MetaTitle).HasMaxLength(200);
+            entity.Property(e => e.MetaDescription).HasMaxLength(500);
+            entity.HasIndex(e => e.Slug).IsUnique();
+            entity.HasIndex(e => e.Status);
+        });
+
+        modelBuilder.Entity<Banner>(entity =>
+        {
+            entity.ToTable("Banners");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Title).HasMaxLength(300);
+            entity.Property(e => e.Subtitle).HasMaxLength(500);
+            entity.Property(e => e.ImageUrl).HasMaxLength(500);
+            entity.Property(e => e.LinkUrl).HasMaxLength(500);
+            entity.Property(e => e.LinkText).HasMaxLength(100);
+            entity.Property(e => e.Style).HasMaxLength(50);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.Placement);
+        });
+
+        modelBuilder.Entity<HomepageSection>(entity =>
+        {
+            entity.ToTable("HomepageSections");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.SectionType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Subtitle).HasMaxLength(500);
+            entity.HasIndex(e => e.Status);
+        });
+
+        modelBuilder.Entity<NavigationMenu>(entity =>
+        {
+            entity.ToTable("NavigationMenus");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Description).HasMaxLength(300);
+            entity.HasIndex(e => e.Code).IsUnique();
+        });
+
+        modelBuilder.Entity<NavigationItem>(entity =>
+        {
+            entity.ToTable("NavigationItems");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Label).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Url).HasMaxLength(500);
+            entity.Property(e => e.Target).HasMaxLength(10);
+            entity.HasIndex(e => e.MenuId);
+            entity.HasIndex(e => e.ParentId);
+            entity.HasOne(e => e.Menu)
+                .WithMany(m => m.Items)
+                .HasForeignKey(e => e.MenuId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Parent)
+                .WithMany(e => e.Children)
+                .HasForeignKey(e => e.ParentId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<FaqItem>(entity =>
+        {
+            entity.ToTable("FaqItems");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Question).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Answer).HasMaxLength(4000);
+            entity.Property(e => e.Category).HasMaxLength(100);
+            entity.HasIndex(e => e.IsActive);
+        });
+
+        modelBuilder.Entity<BlogPost>(entity =>
+        {
+            entity.ToTable("BlogPosts");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Excerpt).HasMaxLength(500);
+            entity.Property(e => e.CoverImageUrl).HasMaxLength(500);
+            entity.Property(e => e.AuthorName).HasMaxLength(200);
+            entity.HasIndex(e => e.Slug).IsUnique();
+            entity.HasIndex(e => e.Status);
+        });
+
+        modelBuilder.Entity<PolicyDocument>(entity =>
+        {
+            entity.ToTable("PolicyDocuments");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Summary).HasMaxLength(500);
+            entity.HasIndex(e => e.Code).IsUnique();
+            entity.HasIndex(e => e.Status);
+        });
+
+        modelBuilder.Entity<SiteSetting>(entity =>
+        {
+            entity.ToTable("SiteSettings");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Key).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Value).IsRequired();
+            entity.Property(e => e.ValueType).HasMaxLength(50);
+            entity.Property(e => e.Group).HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.HasIndex(e => e.Key).IsUnique();
         });
 
         // Apply soft delete filter

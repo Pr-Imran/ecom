@@ -15,22 +15,42 @@ public class NavigationService : INavigationService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<ApplicationRole> _roleManager;
     private readonly ICartService _cartService;
+    private readonly IContentManagementService _content;
     private readonly ILogger<NavigationService> _logger;
 
     public NavigationService(
         UserManager<ApplicationUser> userManager,
         RoleManager<ApplicationRole> roleManager,
         ICartService cartService,
+        IContentManagementService content,
         ILogger<NavigationService> logger)
     {
         _userManager = userManager;
         _roleManager = roleManager;
         _cartService = cartService;
+        _content = content;
         _logger = logger;
     }
 
-    public Task<IEnumerable<NavigationItem>> GetPublicNavigationAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<NavigationItem>> GetPublicNavigationAsync(CancellationToken cancellationToken = default)
     {
+        try
+        {
+            var menu = await _content.GetNavigationMenuByCodeAsync("main", cancellationToken);
+            if (menu is not null && menu.Items.Count > 0)
+            {
+                var activeItems = menu.Items.Where(i => i.IsActive).ToList();
+                if (activeItems.Count > 0)
+                {
+                    return BuildNavigationTree(activeItems);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load DB-driven navigation; using defaults.");
+        }
+
         var items = new List<NavigationItem>
         {
             new NavigationItem("home", "Home", "/", "home"),
@@ -41,7 +61,30 @@ public class NavigationService : INavigationService
             new NavigationItem("contact", "Contact", "/contact", "mail")
         };
 
-        return Task.FromResult(items.AsEnumerable());
+        return items;
+    }
+
+    /// <summary>Builds a navigation tree from a flat, ordered item list.</summary>
+    private static IEnumerable<NavigationItem> BuildNavigationTree(IReadOnlyList<Application.DTOs.Content.NavigationItemDto> items)
+    {
+        var rootItems = items.Where(i => i.ParentId is null).OrderBy(i => i.DisplayOrder).ToList();
+        return rootItems.Select(i => BuildNode(i, items));
+    }
+
+    private static NavigationItem BuildNode(Application.DTOs.Content.NavigationItemDto item, IReadOnlyList<Application.DTOs.Content.NavigationItemDto> all)
+    {
+        var children = all
+            .Where(c => c.ParentId == item.Id && c.IsActive)
+            .OrderBy(c => c.DisplayOrder)
+            .Select(c => BuildNode(c, all))
+            .ToList();
+
+        return new NavigationItem(
+            item.Id.ToString(),
+            item.Label,
+            item.Url,
+            null,
+            children.Count > 0 ? children : null);
     }
 
     public Task<IEnumerable<NavigationItem>> GetMobileNavigationAsync(string? userId = null, CancellationToken cancellationToken = default)
@@ -125,6 +168,22 @@ public class NavigationService : INavigationService
             items.Add(new NavigationItem("reviews", "Reviews", "/admin/reviews", "message-square"));
         }
 
+        if (HasAnyPermission(permissions, new[] { "Content.Manage" }))
+        {
+            items.Add(new NavigationItem("content", "Content", "/admin/content/pages", "file-text")
+            {
+                Children = new[]
+                {
+                    new NavigationItem("content-pages", "Pages", "/admin/content/pages", null),
+                    new NavigationItem("content-banners", "Banners", "/admin/content/banners", null),
+                    new NavigationItem("content-homepage", "Homepage Sections", "/admin/content/homepage-sections", null),
+                    new NavigationItem("content-navigation", "Navigation", "/admin/content/navigation", null),
+                    new NavigationItem("content-faqs", "FAQs", "/admin/content/faqs", null),
+                    new NavigationItem("content-policies", "Policy Documents", "/admin/content/policy-documents", null)
+                }
+            });
+        }
+
         if (HasAnyPermission(permissions, new[] { "Emails.Manage" }))
         {
             items.Add(new NavigationItem("emails", "Emails", "/admin/emails", "mail"));
@@ -152,7 +211,10 @@ public class NavigationService : INavigationService
             items.Add(new NavigationItem("audit", "Audit Logs", "/admin/audit", "file-text"));
         }
 
-        items.Add(new NavigationItem("settings", "Settings", "/admin/settings", "settings"));
+        if (HasAnyPermission(permissions, new[] { "Settings.Manage" }))
+        {
+            items.Add(new NavigationItem("settings", "Settings", "/admin/settings", "settings"));
+        }
 
         return items;
     }

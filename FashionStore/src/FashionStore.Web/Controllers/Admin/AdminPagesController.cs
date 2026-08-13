@@ -218,6 +218,77 @@ public class AdminPagesController : Controller
         return View("~/Views/Admin/EmailTemplates.cshtml");
     }
 
+    [HttpGet("/admin/content/pages")]
+    [Authorize(Policy = ContentPolicies.ContentManage)]
+    public async Task<IActionResult> ContentPages(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Pages";
+        return View("~/Views/Admin/ContentPages.cshtml");
+    }
+
+    [HttpGet("/admin/content/banners")]
+    [Authorize(Policy = ContentPolicies.ContentManage)]
+    public async Task<IActionResult> ContentBanners(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Banners";
+        return View("~/Views/Admin/ContentBanners.cshtml");
+    }
+
+    [HttpGet("/admin/content/homepage-sections")]
+    [Authorize(Policy = ContentPolicies.ContentManage)]
+    public async Task<IActionResult> ContentHomepageSections(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Homepage Sections";
+        return View("~/Views/Admin/ContentHomepageSections.cshtml");
+    }
+
+    [HttpGet("/admin/content/navigation")]
+    [Authorize(Policy = ContentPolicies.ContentManage)]
+    public async Task<IActionResult> ContentNavigation(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Navigation";
+        return View("~/Views/Admin/ContentNavigation.cshtml");
+    }
+
+    [HttpGet("/admin/content/faqs")]
+    [Authorize(Policy = ContentPolicies.ContentManage)]
+    public async Task<IActionResult> ContentFaqs(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "FAQs";
+        return View("~/Views/Admin/ContentFaqs.cshtml");
+    }
+
+    [HttpGet("/admin/content/policy-documents")]
+    [Authorize(Policy = ContentPolicies.ContentManage)]
+    public async Task<IActionResult> ContentPolicyDocuments(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Policy Documents";
+        return View("~/Views/Admin/ContentPolicyDocuments.cshtml");
+    }
+
+    [HttpGet("/admin/settings")]
+    [Authorize(Policy = SettingsPolicies.SettingsManage)]
+    public async Task<IActionResult> WebsiteSettings(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Store Settings";
+        ViewData["IsSuperAdmin"] = User.IsInRole("SuperAdmin");
+        return View("~/Views/Admin/Settings.cshtml");
+    }
+
     [HttpGet("/admin/orders/{id:guid}/invoice")]
     public async Task<IActionResult> OrderInvoice(Guid id, CancellationToken cancellationToken = default)    {
         var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;

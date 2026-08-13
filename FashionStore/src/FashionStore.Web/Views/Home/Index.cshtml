@@ -13,6 +13,16 @@
     <partial name="Partials/_PromoBanners" model="Model.PromoBanners" />
 }
 
+@if (Model.Banners.Count > 0)
+{
+    <partial name="Partials/_ManagedBanners" model="Model.Banners" />
+}
+
+@foreach (var section in Model.HomepageSections)
+{
+    <partial name="Partials/_HomepageSection" model="section" />
+}
+
 @if (Model.Categories.Count > 0)
 {
     <partial name="Partials/_Categories" model="Model.Categories" />
