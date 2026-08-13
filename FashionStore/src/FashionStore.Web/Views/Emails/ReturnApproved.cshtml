@@ -1,7 +1,7 @@
 @using FashionStore.Application.Email
 @model FashionStore.Application.Email.ReturnApprovedEmail
 @{
-    Layout = "_EmailLayout";
+    Layout = "~/Views/Emails/_EmailLayout.cshtml";
 }
 <p>Hello@(string.IsNullOrWhiteSpace(Model.RecipientName) || Model.RecipientName == "there" ? string.Empty : $" {Model.RecipientName}"),</p>
 <p>Good news — your return <strong>@Model.ReturnNumber</strong> for order <strong>@Model.OrderNumber</strong> has been approved.</p>

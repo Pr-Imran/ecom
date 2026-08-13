@@ -2,6 +2,7 @@ using FashionStore.Application.Configuration;
 using FashionStore.Application.DTOs.Inventory;
 using FashionStore.Application.DTOs.Payments;
 using FashionStore.Application.DTOs.Returns;
+using FashionStore.Application.Email;
 using FashionStore.Application.Interfaces;
 using FashionStore.Domain.Entities;
 using FashionStore.Domain.Enums;
@@ -42,6 +43,7 @@ public class AdminReturnServiceTests
         public AppDbContext Context { get; }
         public Mock<IInventoryService> Inventory { get; } = new();
         public Mock<IPaymentService> Payment { get; } = new();
+        public Mock<IEmailNotificationService> EmailService { get; } = new();
 
         public Fixture()
         {
@@ -82,6 +84,7 @@ public class AdminReturnServiceTests
                 Inventory.Object,
                 Payment.Object,
                 Options.Create(settings ?? Settings),
+                EmailService.Object,
                 NullLogger<AdminReturnService>.Instance);
     }
 

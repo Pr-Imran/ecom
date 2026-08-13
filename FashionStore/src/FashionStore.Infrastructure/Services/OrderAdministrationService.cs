@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using FashionStore.Application.DTOs.Orders;
+using FashionStore.Application.Email;
 using FashionStore.Application.Interfaces;
 using FashionStore.Domain.Entities;
 using FashionStore.Domain.Enums;

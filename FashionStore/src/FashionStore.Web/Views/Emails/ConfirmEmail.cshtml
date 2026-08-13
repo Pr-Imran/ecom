@@ -1,7 +1,7 @@
 @using FashionStore.Application.Email
 @model FashionStore.Application.Email.ConfirmEmailEmail
 @{
-    Layout = "_EmailLayout";
+    Layout = "~/Views/Emails/_EmailLayout.cshtml";
 }
 <p>Hello@(string.IsNullOrWhiteSpace(Model.RecipientName) || Model.RecipientName == "there" ? string.Empty : $" {Model.RecipientName}"),</p>
 <p>Thanks for signing up with @Model.StoreName. To finish creating your account, confirm your email address by clicking the button below.</p>

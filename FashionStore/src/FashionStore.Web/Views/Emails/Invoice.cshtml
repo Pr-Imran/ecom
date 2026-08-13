@@ -1,7 +1,7 @@
 @using FashionStore.Application.Email
 @model FashionStore.Application.Email.InvoiceEmail
 @{
-    Layout = "_EmailLayout";
+    Layout = "~/Views/Emails/_EmailLayout.cshtml";
 }
 <p>Hello@(string.IsNullOrWhiteSpace(Model.RecipientName) || Model.RecipientName == "there" ? string.Empty : $" {Model.RecipientName}"),</p>
 <p>Thank you for shopping with @Model.StoreName. Please find your invoice for <strong>order @Model.OrderNumber</strong> attached to this email.</p>

@@ -1,6 +1,7 @@
 using FashionStore.Application.Configuration;
 using FashionStore.Application.DTOs.Images;
 using FashionStore.Application.DTOs.Returns;
+using FashionStore.Application.Email;
 using FashionStore.Application.Interfaces;
 using FashionStore.Domain.Entities;
 using FashionStore.Domain.Enums;
@@ -25,17 +26,20 @@ public sealed class CustomerReturnService : ICustomerReturnService
     private readonly AppDbContext _context;
     private readonly IFileStorageService _fileStorage;
     private readonly IOptions<ReturnSettings> _returnOptions;
+    private readonly IEmailNotificationService _emailService;
     private readonly ILogger<CustomerReturnService> _logger;
 
     public CustomerReturnService(
         AppDbContext context,
         IFileStorageService fileStorage,
         IOptions<ReturnSettings> returnOptions,
+        IEmailNotificationService emailService,
         ILogger<CustomerReturnService> logger)
     {
         _context = context;
         _fileStorage = fileStorage;
         _returnOptions = returnOptions;
+        _emailService = emailService;
         _logger = logger;
     }
 
@@ -344,6 +348,8 @@ public sealed class CustomerReturnService : ICustomerReturnService
 
                 _context.ReturnRequests.Add(returnRequest);
                 await _context.SaveChangesAsync(cancellationToken);
+
+                await _emailService.SendReturnRequestedAsync(returnRequest.Id, cancellationToken);
 
                 if (tx != null)
                 {

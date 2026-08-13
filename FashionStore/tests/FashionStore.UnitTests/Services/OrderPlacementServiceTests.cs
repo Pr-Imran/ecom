@@ -4,6 +4,7 @@ using FashionStore.Application.DTOs.Orders;
 using FashionStore.Application.DTOs.Products;
 using FashionStore.Application.DTOs.Promotions;
 using FashionStore.Application.DTOs.Shipping;
+using FashionStore.Application.Email;
 using FashionStore.Application.Interfaces;
 using FashionStore.Domain.Entities;
 using FashionStore.Infrastructure.Data;
@@ -97,6 +98,7 @@ public class OrderPlacementServiceTests
         public Mock<ICheckoutCalculationService> Checkout { get; } = new();
         public Mock<IDiscountService> Discount { get; } = new();
         public Mock<IInventoryService> Inventory { get; } = new();
+        public Mock<IEmailNotificationService> EmailService { get; } = new();
 
         public Fixture()
         {
@@ -130,6 +132,7 @@ public class OrderPlacementServiceTests
                 Checkout.Object,
                 Discount.Object,
                 Inventory.Object,
+                EmailService.Object,
                 Options.Create(new OrderSettings { CodReservationMinutes = 4320, OnlineReservationMinutes = 30 }),
                 NullLogger<OrderPlacementService>.Instance);
         }

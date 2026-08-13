@@ -1,5 +1,6 @@
 using FashionStore.Application.Configuration;
 using FashionStore.Application.DTOs.Returns;
+using FashionStore.Application.Email;
 using FashionStore.Application.Interfaces;
 using FashionStore.Domain.Entities;
 using FashionStore.Domain.Enums;
@@ -29,6 +30,7 @@ public class CustomerReturnServiceTests
     {
         public AppDbContext Context { get; }
         public Mock<IFileStorageService> FileStorage { get; } = new();
+        public Mock<IEmailNotificationService> EmailService { get; } = new();
 
         public Fixture()
         {
@@ -40,7 +42,7 @@ public class CustomerReturnServiceTests
         }
 
         public CustomerReturnService CreateService() =>
-            new(Context, FileStorage.Object, Options.Create(Settings), NullLogger<CustomerReturnService>.Instance);
+            new(Context, FileStorage.Object, Options.Create(Settings), EmailService.Object, NullLogger<CustomerReturnService>.Instance);
     }
 
     private static Order SeedOrder(

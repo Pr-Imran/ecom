@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FashionStore.Application.Configuration;
 using FashionStore.Application.DTOs.Payments;
+using FashionStore.Application.Email;
 using FashionStore.Domain.Entities;
 using FashionStore.Domain.Enums;
 using FashionStore.Infrastructure.Data;
@@ -291,6 +292,7 @@ public class PaymentServiceTests
             contextA,
             fixture.Factory,
             fixture.Inventory.Object,
+            fixture.EmailService.Object,
             Options.Create(fixture.Settings),
             Options.Create(new OrderSettings { CodReservationMinutes = 4320, OnlineReservationMinutes = 30 }),
             NullLogger<PaymentService>.Instance);
@@ -299,6 +301,7 @@ public class PaymentServiceTests
             contextB,
             fixture.Factory,
             fixture.Inventory.Object,
+            fixture.EmailService.Object,
             Options.Create(fixture.Settings),
             Options.Create(new OrderSettings { CodReservationMinutes = 4320, OnlineReservationMinutes = 30 }),
             NullLogger<PaymentService>.Instance);
@@ -393,6 +396,7 @@ public class PaymentServiceTests
         public PaymentSettings Settings { get; }
         public PaymentProviderFactory Factory { get; }
         public Mock<FashionStore.Application.Interfaces.IInventoryService> Inventory { get; } = new();
+        public Mock<IEmailNotificationService> EmailService { get; } = new();
 
         public Fixture(string? dbName = null)
         {
@@ -423,6 +427,7 @@ public class PaymentServiceTests
                 Context,
                 Factory,
                 Inventory.Object,
+                EmailService.Object,
                 Options.Create(Settings),
                 Options.Create(new OrderSettings { CodReservationMinutes = 4320, OnlineReservationMinutes = 30 }),
                 NullLogger<PaymentService>.Instance);

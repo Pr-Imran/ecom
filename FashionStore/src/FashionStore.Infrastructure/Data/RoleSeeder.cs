@@ -215,6 +215,7 @@ public class RoleSeeder : IRoleSeeder
                 Returns.View, Returns.Review, Returns.Inspect, Returns.Restock, Returns.Refund, Returns.Exchange, Returns.Complete,
                 Customers.View, Customers.Update,
                 Reviews.Manage, Promotions.Manage, Coupons.Manage, Shipping.Manage, Content.Manage,
+                ApplicationPermissions.Emails.Manage,
                 Reports.View,
                 Users.Manage,
                 AuditLogs.View

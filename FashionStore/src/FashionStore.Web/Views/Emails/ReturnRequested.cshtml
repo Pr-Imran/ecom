@@ -1,7 +1,7 @@
 @using FashionStore.Application.Email
 @model FashionStore.Application.Email.ReturnRequestedEmail
 @{
-    Layout = "_EmailLayout";
+    Layout = "~/Views/Emails/_EmailLayout.cshtml";
 }
 <p>Hello@(string.IsNullOrWhiteSpace(Model.RecipientName) || Model.RecipientName == "there" ? string.Empty : $" {Model.RecipientName}"),</p>
 <p>We have received your return request <strong>@Model.ReturnNumber</strong> for order <strong>@Model.OrderNumber</strong>. Our team is reviewing it and will email you as soon as a decision is made.</p>

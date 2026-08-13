@@ -1,5 +1,6 @@
 using FashionStore.Application.Configuration;
 using FashionStore.Application.DTOs.Invoices;
+using FashionStore.Application.Email;
 using FashionStore.Domain.Entities;
 using FashionStore.Domain.Enums;
 using FashionStore.Infrastructure.Data;
@@ -25,7 +26,7 @@ public class InvoiceServiceTests
     {
         public AppDbContext Context { get; }
         public Mock<IInvoicePdfGenerator> PdfGenerator { get; } = new();
-        public Mock<IEmailService> EmailService { get; } = new();
+        public Mock<IEmailNotificationService> EmailService { get; } = new();
 
         public Fixture(string? sharedDatabaseName = null)
         {
@@ -37,10 +38,6 @@ public class InvoiceServiceTests
             PdfGenerator
                 .Setup(g => g.Generate(It.IsAny<InvoiceDto>()))
                 .Returns(new byte[] { 0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34 }); // "%PDF-1.4"
-
-            EmailService
-                .Setup(e => e.SendEmailWithAttachmentAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(true);
         }
 
         public InvoiceService CreateService() =>
@@ -62,9 +59,7 @@ public class InvoiceServiceTests
         var generator = new Mock<IInvoicePdfGenerator>();
         generator.Setup(g => g.Generate(It.IsAny<InvoiceDto>())).Returns(new byte[] { 0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34 });
 
-        var email = new Mock<IEmailService>();
-        email.Setup(e => e.SendEmailWithAttachmentAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        var email = new Mock<IEmailNotificationService>();
 
         return new InvoiceService(
             context,

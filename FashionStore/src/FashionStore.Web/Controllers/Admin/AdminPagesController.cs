@@ -2,6 +2,7 @@ using System.Security.Claims;
 using FashionStore.Application.Authorization;
 using FashionStore.Application.Configuration;
 using FashionStore.Application.DTOs.Invoices;
+using FashionStore.Application.Email;
 using FashionStore.Application.Interfaces;
 using FashionStore.Application.Services;
 using FashionStore.Web.Models;
@@ -16,15 +17,18 @@ public class AdminPagesController : Controller
 {
     private readonly INavigationService _navigationService;
     private readonly IInvoiceService _invoiceService;
+    private readonly IEmailAdminService _emailAdminService;
     private readonly IOptions<InvoiceSettings> _invoiceOptions;
 
     public AdminPagesController(
         INavigationService navigationService,
         IInvoiceService invoiceService,
+        IEmailAdminService emailAdminService,
         IOptions<InvoiceSettings> invoiceOptions)
     {
         _navigationService = navigationService;
         _invoiceService = invoiceService;
+        _emailAdminService = emailAdminService;
         _invoiceOptions = invoiceOptions;
     }
 
@@ -190,6 +194,27 @@ public class AdminPagesController : Controller
         ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
         ViewData["PageTitle"] = "Review";
         ViewData["ReviewId"] = id;
+        return View();
+    }
+
+    [HttpGet("/admin/emails")]
+    [Authorize(Policy = EmailPolicies.EmailsManage)]
+    public async Task<IActionResult> Emails(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Emails";
+        return View();
+    }
+
+    [HttpGet("/admin/emails/templates")]
+    [Authorize(Policy = EmailPolicies.EmailsManage)]
+    public async Task<IActionResult> EmailTemplates(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Email Templates";
+        ViewData["EmailTemplatePreviews"] = await _emailAdminService.GetTemplatePreviewsAsync(cancellationToken);
         return View();
     }
 

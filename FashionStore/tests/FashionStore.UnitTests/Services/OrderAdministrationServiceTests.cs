@@ -1,4 +1,5 @@
 using FashionStore.Application.DTOs.Orders;
+using FashionStore.Application.Email;
 using FashionStore.Application.Interfaces;
 using FashionStore.Domain.Entities;
 using FashionStore.Domain.Enums;
@@ -23,6 +24,7 @@ public class OrderAdministrationServiceTests
     {
         public AppDbContext Context { get; }
         public Mock<IInventoryService> Inventory { get; } = new();
+        public Mock<IEmailNotificationService> EmailService { get; } = new();
 
         public Fixture()
         {
@@ -37,7 +39,7 @@ public class OrderAdministrationServiceTests
         }
 
         public OrderAdministrationService CreateService() =>
-            new(Context, Inventory.Object, NullLogger<OrderAdministrationService>.Instance);
+            new(Context, Inventory.Object, EmailService.Object, NullLogger<OrderAdministrationService>.Instance);
     }
 
     private static Order SeedOrder(

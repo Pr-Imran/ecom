@@ -125,6 +125,11 @@ public class NavigationService : INavigationService
             items.Add(new NavigationItem("reviews", "Reviews", "/admin/reviews", "message-square"));
         }
 
+        if (HasAnyPermission(permissions, new[] { "Emails.Manage" }))
+        {
+            items.Add(new NavigationItem("emails", "Emails", "/admin/emails", "mail"));
+        }
+
         if (HasAnyPermission(permissions, new[] { "Reports.View" }))
         {
             items.Add(new NavigationItem("reports", "Reports", "/admin/reports", "bar-chart-3"));

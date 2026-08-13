@@ -2,6 +2,7 @@ using FashionStore.Application.Configuration;
 using FashionStore.Application.DTOs.Images;
 using FashionStore.Application.DTOs.Inventory;
 using FashionStore.Application.DTOs.Returns;
+using FashionStore.Application.Email;
 using FashionStore.Application.Interfaces;
 using FashionStore.Domain.Entities;
 using FashionStore.Domain.Enums;
@@ -27,6 +28,7 @@ public sealed class AdminReturnService : IAdminReturnService
     private readonly IInventoryService _inventoryService;
     private readonly IPaymentService _paymentService;
     private readonly IOptions<ReturnSettings> _returnOptions;
+    private readonly IEmailNotificationService _emailService;
     private readonly ILogger<AdminReturnService> _logger;
 
     public AdminReturnService(
@@ -34,12 +36,14 @@ public sealed class AdminReturnService : IAdminReturnService
         IInventoryService inventoryService,
         IPaymentService paymentService,
         IOptions<ReturnSettings> returnOptions,
+        IEmailNotificationService emailService,
         ILogger<AdminReturnService> logger)
     {
         _context = context;
         _inventoryService = inventoryService;
         _paymentService = paymentService;
         _returnOptions = returnOptions;
+        _emailService = emailService;
         _logger = logger;
     }
 
@@ -140,7 +144,8 @@ public sealed class AdminReturnService : IAdminReturnService
             {
                 returnRequest.ApprovedAtUtc = DateTime.UtcNow;
             },
-            cancellationToken);
+            cancellationToken,
+            afterSave: (returnRequest, token) => _emailService.SendReturnApprovedAsync(returnRequest.Id, token));
     }
 
     public async Task<ReturnTransitionResult> RejectAsync(
@@ -194,6 +199,8 @@ public sealed class AdminReturnService : IAdminReturnService
                 });
 
                 await _context.SaveChangesAsync(cancellationToken);
+
+                await _emailService.SendReturnRejectedAsync(returnRequest.Id, cancellationToken);
 
                 if (tx != null)
                 {
@@ -636,6 +643,8 @@ public sealed class AdminReturnService : IAdminReturnService
 
                 await _context.SaveChangesAsync(cancellationToken);
 
+                await _emailService.SendRefundCompletedAsync(returnRequest.OrderId, cancellationToken);
+
                 if (tx != null)
                 {
                     await tx.CommitAsync(cancellationToken);
@@ -896,7 +905,8 @@ public sealed class AdminReturnService : IAdminReturnService
         string? errorVerb,
         string historyNote,
         Action<ReturnRequest> apply,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<ReturnRequest, CancellationToken, Task>? afterSave = null)
     {
         var strategy = _context.Database.CreateExecutionStrategy();
         try
@@ -938,6 +948,11 @@ public sealed class AdminReturnService : IAdminReturnService
                 });
 
                 await _context.SaveChangesAsync(cancellationToken);
+
+                if (afterSave is not null)
+                {
+                    await afterSave(returnRequest, cancellationToken);
+                }
 
                 if (tx != null)
                 {
