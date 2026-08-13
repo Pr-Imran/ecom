@@ -204,7 +204,7 @@ public class AdminPagesController : Controller
         var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
         ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
         ViewData["PageTitle"] = "Emails";
-        return View();
+        return View("~/Views/Admin/Emails.cshtml");
     }
 
     [HttpGet("/admin/emails/templates")]
@@ -215,7 +215,7 @@ public class AdminPagesController : Controller
         ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
         ViewData["PageTitle"] = "Email Templates";
         ViewData["EmailTemplatePreviews"] = await _emailAdminService.GetTemplatePreviewsAsync(cancellationToken);
-        return View();
+        return View("~/Views/Admin/EmailTemplates.cshtml");
     }
 
     [HttpGet("/admin/orders/{id:guid}/invoice")]
