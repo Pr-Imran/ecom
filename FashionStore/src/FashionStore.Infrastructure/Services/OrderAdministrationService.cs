@@ -26,15 +26,18 @@ public sealed class OrderAdministrationService : IOrderAdministrationService
 
     private readonly AppDbContext _context;
     private readonly IInventoryService _inventoryService;
+    private readonly IEmailNotificationService _emailService;
     private readonly ILogger<OrderAdministrationService> _logger;
 
     public OrderAdministrationService(
         AppDbContext context,
         IInventoryService inventoryService,
+        IEmailNotificationService emailService,
         ILogger<OrderAdministrationService> logger)
     {
         _context = context;
         _inventoryService = inventoryService;
+        _emailService = emailService;
         _logger = logger;
     }
 
@@ -731,6 +734,19 @@ public sealed class OrderAdministrationService : IOrderAdministrationService
             from,
             toStatus,
             actorId);
+
+        switch (toStatus)
+        {
+            case OrderStatus.Processing:
+                await _emailService.SendOrderProcessingAsync(order.Id, cancellationToken);
+                break;
+            case OrderStatus.Shipped:
+                await _emailService.SendOrderShippedAsync(order.Id, cancellationToken);
+                break;
+            case OrderStatus.Delivered:
+                await _emailService.SendOrderDeliveredAsync(order.Id, cancellationToken);
+                break;
+        }
     }
 
     private async Task<Order?> LoadOrderAsync(

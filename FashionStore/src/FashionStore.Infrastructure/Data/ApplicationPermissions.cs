@@ -58,6 +58,11 @@ public static class ApplicationPermissions
         public const string Manage = "Reviews.Manage";
     }
 
+    public static class Emails
+    {
+        public const string Manage = "Emails.Manage";
+    }
+
     public static class Promotions
     {
         public const string Manage = "Promotions.Manage";
@@ -113,6 +118,7 @@ public static class ApplicationPermissions
         Returns.View, Returns.Review, Returns.Inspect, Returns.Restock, Returns.Refund, Returns.Exchange, Returns.Complete,
         Customers.View, Customers.Update,
         Reviews.Manage,
+        Emails.Manage,
         Promotions.Manage,
         Coupons.Manage,
         Shipping.Manage,

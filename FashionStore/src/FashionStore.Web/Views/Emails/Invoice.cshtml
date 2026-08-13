@@ -1,0 +1,14 @@
+@using FashionStore.Application.Email
+@model FashionStore.Application.Email.InvoiceEmail
+@{
+    Layout = "_EmailLayout";
+}
+<p>Hello@(string.IsNullOrWhiteSpace(Model.RecipientName) || Model.RecipientName == "there" ? string.Empty : $" {Model.RecipientName}"),</p>
+<p>Thank you for shopping with @Model.StoreName. Please find your invoice for <strong>order @Model.OrderNumber</strong> attached to this email.</p>
+@if (!string.IsNullOrWhiteSpace(Model.InvoiceNumber))
+{
+    <div class="box">
+        <p style="margin:0;"><strong>Invoice number:</strong> @Model.InvoiceNumber</p>
+    </div>
+}
+<p class="muted">If the attachment does not appear, view the order page and use the invoice download option.</p>

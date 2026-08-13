@@ -1,0 +1,11 @@
+@using FashionStore.Application.Email
+@model FashionStore.Application.Email.WelcomeEmail
+@{
+    Layout = "_EmailLayout";
+}
+<p>Welcome to @Model.StoreName, @(string.IsNullOrWhiteSpace(Model.RecipientName) || Model.RecipientName == "there" ? "and thank you for joining us" : Model.RecipientName)!</p>
+<p>Your account is ready. Browse the latest collections and start shopping whenever you like.</p>
+<div style="margin:8px 0 8px 0;">
+    <a class="btn" href="@Model.ShopUrl">Start shopping</a>
+</div>
+<p class="muted">If you have any questions, just reply to this email and our team will be happy to help.</p>

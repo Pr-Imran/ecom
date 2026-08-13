@@ -1,0 +1,86 @@
+@using FashionStore.Application.Email
+@model FashionStore.Application.Email.EmailTemplateModel
+@{
+    Layout = null;
+    var storeUrl = string.IsNullOrWhiteSpace(Model.StoreUrl) ? "#" : Model.StoreUrl.TrimEnd('/');
+    var storeName = string.IsNullOrWhiteSpace(Model.StoreName) ? "FashionStore" : Model.StoreName;
+    var preheader = string.IsNullOrWhiteSpace(Model.Preheader) ? Model.Title : Model.Preheader;
+}
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <title>@Model.Subject</title>
+    <style>
+        @@media only screen and (max-width: 600px) {
+            .container { width: 100% !important; }
+            .btn { display: block !important; width: 100% !important; }
+            .stack { display: block !important; width: 100% !important; }
+            .items-table td { font-size: 13px !important; }
+        }
+        body { margin: 0; padding: 0; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .card { background-color: #ffffff; border-radius: 12px; overflow: hidden; }
+        .header { background-color: #111827; padding: 28px 32px; }
+        .header h1 { margin: 0; color: #ffffff; font-size: 20px; font-weight: 700; }
+        .body { padding: 32px; }
+        h2 { margin: 0 0 12px 0; color: #111827; font-size: 22px; line-height: 1.3; }
+        p { margin: 0 0 16px 0; color: #374151; font-size: 15px; line-height: 1.6; }
+        a { color: #2563eb; }
+        .btn { display: inline-block; background-color: #111827; color: #ffffff !important; text-decoration: none; font-size: 15px; font-weight: 600; padding: 12px 28px; border-radius: 8px; }
+        .btn-accent { background-color: #2563eb; }
+        .items-table { width: 100%; border-collapse: collapse; }
+        .items-table th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; padding: 8px 12px; border-bottom: 1px solid #e5e7eb; }
+        .items-table td { padding: 12px; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #374151; }
+        .totals { width: 100%; margin-top: 8px; }
+        .totals td { padding: 6px 12px; font-size: 14px; color: #374151; }
+        .totals .grand { font-weight: 700; color: #111827; border-top: 2px solid #111827; }
+        .muted { color: #6b7280 !important; font-size: 13px !important; }
+        .box { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; }
+        .footer { padding: 20px 32px; background-color: #f9fafb; }
+        .footer p { margin: 0 0 4px 0; color: #6b7280; font-size: 12px; }
+        .spacer { height: 24px; }
+    </style>
+</head>
+<body>
+    <span class="preheader" style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;mso-hide:all;">@preheader</span>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:24px 12px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" class="container" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                        <td align="center" style="padding:0 0 16px 0;">
+                            <a href="@storeUrl" style="color:#111827;font-size:18px;font-weight:800;text-decoration:none;">@storeName</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <table role="presentation" class="card" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td class="header">
+                                        <h1>@Model.Title</h1>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="body">
+                                        @RenderBody()
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="footer">
+                                        <p>You are receiving this email because you have an account or recent activity with @storeName.</p>
+                                        <p>&copy; @DateTime.UtcNow.Year @storeName. All rights reserved.</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

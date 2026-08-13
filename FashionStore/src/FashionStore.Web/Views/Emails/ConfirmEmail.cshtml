@@ -1,0 +1,15 @@
+@using FashionStore.Application.Email
+@model FashionStore.Application.Email.ConfirmEmailEmail
+@{
+    Layout = "_EmailLayout";
+}
+<p>Hello@(string.IsNullOrWhiteSpace(Model.RecipientName) || Model.RecipientName == "there" ? string.Empty : $" {Model.RecipientName}"),</p>
+<p>Thanks for signing up with @Model.StoreName. To finish creating your account, confirm your email address by clicking the button below.</p>
+<div style="margin:8px 0 20px 0;">
+    <a class="btn" href="@Model.ConfirmUrl">Confirm my email</a>
+</div>
+<div class="box">
+    <p class="muted" style="margin:0;">This link expires in @Model.ExpiryHours hour@(Model.ExpiryHours == 1 ? string.Empty : "s"). If the button does not work, copy and paste this address into your browser:</p>
+    <p class="muted" style="margin:4px 0 0 0;word-break:break-all;">@Model.ConfirmUrl</p>
+</div>
+<p class="muted">If you did not create an account with @Model.StoreName, you can safely ignore this email.</p>

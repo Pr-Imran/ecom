@@ -1,0 +1,11 @@
+@using FashionStore.Application.Email
+@model FashionStore.Application.Email.ReturnRequestedEmail
+@{
+    Layout = "_EmailLayout";
+}
+<p>Hello@(string.IsNullOrWhiteSpace(Model.RecipientName) || Model.RecipientName == "there" ? string.Empty : $" {Model.RecipientName}"),</p>
+<p>We have received your return request <strong>@Model.ReturnNumber</strong> for order <strong>@Model.OrderNumber</strong>. Our team is reviewing it and will email you as soon as a decision is made.</p>
+<div style="margin:8px 0 20px 0;">
+    <a class="btn" href="@Model.ReturnUrl">View my return</a>
+</div>
+<p class="muted">You can follow the progress of your return at any time from your account.</p>

@@ -1,0 +1,14 @@
+@using FashionStore.Application.Email
+@model FashionStore.Application.Email.ReturnRejectedEmail
+@{
+    Layout = "_EmailLayout";
+}
+<p>Hello@(string.IsNullOrWhiteSpace(Model.RecipientName) || Model.RecipientName == "there" ? string.Empty : $" {Model.RecipientName}"),</p>
+<p>We are sorry to tell you that your return <strong>@Model.ReturnNumber</strong> for order <strong>@Model.OrderNumber</strong> could not be approved.</p>
+@if (!string.IsNullOrWhiteSpace(Model.Reason))
+{
+    <div class="box">
+        <p style="margin:0;"><strong>Reason:</strong> @Model.Reason</p>
+    </div>
+}
+<p>If you believe this decision is a mistake, reply to this email and our support team will take another look.</p>

@@ -75,6 +75,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<RefundTransaction> RefundTransactions => Set<RefundTransaction>();
     public DbSet<ReturnReason> ReturnReasons => Set<ReturnReason>();
     public DbSet<ReturnAttachment> ReturnAttachments => Set<ReturnAttachment>();
+    public DbSet<EmailMessage> EmailMessages => Set<EmailMessage>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -939,6 +940,28 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             entity.Property(e => e.UploadedBy).HasMaxLength(450);
             entity.HasIndex(e => e.ReturnRequestId);
             entity.HasOne(e => e.ReturnRequest).WithMany(r => r.Attachments).HasForeignKey(e => e.ReturnRequestId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EmailMessage>(entity =>
+        {
+            entity.ToTable("EmailMessages");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ToEmail).IsRequired().HasMaxLength(254);
+            entity.Property(e => e.RecipientName).HasMaxLength(200);
+            entity.Property(e => e.Subject).HasMaxLength(500);
+            entity.Property(e => e.BodyHtml).IsRequired();
+            entity.Property(e => e.TemplateName).HasMaxLength(100);
+            entity.Property(e => e.AttachmentKind).HasMaxLength(50);
+            entity.Property(e => e.LastError).HasMaxLength(1000);
+            entity.Property(e => e.DeduplicationKey).HasMaxLength(450);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => new { e.Status, e.NextAttemptAtUtc });
+            entity.HasIndex(e => e.CreatedAtUtc);
+            entity.HasIndex(e => e.ToEmail);
+            // Duplicate prevention backstop: at most one queued email per stable key.
+            entity.HasIndex(e => e.DeduplicationKey)
+                .IsUnique()
+                .HasFilter("[DeduplicationKey] IS NOT NULL");
         });
 
         // Apply soft delete filter

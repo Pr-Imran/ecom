@@ -1,0 +1,12 @@
+@using FashionStore.Application.Email
+@model FashionStore.Application.Email.OrderPlacedEmail
+@{
+    Layout = "_EmailLayout";
+}
+<p>Hello@(string.IsNullOrWhiteSpace(Model.RecipientName) || Model.RecipientName == "there" ? string.Empty : $" {Model.RecipientName}"),</p>
+<p>Thank you for your order! We have received <strong>order @Model.OrderNumber</strong> and are now preparing it for you. A confirmation of your payment will follow separately.</p>
+<div style="margin:8px 0 20px 0;">
+    <a class="btn" href="@Model.OrderUrl">View my order</a>
+</div>
+<h2 style="font-size:16px;margin:0 0 12px 0;">Order summary</h2>
+@{ await Html.RenderPartialAsync("_OrderItems", Model); }

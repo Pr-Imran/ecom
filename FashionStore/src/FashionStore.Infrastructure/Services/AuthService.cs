@@ -2,6 +2,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Text;
 using FashionStore.Application.DTOs.Auth;
+using FashionStore.Application.Email;
 using FashionStore.Infrastructure.Data;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
@@ -16,7 +17,7 @@ public class AuthService : IAuthService
     private readonly RoleManager<ApplicationRole> _roleManager;
     private readonly AppDbContext _context;
     private readonly ILogger<AuthService> _logger;
-    private readonly IEmailService _emailService;
+    private readonly IEmailNotificationService _emailService;
     private readonly IDataProtector _dataProtector;
 
     public AuthService(
@@ -25,7 +26,7 @@ public class AuthService : IAuthService
         RoleManager<ApplicationRole> roleManager,
         AppDbContext context,
         ILogger<AuthService> logger,
-        IEmailService emailService,
+        IEmailNotificationService emailService,
         IDataProtectionProvider dataProtectionProvider)
     {
         _userManager = userManager;

@@ -1,0 +1,16 @@
+@using FashionStore.Application.Email
+@model FashionStore.Application.Email.OrderCancelledEmail
+@{
+    Layout = "_EmailLayout";
+}
+<p>Hello@(string.IsNullOrWhiteSpace(Model.RecipientName) || Model.RecipientName == "there" ? string.Empty : $" {Model.RecipientName}"),</p>
+<p>Your <strong>order @Model.OrderNumber</strong> has been cancelled.
+@if (!string.IsNullOrWhiteSpace(Model.Reason))
+{
+    <text>Reason: @Model.Reason.</text>
+}
+</p>
+<p>If you were charged for this order, the refund will be processed automatically and typically appears within a few business days.</p>
+<p>If you still want these items, please place a new order. For any questions, reply to this email.</p>
+<h2 style="font-size:16px;margin:0 0 12px 0;">Order summary</h2>
+@{ await Html.RenderPartialAsync("_OrderItems", Model); }

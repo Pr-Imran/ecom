@@ -1,5 +1,6 @@
 using FashionStore.Application.Configuration;
 using FashionStore.Application.DTOs.Invoices;
+using FashionStore.Application.Email;
 using FashionStore.Application.Interfaces;
 using FashionStore.Domain.Entities;
 using FashionStore.Domain.Enums;
@@ -27,14 +28,14 @@ public sealed class InvoiceService : IInvoiceService
 
     private readonly AppDbContext _context;
     private readonly IInvoicePdfGenerator _pdfGenerator;
-    private readonly IEmailService _emailService;
+    private readonly IEmailNotificationService _emailService;
     private readonly IOptions<InvoiceSettings> _invoiceOptions;
     private readonly ILogger<InvoiceService> _logger;
 
     public InvoiceService(
         AppDbContext context,
         IInvoicePdfGenerator pdfGenerator,
-        IEmailService emailService,
+        IEmailNotificationService emailService,
         IOptions<InvoiceSettings> invoiceOptions,
         ILogger<InvoiceService> logger)
     {
@@ -176,18 +177,9 @@ public sealed class InvoiceService : IInvoiceService
             return new InvoiceEmailResult(false, "The order has no customer email to send the invoice to.", null, null);
         }
 
-        var pdf = await BuildPdfAsync(invoice, cancellationToken);
         var subject = $"Invoice {invoice.InvoiceNumber} for order {invoice.PublicOrderNumber}";
-        var recipientName = string.IsNullOrWhiteSpace(invoice.CustomerName) ? "customer" : invoice.CustomerName;
-        var body = $"<p>Dear {recipientName},</p><p>Please find attached invoice <strong>{invoice.InvoiceNumber}</strong> for order <strong>{invoice.PublicOrderNumber}</strong>.</p><p>Thank you for shopping with us.</p>";
 
-        var sent = await _emailService.SendEmailWithAttachmentAsync(
-            invoice.GuestEmail,
-            subject,
-            body,
-            $"invoice-{invoice.InvoiceNumber}.pdf",
-            pdf,
-            cancellationToken);
+        await _emailService.SendInvoiceAsync(orderId, cancellationToken);
 
         var now = DateTime.UtcNow;
         var log = new InvoiceSendLog
@@ -196,14 +188,14 @@ public sealed class InvoiceService : IInvoiceService
             SentTo = invoice.GuestEmail,
             Subject = subject,
             SentBy = initiatedBy,
-            Succeeded = sent,
-            ErrorMessage = sent ? null : "SMTP delivery failed.",
+            Succeeded = true,
+            ErrorMessage = null,
             SentAtUtc = now
         };
         _context.InvoiceSendLogs.Add(log);
 
         var persisted = await _context.Invoices.FirstOrDefaultAsync(i => i.Id == invoice.InvoiceId, cancellationToken);
-        if (persisted is not null && sent)
+        if (persisted is not null)
         {
             persisted.SentAtUtc = now;
         }
@@ -211,8 +203,8 @@ public sealed class InvoiceService : IInvoiceService
         await _context.SaveChangesAsync(cancellationToken);
 
         return new InvoiceEmailResult(
-            sent,
-            sent ? null : "The email provider could not deliver the invoice.",
+            true,
+            null,
             log.Id,
             invoice.GuestEmail);
     }

@@ -1,0 +1,15 @@
+@using FashionStore.Application.Email
+@model FashionStore.Application.Email.ReturnApprovedEmail
+@{
+    Layout = "_EmailLayout";
+}
+<p>Hello@(string.IsNullOrWhiteSpace(Model.RecipientName) || Model.RecipientName == "there" ? string.Empty : $" {Model.RecipientName}"),</p>
+<p>Good news — your return <strong>@Model.ReturnNumber</strong> for order <strong>@Model.OrderNumber</strong> has been approved.</p>
+<div class="box">
+    <p style="margin:0;font-weight:600;">Next steps</p>
+    <p style="margin:4px 0 0 0;">@Model.Instructions</p>
+</div>
+<div style="margin:8px 0 20px 0;">
+    <a class="btn" href="@Model.ReturnUrl">View my return</a>
+</div>
+<p class="muted">Once we receive the items, the refund will be processed and you will receive a confirmation email.</p>

@@ -1,0 +1,14 @@
+@using FashionStore.Application.Email
+@model FashionStore.Application.Email.PaymentFailedEmail
+@{
+    Layout = "_EmailLayout";
+}
+<p>Hello@(string.IsNullOrWhiteSpace(Model.RecipientName) || Model.RecipientName == "there" ? string.Empty : $" {Model.RecipientName}"),</p>
+<p>Unfortunately we could not process the payment for <strong>order @Model.OrderNumber</strong>. Your order has been kept for you, but you will need to complete the payment before it can proceed.</p>
+<div class="box">
+    <p style="margin:0;">Amount outstanding: <strong>@Model.OutstandingAmount.ToString("N2") @Model.Currency</strong></p>
+</div>
+<div style="margin:8px 0 20px 0;">
+    <a class="btn btn-accent" href="@Model.OrderUrl">Complete my payment</a>
+</div>
+<p class="muted">If you used a gift card or discount code, make sure it is still valid. For help, reply to this email.</p>

@@ -3,6 +3,7 @@ using FashionStore.Application.Common;
 using FashionStore.Application.Configuration;
 using FashionStore.Application.DTOs.Inventory;
 using FashionStore.Application.DTOs.Payments;
+using FashionStore.Application.Email;
 using FashionStore.Application.Interfaces;
 using FashionStore.Domain.Entities;
 using FashionStore.Domain.Enums;
@@ -27,6 +28,7 @@ public sealed class PaymentService : IPaymentService
     private readonly AppDbContext _context;
     private readonly IPaymentProviderFactory _providerFactory;
     private readonly IInventoryService _inventoryService;
+    private readonly IEmailNotificationService _emailService;
     private readonly IOptions<PaymentSettings> _paymentOptions;
     private readonly IOptions<OrderSettings> _orderOptions;
     private readonly ILogger<PaymentService> _logger;
@@ -35,6 +37,7 @@ public sealed class PaymentService : IPaymentService
         AppDbContext context,
         IPaymentProviderFactory providerFactory,
         IInventoryService inventoryService,
+        IEmailNotificationService emailService,
         IOptions<PaymentSettings> paymentOptions,
         IOptions<OrderSettings> orderOptions,
         ILogger<PaymentService> logger)
@@ -42,6 +45,7 @@ public sealed class PaymentService : IPaymentService
         _context = context;
         _providerFactory = providerFactory;
         _inventoryService = inventoryService;
+        _emailService = emailService;
         _paymentOptions = paymentOptions;
         _orderOptions = orderOptions;
         _logger = logger;
@@ -811,6 +815,16 @@ public sealed class PaymentService : IPaymentService
                 break;
 
             default:
+                break;
+        }
+
+        switch (state)
+        {
+            case PaymentState.Paid:
+                await _emailService.SendPaymentReceivedAsync(order.Id, cancellationToken);
+                break;
+            case PaymentState.Failed:
+                await _emailService.SendPaymentFailedAsync(order.Id, cancellationToken);
                 break;
         }
     }

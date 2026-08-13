@@ -2,6 +2,7 @@ using FashionStore.Application;
 using FashionStore.Application.Configuration;
 using FashionStore.Application.Interfaces;
 using FashionStore.Infrastructure;
+using FashionStore.Infrastructure.BackgroundJobs;
 using FashionStore.Web.Infrastructure;
 using FashionStore.Web.Middleware;
 using Hangfire;
@@ -162,12 +163,45 @@ using (var scope = app.Services.CreateScope())
 {
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     var inventorySettings = scope.ServiceProvider.GetRequiredService<InventorySettings>();
+    var backgroundJobSettings = scope.ServiceProvider.GetRequiredService<BackgroundJobSettings>();
     try
     {
         RecurringJob.AddOrUpdate<IInventoryService>(
             "inventory-release-expired-reservations",
             service => service.ReleaseExpiredReservationsAsync(CancellationToken.None),
             inventorySettings.ExpiredReservationReleaseCron);
+
+#pragma warning disable CS0618
+        RecurringJob.AddOrUpdate<SendQueuedEmailsJob>(
+            "email-process-outbox",
+            job => job.ExecuteAsync(CancellationToken.None),
+            backgroundJobSettings.EmailQueueCron,
+            new RecurringJobOptions { QueueName = "email" });
+
+        RecurringJob.AddOrUpdate<ExpireUnpaidOrdersJob>(
+            "email-expire-unpaid-orders",
+            job => job.ExecuteAsync(CancellationToken.None),
+            backgroundJobSettings.ExpireUnpaidOrdersCron,
+            new RecurringJobOptions { QueueName = "email" });
+
+        RecurringJob.AddOrUpdate<ScheduledPromotionsJob>(
+            "promotions-apply-schedule",
+            job => job.ExecuteAsync(CancellationToken.None),
+            backgroundJobSettings.ScheduledPromotionsCron,
+            new RecurringJobOptions { QueueName = "default" });
+
+        RecurringJob.AddOrUpdate<LowStockAlertJob>(
+            "inventory-low-stock-alert",
+            job => job.ExecuteAsync(CancellationToken.None),
+            backgroundJobSettings.LowStockAlertCron,
+            new RecurringJobOptions { QueueName = "email" });
+
+        RecurringJob.AddOrUpdate<CleanupTemporaryUploadsJob>(
+            "storage-cleanup-temporary-uploads",
+            job => job.ExecuteAsync(CancellationToken.None),
+            backgroundJobSettings.CleanupTemporaryUploadsCron,
+            new RecurringJobOptions { QueueName = "cleanup" });
+#pragma warning restore CS0618
     }
     catch (Exception ex)
     {

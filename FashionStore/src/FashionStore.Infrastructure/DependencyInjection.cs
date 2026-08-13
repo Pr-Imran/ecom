@@ -1,7 +1,10 @@
 using FashionStore.Application.Authorization;
 using FashionStore.Application.Configuration;
+using FashionStore.Application.Email;
 using FashionStore.Application.Interfaces;
+using FashionStore.Infrastructure.BackgroundJobs;
 using FashionStore.Infrastructure.Data;
+using FashionStore.Infrastructure.Emails;
 using FashionStore.Infrastructure.Invoicing;
 using FashionStore.Infrastructure.Payments;
 using FashionStore.Infrastructure.Services;
@@ -56,12 +59,17 @@ public static class DependencyInjection
             .GetSection(HomePageSettings.SectionName)
             .Get<HomePageSettings>() ?? new HomePageSettings();
 
+        var emailSettings = configuration
+            .GetSection(EmailSettings.SectionName)
+            .Get<EmailSettings>() ?? new EmailSettings();
+
         services.AddSingleton(cacheSettings);
         services.AddSingleton(fileStorageSettings);
         services.AddSingleton(imageSettings);
         services.AddSingleton(backgroundJobSettings);
         services.AddSingleton(inventorySettings);
         services.AddSingleton(homePageSettings);
+        services.AddSingleton(emailSettings);
         services.AddDistributedMemoryCache();
 
         services.AddDbContext<AppDbContext>(options =>
@@ -112,7 +120,6 @@ public static class DependencyInjection
         services.AddScoped<IRoleSeeder, RoleSeeder>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<FashionStore.Application.Services.INavigationService, NavigationService>();
-        services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IBrandService, BrandService>();
         services.AddScoped<ICollectionService, CollectionService>();
@@ -154,6 +161,19 @@ public static class DependencyInjection
         services.AddScoped<IImageService, ImageService>();
         services.AddSingleton<IImageProcessingDispatcher, ImageProcessingDispatcher>();
         services.AddHostedService<ImageProcessingBackgroundService>();
+        services.AddTransient<IEmailProvider, DevelopmentEmailProvider>();
+        services.AddTransient<IEmailProvider, SmtpEmailProvider>();
+        services.AddTransient<IEmailProvider, ApiEmailProvider>();
+        services.AddScoped<IEmailOutbox, EmailOutbox>();
+        services.AddScoped<IEmailSender, EmailSender>();
+        services.AddScoped<IEmailTemplateRenderer, RazorEmailTemplateRenderer>();
+        services.AddScoped<IEmailNotificationService, EmailNotificationService>();
+        services.AddScoped<IEmailAdminService, EmailAdminService>();
+        services.AddTransient<SendQueuedEmailsJob>();
+        services.AddTransient<ExpireUnpaidOrdersJob>();
+        services.AddTransient<ScheduledPromotionsJob>();
+        services.AddTransient<LowStockAlertJob>();
+        services.AddTransient<CleanupTemporaryUploadsJob>();
         services.AddAuthorization(options =>
         {
             options.AddPolicy(InventoryPolicies.InventoryManage, policy =>
@@ -201,6 +221,9 @@ public static class DependencyInjection
             options.AddPolicy(ReviewPolicies.ReviewsManage, policy =>
                 policy.RequireAuthenticatedUser()
                       .RequireClaim("permission", ApplicationPermissions.Reviews.Manage));
+            options.AddPolicy(EmailPolicies.EmailsManage, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireClaim("permission", ApplicationPermissions.Emails.Manage));
         });
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>("database");

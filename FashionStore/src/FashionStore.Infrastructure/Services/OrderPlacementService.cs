@@ -2,6 +2,7 @@ using FashionStore.Application.Configuration;
 using FashionStore.Application.DTOs.Checkout;
 using FashionStore.Application.DTOs.Orders;
 using FashionStore.Application.DTOs.Promotions;
+using FashionStore.Application.Email;
 using FashionStore.Application.Interfaces;
 using FashionStore.Domain.Entities;
 using FashionStore.Domain.Enums;
@@ -28,6 +29,7 @@ public sealed class OrderPlacementService : IOrderService
     private readonly ICheckoutCalculationService _checkoutCalculationService;
     private readonly IDiscountService _discountService;
     private readonly IInventoryService _inventoryService;
+    private readonly IEmailNotificationService _emailService;
     private readonly IOptions<OrderSettings> _orderOptions;
     private readonly ILogger<OrderPlacementService> _logger;
 
@@ -36,6 +38,7 @@ public sealed class OrderPlacementService : IOrderService
         ICheckoutCalculationService checkoutCalculationService,
         IDiscountService discountService,
         IInventoryService inventoryService,
+        IEmailNotificationService emailService,
         IOptions<OrderSettings> orderOptions,
         ILogger<OrderPlacementService> logger)
     {
@@ -43,6 +46,7 @@ public sealed class OrderPlacementService : IOrderService
         _checkoutCalculationService = checkoutCalculationService;
         _discountService = discountService;
         _inventoryService = inventoryService;
+        _emailService = emailService;
         _orderOptions = orderOptions;
         _logger = logger;
     }
@@ -205,6 +209,8 @@ public sealed class OrderPlacementService : IOrderService
                     CreatedAtUtc = now,
                     ExpiresAtUtc = now.AddDays(_orderOptions.Value.IdempotencyRetentionDays)
                 });
+
+                await _emailService.SendOrderPlacedAsync(order, cancellationToken);
 
                 await _context.SaveChangesAsync(cancellationToken);
 

@@ -1,0 +1,30 @@
+@using FashionStore.Application.Email
+@model FashionStore.Application.Email.OrderShippedEmail
+@{
+    Layout = "_EmailLayout";
+}
+<p>Hello@(string.IsNullOrWhiteSpace(Model.RecipientName) || Model.RecipientName == "there" ? string.Empty : $" {Model.RecipientName}"),</p>
+<p>Great news — <strong>order @Model.OrderNumber</strong> has shipped! Here are your tracking details:</p>
+<div class="box">
+    @if (!string.IsNullOrWhiteSpace(Model.CarrierCode))
+    {
+        <p style="margin:0 0 4px 0;"><strong>Carrier:</strong> @Model.CarrierCode</p>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.TrackingNumber))
+    {
+        <p style="margin:0 0 4px 0;"><strong>Tracking number:</strong> @Model.TrackingNumber</p>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.TrackingUrl))
+    {
+        <p style="margin:0 0 4px 0;"><a href="@Model.TrackingUrl">Track my parcel</a></p>
+    }
+    @if (string.IsNullOrWhiteSpace(Model.TrackingNumber) && string.IsNullOrWhiteSpace(Model.TrackingUrl))
+    {
+        <p style="margin:0;">We will share tracking details with you as soon as they are available.</p>
+    }
+</div>
+<div style="margin:8px 0 20px 0;">
+    <a class="btn" href="@Model.OrderUrl">View my order</a>
+</div>
+<h2 style="font-size:16px;margin:0 0 12px 0;">Order summary</h2>
+@{ await Html.RenderPartialAsync("_OrderItems", Model); }

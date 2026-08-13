@@ -1,0 +1,14 @@
+@using FashionStore.Application.Email
+@model FashionStore.Application.Email.RefundCompletedEmail
+@{
+    Layout = "_EmailLayout";
+}
+<p>Hello@(string.IsNullOrWhiteSpace(Model.RecipientName) || Model.RecipientName == "there" ? string.Empty : $" {Model.RecipientName}"),</p>
+<p>Your refund for <strong>order @Model.OrderNumber</strong> has been processed.</p>
+<div class="box">
+    <p style="margin:0;">Refunded amount: <strong>@Model.RefundedAmount.ToString("N2") @Model.Currency</strong></p>
+</div>
+<p class="muted">Depending on your bank or card provider, the money may take a few business days to appear on your statement.</p>
+<div style="margin:8px 0 0 0;">
+    <a class="btn" href="@Model.OrderUrl">View my order</a>
+</div>
