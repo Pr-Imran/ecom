@@ -31,4 +31,16 @@ public static class CacheKeys
 
     /// <summary>Published policy documents that render on the storefront.</summary>
     public const string PolicyDocuments = "content:policies:published";
+
+    /// <summary>The aggregated administration dashboard payload (short TTL).</summary>
+    public const string AdminDashboard = "admin:dashboard";
+
+    /// <summary>A single aggregated report result (cached per report + filter tuple).</summary>
+    public const string AdminReport = "admin:report:{type}:{key}";
+
+    /// <summary>The shared report filter option sets (categories, brands, products, etc.).</summary>
+    public const string AdminReportFilters = "admin:report:filters";
+
+    /// <summary>Background report export job state, cached per job id.</summary>
+    public const string AdminReportExport = "admin:report:export:{jobId}";
 }
