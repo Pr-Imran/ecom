@@ -187,22 +187,32 @@ public sealed class AdminReportService : IAdminReportService
 
         var grouped = orders
             .GroupBy(o => o.CreatedAtUtc.Date)
-            .Select(g => new AdminSalesReportRowDto(
-                g.Key,
-                g.Count(),
-                g.Sum(x => x.GrandTotal),
-                g.Sum(x => x.ProductDiscount + x.CouponDiscount),
-                g.Sum(x => x.ShippingCharge),
-                g.Sum(x => x.Tax),
-                g.Sum(x => x.RefundedAmount),
-                g.Sum(x => x.GrandTotal) - g.Sum(x => x.RefundedAmount)));
+            .Select(g => new
+            {
+                Day = g.Key,
+                OrderCount = g.Count(),
+                Gross = g.Sum(x => x.GrandTotal),
+                Discount = g.Sum(x => x.ProductDiscount + x.CouponDiscount),
+                Shipping = g.Sum(x => x.ShippingCharge),
+                Tax = g.Sum(x => x.Tax),
+                Refunded = g.Sum(x => x.RefundedAmount)
+            });
 
         var totalDays = await grouped.CountAsync(cancellationToken);
 
         var items = await grouped
-            .OrderByDescending(x => x.DayUtc)
+            .OrderByDescending(x => x.Day)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
+            .Select(x => new AdminSalesReportRowDto(
+                x.Day,
+                x.OrderCount,
+                x.Gross,
+                x.Discount,
+                x.Shipping,
+                x.Tax,
+                x.Refunded,
+                x.Gross - x.Refunded))
             .ToListAsync(cancellationToken);
 
         var totals = await orders
@@ -1065,7 +1075,8 @@ public sealed class AdminReportService : IAdminReportService
                 x.LineTotal,
                 1))
             .GroupBy(x => new { x.ProductId, x.ProductName, x.Sku, x.CategoryId, x.CategoryName, x.BrandId, x.BrandName })
-            .Select(g => new ProductReportItem(
+            .Select(g => new
+            {
                 g.Key.ProductId,
                 g.Key.ProductName,
                 g.Key.Sku,
@@ -1073,10 +1084,22 @@ public sealed class AdminReportService : IAdminReportService
                 g.Key.CategoryName,
                 g.Key.BrandId,
                 g.Key.BrandName,
-                g.Sum(x => x.Units),
-                g.Sum(x => x.Revenue),
-                g.Sum(x => x.OrderCount)))
-            .OrderByDescending(x => x.Revenue);
+                Units = g.Sum(x => x.Units),
+                Revenue = g.Sum(x => x.Revenue),
+                OrderCount = g.Sum(x => x.OrderCount)
+            })
+            .OrderByDescending(x => x.Revenue)
+            .Select(x => new ProductReportItem(
+                x.ProductId,
+                x.ProductName,
+                x.Sku,
+                x.CategoryId,
+                x.CategoryName,
+                x.BrandId,
+                x.BrandName,
+                x.Units,
+                x.Revenue,
+                x.OrderCount));
     }
 
     private IQueryable<Order> ApplyOrderFilters(

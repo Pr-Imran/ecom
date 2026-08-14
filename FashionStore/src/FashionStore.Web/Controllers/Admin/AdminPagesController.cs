@@ -18,21 +18,28 @@ public class AdminPagesController : Controller
     private readonly INavigationService _navigationService;
     private readonly IInvoiceService _invoiceService;
     private readonly IEmailAdminService _emailAdminService;
+    private readonly IAdminDashboardService _dashboardService;
+    private readonly IWebsiteSettingsService _settingsService;
     private readonly IOptions<InvoiceSettings> _invoiceOptions;
 
     public AdminPagesController(
         INavigationService navigationService,
         IInvoiceService invoiceService,
         IEmailAdminService emailAdminService,
+        IAdminDashboardService dashboardService,
+        IWebsiteSettingsService settingsService,
         IOptions<InvoiceSettings> invoiceOptions)
     {
         _navigationService = navigationService;
         _invoiceService = invoiceService;
         _emailAdminService = emailAdminService;
+        _dashboardService = dashboardService;
+        _settingsService = settingsService;
         _invoiceOptions = invoiceOptions;
     }
 
     [HttpGet("/admin")]
+    [Authorize(Policy = DashboardPolicies.DashboardView)]
     public async Task<IActionResult> Dashboard(CancellationToken cancellationToken = default)
     {
         var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
@@ -42,7 +49,20 @@ public class AdminPagesController : Controller
         ViewData["UserDisplayName"] = User.FindFirst("name")?.Value ?? "Admin";
         ViewData["UserEmail"] = User.FindFirst("email")?.Value ?? "admin@example.com";
 
-        return View();
+        var data = await _dashboardService.GetDashboardAsync(cancellationToken);
+        return View(data);
+    }
+
+    [HttpGet("/admin/reports")]
+    [Authorize(Policy = ReportsPolicies.ReportsView)]
+    public async Task<IActionResult> Reports(CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        ViewData["AdminNav"] = await _navigationService.GetAdminNavigationAsync(userId, cancellationToken);
+        ViewData["PageTitle"] = "Reports";
+        var settings = await _settingsService.GetSettingsAsync(cancellationToken);
+        ViewData["Currency"] = settings.Commerce.CurrencyCode;
+        return View("~/Views/Admin/Reports.cshtml");
     }
 
     [HttpGet("/admin/categories")]

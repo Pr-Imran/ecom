@@ -190,14 +190,17 @@ public sealed class AdminDashboardService : IAdminDashboardService
                         i.Order.CreatedAtUtc < monthEndUtc &&
                         i.Order.OrderStatus != OrderStatus.Cancelled)
             .GroupBy(i => new { i.ProductId, i.ProductName, i.Sku })
-            .Select(g => new AdminTopProductDto(
+            .Select(g => new
+            {
                 g.Key.ProductId,
                 g.Key.ProductName,
                 g.Key.Sku,
-                g.Sum(x => x.Quantity),
-                g.Sum(x => x.LineTotal)))
-            .OrderByDescending(x => x.UnitsSold)
+                Units = g.Sum(x => x.Quantity),
+                Revenue = g.Sum(x => x.LineTotal)
+            })
+            .OrderByDescending(x => x.Units)
             .ThenByDescending(x => x.Revenue)
+            .Select(x => new AdminTopProductDto(x.ProductId, x.ProductName, x.Sku, x.Units, x.Revenue))
             .Take(5)
             .ToListAsync(cancellationToken);
     }

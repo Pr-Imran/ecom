@@ -1,125 +1,246 @@
+@model FashionStore.Application.DTOs.Reports.AdminDashboardDataDto
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Dashboard";
     ViewData["PageTitle"] = "Dashboard";
+    var m = Model.Metrics;
+    var currency = m.Currency;
+    string Money(decimal value) => $"{currency} {value.ToString("N2")}";
 }
 
-<div class="space-y-6">
-    @* Welcome Section *@
-    <div class="bg-gradient-to-r from-brand-primary to-brand-primary/80 rounded-lg p-6 text-white">
-        <h2 class="text-2xl font-bold mb-2">Welcome back, @ViewData["UserDisplayName"]!</h2>
-        <p class="text-white/90">Manage your store's categories, brands, and collections from here.</p>
+<div class="space-y-4 pb-24">
+    @* Welcome *@
+    <div class="bg-gradient-to-r from-brand-primary to-brand-primary/80 rounded-lg p-5 sm:p-6 text-white">
+        <h2 class="text-xl sm:text-2xl font-bold mb-1">Welcome back, @ViewData["UserDisplayName"]!</h2>
+        <p class="text-white/90 text-sm">Here is what is happening in your store right now.</p>
     </div>
 
-    @* Quick Stats *@
-    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-white rounded-lg border p-4">
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-sm text-gray-600">Categories</span>
-                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
-                </svg>
-            </div>
-            <p class="text-2xl font-bold text-gray-900">0</p>
-            <p class="text-xs text-gray-500 mt-1">Manage product categories</p>
+    @* Swipe-friendly metric cards (horizontal scroll on mobile, grid on desktop) *@
+    <div class="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 lg:mx-0 lg:px-0 lg:grid lg:grid-cols-4 lg:overflow-visible">
+        <div class="snap-center shrink-0 w-40 lg:w-auto bg-white rounded-lg border p-4">
+            <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Sales today</p>
+            <p class="text-lg lg:text-2xl font-bold text-gray-900 mt-1 truncate">@Money(m.SalesToday)</p>
+            <p class="text-xs text-gray-400 mt-1">Non-cancelled paid orders</p>
         </div>
-
-        <div class="bg-white rounded-lg border p-4">
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-sm text-gray-600">Brands</span>
-                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
-                </svg>
-            </div>
-            <p class="text-2xl font-bold text-gray-900">0</p>
-            <p class="text-xs text-gray-500 mt-1">Product brands</p>
+        <div class="snap-center shrink-0 w-40 lg:w-auto bg-white rounded-lg border p-4">
+            <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Sales this month</p>
+            <p class="text-lg lg:text-2xl font-bold text-gray-900 mt-1 truncate">@Money(m.SalesThisMonth)</p>
+            <p class="text-xs text-gray-400 mt-1">Gross sales this month</p>
         </div>
-
-        <div class="bg-white rounded-lg border p-4">
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-sm text-gray-600">Collections</span>
-                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                </svg>
-            </div>
-            <p class="text-2xl font-bold text-gray-900">0</p>
-            <p class="text-xs text-gray-500 mt-1">Seasonal collections</p>
+        <div class="snap-center shrink-0 w-40 lg:w-auto bg-white rounded-lg border p-4">
+            <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Orders today</p>
+            <p class="text-lg lg:text-2xl font-bold text-gray-900 mt-1">@m.OrdersToday</p>
+            <p class="text-xs text-gray-400 mt-1">All orders placed today</p>
         </div>
-
-        <div class="bg-white rounded-lg border p-4">
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-sm text-gray-600">Products</span>
-                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7a6 6 0 00-12 0m12 0a6 6 0 00-12 0m12 0v2.586a1 1 0 01-.293.707l-3.414 3.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293L6.293 13.586A1 1 0 016 12.879V7m0 3.586V19a2 2 0 002 2h12a2 2 0 002-2v-8.414z"/>
-                </svg>
-            </div>
-            <p class="text-2xl font-bold text-gray-900">0</p>
-            <p class="text-xs text-gray-500 mt-1">Total products</p>
+        <div class="snap-center shrink-0 w-40 lg:w-auto bg-white rounded-lg border p-4">
+            <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Pending orders</p>
+            <p class="text-lg lg:text-2xl font-bold text-amber-600 mt-1">@m.PendingOrders</p>
+            <p class="text-xs text-gray-400 mt-1">Open fulfilment states</p>
         </div>
-    </div>
-
-    @* Quick Actions *@
-    <div class="bg-white rounded-lg shadow-sm border p-6">
-        <h3 class="text-lg font-bold mb-4">Quick Actions</h3>
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <a href="/admin/categories" class="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                <div class="w-10 h-10 bg-brand-primary/10 rounded-lg flex items-center justify-center">
-                    <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
-                    </svg>
-                </div>
-                <div>
-                    <p class="font-medium text-gray-900">Manage Categories</p>
-                    <p class="text-xs text-gray-500">Create & organize categories</p>
-                </div>
-            </a>
-
-            <a href="/admin/brands" class="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                <div class="w-10 h-10 bg-brand-primary/10 rounded-lg flex items-center justify-center">
-                    <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
-                    </svg>
-                </div>
-                <div>
-                    <p class="font-medium text-gray-900">Manage Brands</p>
-                    <p class="text-xs text-gray-500">Add & edit product brands</p>
-                </div>
-            </a>
-
-            <a href="/admin/collections" class="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                <div class="w-10 h-10 bg-brand-primary/10 rounded-lg flex items-center justify-center">
-                    <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                    </svg>
-                </div>
-                <div>
-                    <p class="font-medium text-gray-900">Manage Collections</p>
-                    <p class="text-xs text-gray-500">Seasonal & featured collections</p>
-                </div>
-            </a>
+        <div class="snap-center shrink-0 w-40 lg:w-auto bg-white rounded-lg border p-4">
+            <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Paid orders</p>
+            <p class="text-lg lg:text-2xl font-bold text-emerald-600 mt-1">@m.PaidOrders</p>
+            <p class="text-xs text-gray-400 mt-1">All-time fully paid</p>
+        </div>
+        <div class="snap-center shrink-0 w-40 lg:w-auto bg-white rounded-lg border p-4">
+            <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Failed payments</p>
+            <p class="text-lg lg:text-2xl font-bold text-red-600 mt-1">@m.FailedPayments</p>
+            <p class="text-xs text-gray-400 mt-1">This month</p>
+        </div>
+        <div class="snap-center shrink-0 w-40 lg:w-auto bg-white rounded-lg border p-4">
+            <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Low stock</p>
+            <p class="text-lg lg:text-2xl font-bold text-amber-600 mt-1">@m.LowStockVariants</p>
+            <p class="text-xs text-gray-400 mt-1">At/below threshold</p>
+        </div>
+        <div class="snap-center shrink-0 w-40 lg:w-auto bg-white rounded-lg border p-4">
+            <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Out of stock</p>
+            <p class="text-lg lg:text-2xl font-bold text-red-600 mt-1">@m.OutOfStockVariants</p>
+            <p class="text-xs text-gray-400 mt-1">Available = 0</p>
+        </div>
+        <div class="snap-center shrink-0 w-40 lg:w-auto bg-white rounded-lg border p-4">
+            <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Pending returns</p>
+            <p class="text-lg lg:text-2xl font-bold text-gray-900 mt-1">@m.PendingReturns</p>
+            <p class="text-xs text-gray-400 mt-1">Active, non-terminal</p>
+        </div>
+        <div class="snap-center shrink-0 w-40 lg:w-auto bg-white rounded-lg border p-4">
+            <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Pending refunds</p>
+            <p class="text-lg lg:text-2xl font-bold text-gray-900 mt-1">@m.PendingRefunds</p>
+            <p class="text-xs text-gray-400 mt-1">Awaiting processing</p>
+        </div>
+        <div class="snap-center shrink-0 w-40 lg:w-auto bg-white rounded-lg border p-4">
+            <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">New customers</p>
+            <p class="text-lg lg:text-2xl font-bold text-gray-900 mt-1">@m.NewCustomers</p>
+            <p class="text-xs text-gray-400 mt-1">Accounts this month</p>
+        </div>
+        <div class="snap-center shrink-0 w-40 lg:w-auto bg-white rounded-lg border p-4">
+            <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Average order</p>
+            <p class="text-lg lg:text-2xl font-bold text-gray-900 mt-1 truncate">@Money(m.AverageOrderValue)</p>
+            <p class="text-xs text-gray-400 mt-1">Gross sales / paid orders</p>
         </div>
     </div>
 
-    @* Getting Started Guide *@
-    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <h3 class="text-lg font-bold text-blue-900 mb-3">Getting Started</h3>
-        <ol class="space-y-2 text-sm text-blue-800">
-            <li class="flex items-start gap-2">
-                <span class="font-bold">1.</span>
-                <span>Start by creating your main product categories (e.g., Men, Women, Kids)</span>
-            </li>
-            <li class="flex items-start gap-2">
-                <span class="font-bold">2.</span>
-                <span>Add the brands you carry (e.g., Nike, Adidas, Zara)</span>
-            </li>
-            <li class="flex items-start gap-2">
-                <span class="font-bold">3.</span>
-                <span>Set up seasonal collections to group products (e.g., Summer 2026, Holiday Sale)</span>
-            </li>
-            <li class="flex items-start gap-2">
-                <span class="font-bold">4.</span>
-                <span>Once categories, brands, and collections are set up, you can start adding products</span>
-            </li>
-        </ol>
+    <div class="grid lg:grid-cols-3 gap-4">
+        @* Sales trend (single-column responsive bar chart) *@
+        <div class="bg-white rounded-lg border p-5 lg:col-span-2">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold text-gray-900">Sales trend (last 14 days)</h3>
+                <span class="text-xs text-gray-400">Gross sales, store timezone</span>
+            </div>
+            @if (Model.SalesTrend.Count == 0)
+            {
+                <p class="text-sm text-gray-500 py-8 text-center">No sales data yet.</p>
+            }
+            else
+            {
+                var max = Model.SalesTrend.Max(p => p.GrossSales);
+                <div class="flex items-end gap-1 sm:gap-2 h-48 overflow-x-auto pb-1">
+                    @foreach (var point in Model.SalesTrend)
+                    {
+                        var height = max > 0 ? Math.Max(4, (int)((point.GrossSales / max) * 160)) : 4;
+                        <div class="flex-1 min-w-6 flex flex-col items-center gap-1" title="@point.DayUtc.ToString("MMM d") — @Money(point.GrossSales)">
+                            <span class="text-[10px] text-gray-500 font-medium">@point.OrderCount</span>
+                            <div class="w-full rounded-t bg-brand-primary/80 hover:bg-brand-primary transition-colors" style="height:@(height)px;"></div>
+                            <span class="text-[10px] text-gray-400">@point.DayUtc.ToString("d")</span>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        @* Top selling products *@
+        <div class="bg-white rounded-lg border p-5">
+            <h3 class="font-semibold text-gray-900 mb-3">Top selling products</h3>
+            @if (Model.TopProducts.Count == 0)
+            {
+                <p class="text-sm text-gray-500 py-6 text-center">No sales this month.</p>
+            }
+            else
+            {
+                <ul class="space-y-3">
+                    @foreach (var product in Model.TopProducts)
+                    {
+                        <li class="flex items-center justify-between gap-2">
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">@product.ProductName</p>
+                                <p class="text-xs text-gray-400">@product.UnitsSold sold</p>
+                            </div>
+                            <span class="text-sm font-semibold text-gray-900 shrink-0">@Money(product.Revenue)</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
     </div>
+
+    <div class="grid lg:grid-cols-2 gap-4">
+        @* Top categories *@
+        <div class="bg-white rounded-lg border p-5">
+            <h3 class="font-semibold text-gray-900 mb-3">Top categories</h3>
+            @if (Model.TopCategories.Count == 0)
+            {
+                <p class="text-sm text-gray-500 py-6 text-center">No data this month.</p>
+            }
+            else
+            {
+                <ul class="space-y-3">
+                    @foreach (var category in Model.TopCategories)
+                    {
+                        <li class="flex items-center justify-between gap-2">
+                            <span class="text-sm font-medium text-gray-900 truncate">@category.CategoryName</span>
+                            <span class="text-sm text-gray-600 shrink-0">@category.UnitsSold units</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        @* Top brands *@
+        <div class="bg-white rounded-lg border p-5">
+            <h3 class="font-semibold text-gray-900 mb-3">Top brands</h3>
+            @if (Model.TopBrands.Count == 0)
+            {
+                <p class="text-sm text-gray-500 py-6 text-center">No data this month.</p>
+            }
+            else
+            {
+                <ul class="space-y-3">
+                    @foreach (var brand in Model.TopBrands)
+                    {
+                        <li class="flex items-center justify-between gap-2">
+                            <span class="text-sm font-medium text-gray-900 truncate">@brand.BrandName</span>
+                            <span class="text-sm text-gray-600 shrink-0">@brand.UnitsSold units</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+
+    @* Recent orders *@
+    <div class="bg-white rounded-lg border overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b">
+            <h3 class="font-semibold text-gray-900">Recent orders</h3>
+            <a href="/admin/orders" class="text-sm text-brand-primary font-medium hover:underline">View all</a>
+        </div>
+        @if (Model.RecentOrders.Count == 0)
+        {
+            <p class="text-sm text-gray-500 py-8 text-center">No orders yet.</p>
+        }
+        else
+        {
+            <div class="hidden lg:block overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50 border-b">
+                        <tr>
+                            <th class="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Order</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Placed</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var order in Model.RecentOrders)
+                        {
+                            <tr class="border-b last:border-0 hover:bg-gray-50">
+                                <td class="px-5 py-3 text-sm">
+                                    <a href="/admin/orders/@order.OrderId" class="font-medium text-brand-primary hover:underline">@order.PublicOrderNumber</a>
+                                </td>
+                                <td class="px-5 py-3 text-sm text-gray-700">@(order.IsGuest ? order.GuestEmail : order.CustomerName)</td>
+                                <td class="px-5 py-3"><span class="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">@order.OrderStatus</span></td>
+                                <td class="px-5 py-3"><span class="inline-flex px-2 py-1 rounded-full text-xs font-medium @(order.PaymentStatus == "Paid" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")">@order.PaymentStatus</span></td>
+                                <td class="px-5 py-3 text-sm font-semibold text-gray-900">@order.Currency @order.GrandTotal.ToString("N2")</td>
+                                <td class="px-5 py-3 text-sm text-gray-500">@order.CreatedAtUtc.ToLocalTime().ToString("g")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="lg:hidden divide-y">
+                @foreach (var order in Model.RecentOrders)
+                {
+                    <a href="/admin/orders/@order.OrderId" class="block px-5 py-4 hover:bg-gray-50">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-semibold text-brand-primary">@order.PublicOrderNumber</span>
+                            <span class="text-sm font-semibold text-gray-900">@order.Currency @order.GrandTotal.ToString("N2")</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">@(order.IsGuest ? order.GuestEmail : order.CustomerName) · @order.OrderStatus</p>
+                        <p class="text-xs text-gray-400 mt-0.5">@order.CreatedAtUtc.ToLocalTime().ToString("g")</p>
+                    </a>
+                }
+            </div>
+        }
+    </div>
+
+    @* Accuracy notes *@
+    <details class="bg-gray-50 border rounded-lg p-5">
+        <summary class="font-medium text-gray-700 cursor-pointer text-sm">Metric accuracy notes</summary>
+        <ul class="list-disc pl-5 mt-3 space-y-1.5">
+            @foreach (var note in Model.AccuracyNotes)
+            {
+                <li class="text-xs text-gray-600">@note</li>
+            }
+        </ul>
+    </details>
 </div>

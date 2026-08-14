@@ -1,0 +1,680 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Reports";
+    ViewData["PageTitle"] = "Reports";
+    var currencyCode = (string?)ViewData["Currency"] ?? "USD";
+}
+
+@* Global state used by the reports script. *@
+<script id="reports-bootstrap" type="application/json">
+{
+  "currency": "@currencyCode",
+  "types": [
+    { "value": "sales", "label": "Sales" },
+    { "value": "orders", "label": "Orders" },
+    { "value": "product-sales", "label": "Product sales" },
+    { "value": "variation-sales", "label": "Variation sales" },
+    { "value": "category", "label": "Categories" },
+    { "value": "brand", "label": "Brands" },
+    { "value": "customer", "label": "Customers" },
+    { "value": "coupon-usage", "label": "Coupon usage" },
+    { "value": "inventory", "label": "Inventory" },
+    { "value": "returns", "label": "Returns" },
+    { "value": "refunds", "label": "Refunds" },
+    { "value": "payments", "label": "Payments" }
+  ]
+}
+</script>
+
+<div class="space-y-4 pb-24">
+    @* Header: report picker + filters + export *@
+    <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
+        <div class="flex-1 flex flex-col sm:flex-row gap-2">
+            <select id="reportType" class="border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-700 focus:ring-2 focus:ring-brand-primary bg-white">
+            </select>
+            <input type="search" id="reportSearch" placeholder="Search report rows..."
+                   class="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+        </div>
+        <div class="flex gap-2">
+            <button id="btnFilters" class="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 inline-flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                </svg>
+                <span class="hidden sm:inline">Filters</span>
+                <span id="filterCount" class="hidden px-1.5 rounded-full bg-brand-primary text-white text-xs"></span>
+            </button>
+            <button id="btnExport" class="px-4 py-2.5 bg-brand-primary text-white rounded-lg text-sm font-medium hover:bg-brand-primary/90 inline-flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                Export CSV
+            </button>
+        </div>
+    </div>
+
+    @* Filter sheet: full-screen on mobile, side panel on desktop *@
+    <div id="filterSheet" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/40" data-close-filters></div>
+        <div class="absolute inset-y-0 right-0 w-full sm:w-96 bg-white shadow-xl flex flex-col lg:static lg:inset-auto lg:shadow-none lg:rounded-lg lg:border lg:w-full">
+            <div class="flex items-center justify-between px-5 py-4 border-b">
+                <h3 class="font-semibold text-gray-900">Filters</h3>
+                <button data-close-filters class="text-gray-500 hover:text-gray-700 p-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-5 space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1" for="filterFrom">From</label>
+                        <input type="date" id="filterFrom" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-primary" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1" for="filterTo">To</label>
+                        <input type="date" id="filterTo" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-primary" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1" for="filterStatus">Status</label>
+                    <input type="text" id="filterStatus" placeholder="e.g. Paid, Cancelled" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1" for="filterCategory">Category</label>
+                    <select id="filterCategory" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1" for="filterBrand">Brand</label>
+                    <select id="filterBrand" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1" for="filterProduct">Product</label>
+                    <select id="filterProduct" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1" for="filterPaymentMethod">Payment method</label>
+                    <select id="filterPaymentMethod" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1" for="filterShippingMethod">Shipping method</label>
+                    <select id="filterShippingMethod" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1" for="filterCustomer">Customer</label>
+                    <select id="filterCustomer" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1" for="filterCurrency">Currency</label>
+                    <select id="filterCurrency" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"></select>
+                </div>
+            </div>
+            <div class="flex gap-2 px-5 py-4 border-t">
+                <button id="btnResetFilters" class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Reset</button>
+                <button id="btnApplyFilters" class="flex-1 px-4 py-2.5 bg-brand-primary text-white rounded-lg text-sm font-medium hover:bg-brand-primary/90">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    @* Totals strip *@
+    <div id="totalsStrip" class="hidden flex gap-2 sm:gap-3 overflow-x-auto pb-1"></div>
+
+    @* Desktop table *@
+    <div id="reportTableWrap" class="hidden lg:block bg-white rounded-lg border overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-gray-50 border-b">
+                    <tr id="reportTableHead"></tr>
+                </thead>
+                <tbody id="reportTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    @* Mobile compact cards *@
+    <div id="reportCards" class="lg:hidden space-y-3">
+        <div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8">Loading report...</div>
+    </div>
+
+    @* Accuracy note *@
+    <div id="accuracyNote" class="hidden bg-gray-50 border rounded-lg p-4 text-xs text-gray-600"></div>
+
+    @* Pagination *@
+    <div id="pagination" class="hidden items-center justify-between gap-3">
+        <p id="pageInfo" class="text-sm text-gray-500"></p>
+        <div class="flex gap-2">
+            <button id="btnPrevPage" class="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Previous</button>
+            <button id="btnNextPage" class="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Next</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            'use strict';
+
+            var bootstrap = JSON.parse(document.getElementById('reports-bootstrap').textContent);
+            var currency = bootstrap.currency;
+
+            var state = {
+                type: 'sales',
+                page: 1,
+                pageSize: 20,
+                totalCount: 0,
+                hasMore: false
+            };
+
+            var filters = {
+                from: '',
+                to: '',
+                status: '',
+                categoryId: '',
+                brandId: '',
+                productId: '',
+                paymentMethod: '',
+                shippingMethodId: '',
+                customer: '',
+                currency: ''
+            };
+
+            var filterOptions = { categories: [], brands: [], products: [], paymentMethods: [], shippingMethods: [], customers: [], currencies: [] };
+
+            function el(id) { return document.getElementById(id); }
+
+            function esc(value) {
+                if (value === null || value === undefined) return '';
+                return String(value).replace(/[&<>"']/g, function (c) {
+                    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+                });
+            }
+
+            function api(path, options) {
+                return fetch(path, options).then(function (res) {
+                    if (res.ok) return res.json();
+                    return res.json().catch(function () { return null; }).then(function (body) {
+                        var error = (body && (body.error || body.title)) || 'Request failed';
+                        throw new Error(error);
+                    });
+                });
+            }
+
+            function fmtMoney(value, rowCurrency) {
+                var num = Number(value || 0);
+                var label = num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                return (rowCurrency || currency) + ' ' + label;
+            }
+
+            function fmtDate(value) {
+                if (!value) return '';
+                return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+            }
+
+            function fmtDateTime(value) {
+                if (!value) return '';
+                return new Date(value).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            }
+
+            function fmtPct(value) {
+                return Number(value || 0).toLocaleString(undefined, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
+            }
+
+            function fmtBool(value) {
+                return value ? 'Yes' : 'No';
+            }
+
+            var COLUMNS = {
+                'sales': [
+                    { key: 'dayUtc', label: 'Day', fmt: 'date' },
+                    { key: 'orderCount', label: 'Orders', fmt: 'num' },
+                    { key: 'grossSales', label: 'Gross sales', fmt: 'money' },
+                    { key: 'discounts', label: 'Discounts', fmt: 'money' },
+                    { key: 'shipping', label: 'Shipping', fmt: 'money' },
+                    { key: 'tax', label: 'Tax', fmt: 'money' },
+                    { key: 'refunds', label: 'Refunds', fmt: 'money' },
+                    { key: 'netSales', label: 'Net sales', fmt: 'money' }
+                ],
+                'orders': [
+                    { key: 'orderNumber', label: 'Order' },
+                    { key: 'customerLabel', label: 'Customer' },
+                    { key: 'grandTotal', label: 'Total', fmt: 'money' },
+                    { key: 'paidAmount', label: 'Paid', fmt: 'money' },
+                    { key: 'refundedAmount', label: 'Refunded', fmt: 'money' },
+                    { key: 'amountDue', label: 'Due', fmt: 'money' },
+                    { key: 'orderStatus', label: 'Status' },
+                    { key: 'paymentStatus', label: 'Payment' },
+                    { key: 'createdAtUtc', label: 'Created', fmt: 'datetime' }
+                ],
+                'product-sales': [
+                    { key: 'productName', label: 'Product' },
+                    { key: 'sku', label: 'SKU' },
+                    { key: 'categoryName', label: 'Category' },
+                    { key: 'brandName', label: 'Brand' },
+                    { key: 'unitsSold', label: 'Units', fmt: 'num' },
+                    { key: 'orderCount', label: 'Orders', fmt: 'num' },
+                    { key: 'grossRevenue', label: 'Revenue', fmt: 'money' }
+                ],
+                'variation-sales': [
+                    { key: 'sku', label: 'SKU' },
+                    { key: 'productName', label: 'Product' },
+                    { key: 'variantName', label: 'Variant' },
+                    { key: 'unitsSold', label: 'Units', fmt: 'num' },
+                    { key: 'orderCount', label: 'Orders', fmt: 'num' },
+                    { key: 'grossRevenue', label: 'Revenue', fmt: 'money' }
+                ],
+                'category': [
+                    { key: 'categoryName', label: 'Category' },
+                    { key: 'unitsSold', label: 'Units', fmt: 'num' },
+                    { key: 'orderCount', label: 'Orders', fmt: 'num' },
+                    { key: 'grossRevenue', label: 'Revenue', fmt: 'money' },
+                    { key: 'revenueShare', label: 'Share', fmt: 'pct' }
+                ],
+                'brand': [
+                    { key: 'brandName', label: 'Brand' },
+                    { key: 'unitsSold', label: 'Units', fmt: 'num' },
+                    { key: 'orderCount', label: 'Orders', fmt: 'num' },
+                    { key: 'grossRevenue', label: 'Revenue', fmt: 'money' },
+                    { key: 'revenueShare', label: 'Share', fmt: 'pct' }
+                ],
+                'customer': [
+                    { key: 'customerLabel', label: 'Customer' },
+                    { key: 'orderCount', label: 'Orders', fmt: 'num' },
+                    { key: 'totalSpent', label: 'Total spent', fmt: 'money' },
+                    { key: 'totalRefunded', label: 'Refunded', fmt: 'money' },
+                    { key: 'lastOrderAtUtc', label: 'Last order', fmt: 'date' }
+                ],
+                'coupon-usage': [
+                    { key: 'code', label: 'Code' },
+                    { key: 'name', label: 'Name' },
+                    { key: 'usageCount', label: 'Uses', fmt: 'num' },
+                    { key: 'distinctCustomers', label: 'Customers', fmt: 'num' },
+                    { key: 'totalDiscounted', label: 'Discounted', fmt: 'money' }
+                ],
+                'inventory': [
+                    { key: 'sku', label: 'SKU' },
+                    { key: 'productName', label: 'Product' },
+                    { key: 'categoryName', label: 'Category' },
+                    { key: 'totalOnHand', label: 'On hand', fmt: 'num' },
+                    { key: 'totalReserved', label: 'Reserved', fmt: 'num' },
+                    { key: 'totalAvailable', label: 'Available', fmt: 'num' },
+                    { key: 'lowStockThreshold', label: 'Threshold', fmt: 'num' },
+                    { key: 'allowBackorder', label: 'Backorder', fmt: 'bool' },
+                    { key: 'stockStatus', label: 'Status' }
+                ],
+                'returns': [
+                    { key: 'returnNumber', label: 'Return' },
+                    { key: 'orderNumber', label: 'Order' },
+                    { key: 'customerLabel', label: 'Customer' },
+                    { key: 'reasonCode', label: 'Reason' },
+                    { key: 'status', label: 'Status' },
+                    { key: 'refundableAmount', label: 'Refundable', fmt: 'money' },
+                    { key: 'refundedAmount', label: 'Refunded', fmt: 'money' },
+                    { key: 'isExchange', label: 'Exchange', fmt: 'bool' },
+                    { key: 'createdAtUtc', label: 'Created', fmt: 'date' }
+                ],
+                'refunds': [
+                    { key: 'referenceNumber', label: 'Reference' },
+                    { key: 'orderNumber', label: 'Order' },
+                    { key: 'type', label: 'Type' },
+                    { key: 'status', label: 'Status' },
+                    { key: 'amount', label: 'Amount', fmt: 'money' },
+                    { key: 'initiatedBy', label: 'Initiated by' },
+                    { key: 'createdAtUtc', label: 'Created', fmt: 'datetime' },
+                    { key: 'completedAtUtc', label: 'Completed', fmt: 'datetime' }
+                ],
+                'payments': [
+                    { key: 'orderNumber', label: 'Order' },
+                    { key: 'providerCode', label: 'Provider' },
+                    { key: 'paymentMethodCode', label: 'Method' },
+                    { key: 'amount', label: 'Amount', fmt: 'money' },
+                    { key: 'state', label: 'State' },
+                    { key: 'failureCode', label: 'Failure' },
+                    { key: 'createdAtUtc', label: 'Created', fmt: 'datetime' }
+                ]
+            };
+
+            // Per-type computed cell enrichment.
+            function enrich(type, row) {
+                if (type === 'orders' || type === 'returns') {
+                    row.customerLabel = row.isGuest ? (row.guestEmail || 'Guest') : (row.customerName || '—');
+                }
+                if (type === 'customer') {
+                    row.customerLabel = row.customerName || row.email || row.customerId || '—';
+                }
+                return row;
+            }
+
+            function cellValue(col, row) {
+                var raw = row[col.key];
+                if (col.fmt === 'money') return fmtMoney(raw, row.currency);
+                if (col.fmt === 'date') return fmtDate(raw);
+                if (col.fmt === 'datetime') return fmtDateTime(raw);
+                if (col.fmt === 'pct') return fmtPct(raw);
+                if (col.fmt === 'bool') return fmtBool(raw);
+                if (col.fmt === 'num') return raw === null || raw === undefined ? '' : Number(raw).toLocaleString();
+                return raw === null || raw === undefined ? '' : String(raw);
+            }
+
+            function buildQuery() {
+                var params = new URLSearchParams();
+                if (filters.from) params.set('from', filters.from);
+                if (filters.to) params.set('to', filters.to);
+                if (filters.status) params.set('status', filters.status);
+                if (filters.categoryId) params.set('categoryId', filters.categoryId);
+                if (filters.brandId) params.set('brandId', filters.brandId);
+                if (filters.productId) params.set('productId', filters.productId);
+                if (filters.paymentMethod) params.set('paymentMethod', filters.paymentMethod);
+                if (filters.shippingMethodId) params.set('shippingMethodId', filters.shippingMethodId);
+                if (filters.customer) params.set('customer', filters.customer);
+                if (filters.currency) params.set('currency', filters.currency);
+                params.set('page', state.page);
+                params.set('pageSize', state.pageSize);
+                return params.toString();
+            }
+
+            function renderTotals(type, result) {
+                var strip = el('totalsStrip');
+                strip.innerHTML = '';
+                var totals = result.totals;
+                if (!totals) {
+                    strip.classList.add('hidden');
+                    return;
+                }
+                var chips = [];
+                var moneyKeys = { grossSales: 'Gross', netSales: 'Net', discounts: 'Discounts', shipping: 'Shipping', tax: 'Tax', refunds: 'Refunds', totalGrandTotal: 'Total', totalGrossRevenue: 'Revenue', totalSpent: 'Total spent', totalDiscounted: 'Discounted', totalRefunded: 'Refunded', totalRefundable: 'Refundable', totalAmount: 'Total', totalReturned: 'Returns' };
+                Object.keys(totals).forEach(function (key) {
+                    if (key === 'orderCount' || key === 'totalUnits' || key === 'totalVariants' || key === 'totalCount') {
+                        if (typeof totals[key] === 'number') {
+                            chips.push('<span class="shrink-0 inline-flex flex-col px-3 py-2 bg-white rounded-lg border"><span class="text-[10px] text-gray-400 uppercase">' + key.replace(/([A-Z])/g, ' $1') + '</span><span class="text-sm font-semibold text-gray-900">' + Number(totals[key]).toLocaleString() + '</span></span>');
+                        }
+                        return;
+                    }
+                    if (moneyKeys[key] && typeof totals[key] === 'number') {
+                        chips.push('<span class="shrink-0 inline-flex flex-col px-3 py-2 bg-white rounded-lg border"><span class="text-[10px] text-gray-400 uppercase">' + moneyKeys[key] + '</span><span class="text-sm font-semibold text-gray-900">' + fmtMoney(totals[key]) + '</span></span>');
+                    }
+                });
+                if (result.totals.orderCount !== undefined) {
+                    chips.push('<span class="shrink-0 inline-flex flex-col px-3 py-2 bg-white rounded-lg border"><span class="text-[10px] text-gray-400 uppercase">Orders</span><span class="text-sm font-semibold text-gray-900">' + Number(result.totals.orderCount).toLocaleString() + '</span></span>');
+                }
+                strip.innerHTML = chips.join('');
+                strip.classList.remove('hidden');
+                strip.classList.add('flex');
+            }
+
+            function renderTable(type, result) {
+                var cols = COLUMNS[type] || [];
+                var head = el('reportTableHead');
+                head.innerHTML = cols.map(function (c) {
+                    return '<th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">' + esc(c.label) + '</th>';
+                }).join('');
+
+                var body = el('reportTableBody');
+                if (result.items.length === 0) {
+                    body.innerHTML = '<tr><td colspan="' + cols.length + '" class="px-4 py-8 text-center text-sm text-gray-500">No rows match the current filters.</td></tr>';
+                    return;
+                }
+                body.innerHTML = result.items.map(function (row) {
+                    enrich(type, row);
+                    var cells = cols.map(function (c) {
+                        return '<td class="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">' + esc(cellValue(c, row)) + '</td>';
+                    }).join('');
+                    return '<tr class="border-b last:border-0 hover:bg-gray-50">' + cells + '</tr>';
+                }).join('');
+            }
+
+            function renderCards(type, result) {
+                var wrap = el('reportCards');
+                var cols = COLUMNS[type] || [];
+                if (result.items.length === 0) {
+                    wrap.innerHTML = '<div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8">No rows match the current filters.</div>';
+                    return;
+                }
+                wrap.innerHTML = result.items.map(function (row) {
+                    enrich(type, row);
+                    var nameKey = ['orderNumber', 'productName', 'sku', 'categoryName', 'brandName', 'customerLabel', 'code', 'returnNumber', 'referenceNumber', 'dayUtc'].find(function (k) { return k in row; });
+                    var nameCell = nameKey ? cellValue({ key: nameKey, fmt: cols.find(function (c) { return c.key === nameKey; }) && cols.find(function (c) { return c.key === nameKey; }).fmt }, row) : '';
+                    var detailLines = cols
+                        .filter(function (c) { return c.key !== nameKey && !['grandTotal', 'total', 'amount', 'netSales', 'grossSales', 'grossRevenue', 'totalSpent', 'totalDiscounted', 'totalAmount', 'refundableAmount', 'refundedAmount'].includes(c.key); })
+                        .slice(0, 3)
+                        .map(function (c) { return '<span class="text-xs text-gray-500">' + esc(c.label) + ': ' + esc(cellValue(c, row)) + '</span>'; })
+                        .join('');
+                    var moneyKey = ['grandTotal', 'amount', 'netSales', 'grossRevenue', 'totalSpent', 'totalDiscounted', 'totalAmount', 'refundableAmount', 'refundedAmount'].find(function (k) { return k in row; });
+                    var moneyCell = moneyKey ? fmtMoney(row[moneyKey], row.currency) : '';
+                    return '<div class="bg-white rounded-lg border p-4">' +
+                        '<div class="flex items-center justify-between gap-2">' +
+                        '<span class="text-sm font-semibold text-gray-900 truncate">' + esc(nameCell) + '</span>' +
+                        (moneyCell ? '<span class="text-sm font-semibold text-gray-900 shrink-0">' + esc(moneyCell) + '</span>' : '') +
+                        '</div>' +
+                        (detailLines ? '<div class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">' + detailLines + '</div>' : '') +
+                        '</div>';
+                }).join('');
+            }
+
+            function renderAccuracy(type, result) {
+                var note = el('accuracyNote');
+                if (result.accuracyNote) {
+                    note.textContent = result.accuracyNote;
+                    note.classList.remove('hidden');
+                } else {
+                    note.classList.add('hidden');
+                }
+            }
+
+            function renderPaging(result) {
+                var paging = result.paging;
+                state.totalCount = paging.totalCount;
+                state.hasMore = paging.hasMore;
+                var pagination = el('pagination');
+                if (paging.totalCount > 0) {
+                    pagination.classList.remove('hidden');
+                    pagination.classList.add('flex');
+                    el('pageInfo').textContent = 'Page ' + paging.page + ' of ' + Math.max(1, Math.ceil(paging.totalCount / paging.pageSize)) + ' · ' + paging.totalCount + ' rows';
+                    el('btnPrevPage').disabled = paging.page <= 1;
+                    el('btnNextPage').disabled = !paging.hasMore;
+                } else {
+                    pagination.classList.add('hidden');
+                    pagination.classList.remove('flex');
+                }
+            }
+
+            function loadReport() {
+                var wrap = el('reportTableWrap');
+                var cards = el('reportCards');
+                wrap.classList.add('opacity-50');
+                cards.innerHTML = '<div class="bg-white rounded-lg border p-4 text-center text-gray-500 text-sm py-8">Loading report...</div>';
+                api('/api/admin/reports/' + state.type + '?' + buildQuery()).then(function (result) {
+                    renderTotals(state.type, result);
+                    renderTable(state.type, result);
+                    renderCards(state.type, result);
+                    renderAccuracy(state.type, result);
+                    renderPaging(result);
+                    wrap.classList.remove('opacity-50');
+                }).catch(function (err) {
+                    wrap.classList.remove('opacity-50');
+                    el('reportTableBody').innerHTML = '<tr><td class="px-4 py-8 text-center text-sm text-red-600">' + esc(err.message) + '</td></tr>';
+                    el('reportCards').innerHTML = '<div class="bg-white rounded-lg border p-4 text-center text-sm text-red-600 py-8">' + esc(err.message) + '</div>';
+                });
+            }
+
+            // ---- Filters UI ----
+
+            function populateSelect(id, options, labelAll) {
+                var select = el(id);
+                select.innerHTML = '<option value="">' + labelAll + '</option>' + options.map(function (o) {
+                    return '<option value="' + esc(o.id) + '">' + esc(o.name) + '</option>';
+                }).join('');
+            }
+
+            function loadFilterOptions() {
+                return api('/api/admin/reports/filters').then(function (data) {
+                    filterOptions = data;
+                    populateSelect('filterCategory', data.categories, 'All categories');
+                    populateSelect('filterBrand', data.brands, 'All brands');
+                    populateSelect('filterProduct', data.products, 'All products');
+                    populateSelect('filterShippingMethod', data.shippingMethods, 'All shipping methods');
+                    var pm = el('filterPaymentMethod');
+                    pm.innerHTML = '<option value="">All payment methods</option>' + data.paymentMethods.map(function (p) { return '<option value="' + esc(p) + '">' + esc(p) + '</option>'; }).join('');
+                    var cu = el('filterCurrency');
+                    cu.innerHTML = '<option value="">All currencies</option>' + data.currencies.map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('');
+                    var cust = el('filterCustomer');
+                    cust.innerHTML = '<option value="">All customers</option>' + data.customers.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(c.name) + '</option>'; }).join('');
+                });
+            }
+
+            function syncFiltersFromControls() {
+                filters.from = el('filterFrom').value;
+                filters.to = el('filterTo').value;
+                filters.status = el('filterStatus').value.trim();
+                filters.categoryId = el('filterCategory').value;
+                filters.brandId = el('filterBrand').value;
+                filters.productId = el('filterProduct').value;
+                filters.paymentMethod = el('filterPaymentMethod').value;
+                filters.shippingMethodId = el('filterShippingMethod').value;
+                filters.customer = el('filterCustomer').value;
+                filters.currency = el('filterCurrency').value;
+                updateFilterCount();
+            }
+
+            function syncControlsFromFilters() {
+                el('filterFrom').value = filters.from;
+                el('filterTo').value = filters.to;
+                el('filterStatus').value = filters.status;
+                el('filterCategory').value = filters.categoryId;
+                el('filterBrand').value = filters.brandId;
+                el('filterProduct').value = filters.productId;
+                el('filterPaymentMethod').value = filters.paymentMethod;
+                el('filterShippingMethod').value = filters.shippingMethodId;
+                el('filterCustomer').value = filters.customer;
+                el('filterCurrency').value = filters.currency;
+            }
+
+            function updateFilterCount() {
+                var count = Object.keys(filters).filter(function (k) { return filters[k]; }).length;
+                var badge = el('filterCount');
+                if (count > 0) {
+                    badge.textContent = count;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+
+            function openFilters() {
+                el('filterSheet').classList.remove('hidden');
+                el('filterSheet').classList.add('flex');
+                document.body.classList.add('overflow-hidden');
+            }
+
+            function closeFilters() {
+                el('filterSheet').classList.add('hidden');
+                el('filterSheet').classList.remove('flex');
+                document.body.classList.remove('overflow-hidden');
+            }
+
+            // ---- Export ----
+
+            function requestExport() {
+                var btn = el('btnExport');
+                btn.disabled = true;
+                btn.textContent = 'Preparing...';
+                api('/api/admin/reports/' + state.type + '/export?' + buildQuery(), { method: 'POST' }).then(function (job) {
+                    pollExport(job.jobId, btn);
+                }).catch(function (err) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Export CSV';
+                    alert('Export failed: ' + err.message);
+                });
+            }
+
+            function pollExport(jobId, btn) {
+                var attempts = 0;
+                var timer = setInterval(function () {
+                    attempts += 1;
+                    api('/api/admin/reports/export/' + jobId).then(function (job) {
+                        if (job.status === 'Ready') {
+                            clearInterval(timer);
+                            var link = document.createElement('a');
+                            link.href = '/api/admin/reports/export/' + jobId + '/download';
+                            link.setAttribute('download', job.fileName || 'export.csv');
+                            document.body.appendChild(link);
+                            link.click();
+                            link.remove();
+                            btn.disabled = false;
+                            btn.innerHTML = 'Export CSV';
+                        } else if (job.status === 'Failed') {
+                            clearInterval(timer);
+                            btn.disabled = false;
+                            btn.innerHTML = 'Export CSV';
+                            alert('Export failed: ' + (job.errorMessage || 'Unknown error'));
+                        } else if (attempts > 120) {
+                            clearInterval(timer);
+                            btn.disabled = false;
+                            btn.innerHTML = 'Export CSV';
+                            alert('Export is taking too long. Please try again.');
+                        } else {
+                            btn.textContent = 'Preparing ' + (attempts % 4);
+                        }
+                    }).catch(function () {
+                        clearInterval(timer);
+                        btn.disabled = false;
+                        btn.innerHTML = 'Export CSV';
+                    });
+                }, 1000);
+            }
+
+            // ---- Init ----
+
+            function init() {
+                var typeSelect = el('reportType');
+                typeSelect.innerHTML = bootstrap.types.map(function (t) {
+                    return '<option value="' + t.value + '">' + t.label + '</option>';
+                }).join('');
+
+                loadFilterOptions();
+
+                typeSelect.addEventListener('change', function () {
+                    state.type = typeSelect.value;
+                    state.page = 1;
+                    loadReport();
+                });
+
+                el('reportSearch').addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        filters.status = el('reportSearch').value.trim();
+                        state.page = 1;
+                        loadReport();
+                    }
+                });
+
+                el('btnFilters').addEventListener('click', openFilters);
+                document.querySelectorAll('[data-close-filters]').forEach(function (node) {
+                    node.addEventListener('click', closeFilters);
+                });
+                el('btnApplyFilters').addEventListener('click', function () {
+                    syncFiltersFromControls();
+                    state.page = 1;
+                    closeFilters();
+                    loadReport();
+                });
+                el('btnResetFilters').addEventListener('click', function () {
+                    filters = { from: '', to: '', status: '', categoryId: '', brandId: '', productId: '', paymentMethod: '', shippingMethodId: '', customer: '', currency: '' };
+                    el('reportSearch').value = '';
+                    syncControlsFromFilters();
+                    updateFilterCount();
+                    state.page = 1;
+                    loadReport();
+                });
+                el('btnExport').addEventListener('click', requestExport);
+                el('btnPrevPage').addEventListener('click', function () {
+                    if (state.page > 1) { state.page -= 1; loadReport(); }
+                });
+                el('btnNextPage').addEventListener('click', function () {
+                    if (state.hasMore) { state.page += 1; loadReport(); }
+                });
+
+                loadReport();
+            }
+
+            init();
+        })();
+    </script>
+}

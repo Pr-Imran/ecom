@@ -177,7 +177,11 @@ public static class DependencyInjection
         services.AddScoped<IEmailAdminService, EmailAdminService>();
         services.AddScoped<IContentManagementService, ContentManagementService>();
         services.AddScoped<IWebsiteSettingsService, WebsiteSettingsService>();
+        services.AddScoped<IAdminDashboardService, AdminDashboardService>();
+        services.AddScoped<IAdminReportService, AdminReportService>();
+        services.AddScoped<AdminReportService>();
         services.AddTransient<SendQueuedEmailsJob>();
+        services.AddTransient<ReportExportJob>();
         services.AddTransient<ExpireUnpaidOrdersJob>();
         services.AddTransient<ScheduledPromotionsJob>();
         services.AddTransient<LowStockAlertJob>();
@@ -238,6 +242,12 @@ public static class DependencyInjection
             options.AddPolicy(SettingsPolicies.SettingsManage, policy =>
                 policy.RequireAuthenticatedUser()
                       .RequireClaim("permission", ApplicationPermissions.Settings.Manage));
+            options.AddPolicy(DashboardPolicies.DashboardView, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireClaim("permission", ApplicationPermissions.Dashboard.View));
+            options.AddPolicy(ReportsPolicies.ReportsView, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireClaim("permission", ApplicationPermissions.Reports.View));
         });
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>("database");
