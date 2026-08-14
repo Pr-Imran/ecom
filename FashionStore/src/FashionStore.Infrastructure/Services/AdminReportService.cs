@@ -307,15 +307,26 @@ public sealed class AdminReportService : IAdminReportService
         }
 
         var (page, pageSize) = NormalizePage(request);
-        var itemsQuery = BuildItemReportQuery(request);
 
-        var totalCount = await itemsQuery.CountAsync(cancellationToken);
-        var totals = await itemsQuery
-            .GroupBy(x => 1)
-            .Select(g => new { Revenue = g.Sum(x => (decimal?)x.Revenue), Units = g.Sum(x => (int?)x.Units) })
-            .FirstOrDefaultAsync(cancellationToken);
+        var aggregate = await BuildItemReportQuery(request)
+            .Select(x => new
+            {
+                x.ProductId,
+                x.ProductName,
+                x.Sku,
+                x.CategoryName,
+                x.BrandName,
+                x.Units,
+                x.Revenue,
+                x.OrderCount
+            })
+            .ToListAsync(cancellationToken);
 
-        var rows = await itemsQuery
+        var totalCount = aggregate.Count;
+        var totalRevenue = aggregate.Sum(x => x.Revenue);
+        var totalUnits = aggregate.Sum(x => x.Units);
+
+        var rows = aggregate
             .OrderByDescending(x => x.Revenue)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -328,13 +339,13 @@ public sealed class AdminReportService : IAdminReportService
                 x.Units,
                 x.OrderCount,
                 x.Revenue))
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         var result = new AdminProductSalesReportResult(
             rows,
             new AdminReportPagingDto(totalCount, page, pageSize, page * pageSize < totalCount),
-            totals?.Revenue ?? 0m,
-            totals?.Units ?? 0,
+            totalRevenue,
+            totalUnits,
             ProductVolumeAccuracyNote);
 
         await SetCachedAsync(key, result, 5, cancellationToken);
@@ -1063,17 +1074,19 @@ public sealed class AdminReportService : IAdminReportService
 
         return orders
             .SelectMany(o => o.Items, (o, i) => new { o.Id, i.ProductId, i.ProductName, i.Sku, i.Quantity, i.LineTotal })
-            .Join(products, x => x.ProductId, p => (Guid?)p.Id, (x, p) => new ProductReportItem(
-                x.ProductId ?? p.Id,
-                p.Name,
-                p.BaseSku,
-                p.CategoryId,
-                p.CategoryName,
-                p.BrandId,
-                p.BrandName,
-                x.Quantity,
-                x.LineTotal,
-                1))
+            .Join(products, x => x.ProductId, p => (Guid?)p.Id, (x, p) => new
+            {
+                ProductId = x.ProductId ?? p.Id,
+                ProductName = p.Name,
+                Sku = p.BaseSku,
+                CategoryId = p.CategoryId,
+                CategoryName = p.CategoryName,
+                BrandId = p.BrandId,
+                BrandName = p.BrandName,
+                Units = x.Quantity,
+                Revenue = x.LineTotal,
+                OrderCount = 1
+            })
             .GroupBy(x => new { x.ProductId, x.ProductName, x.Sku, x.CategoryId, x.CategoryName, x.BrandId, x.BrandName })
             .Select(g => new
             {
