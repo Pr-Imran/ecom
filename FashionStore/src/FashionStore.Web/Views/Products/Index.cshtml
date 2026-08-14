@@ -6,10 +6,34 @@
     var isList = string.Equals(query.View, "list", StringComparison.OrdinalIgnoreCase);
     var sortLabel = ProductSortOptions.All.FirstOrDefault(o => o.Value == query.Sort).Label ?? "Relevance";
     var canonical = $"{Context.Request.Scheme}://{Context.Request.Host}{CatalogUrlBuilder.Canonical(query)}";
-}
 
-@section Styles {
-    <link rel="canonical" href="@canonical" />
+    ViewData["CanonicalUrl"] = canonical;
+    if (!string.IsNullOrEmpty(Model.ListingSubtitle))
+    {
+        ViewData["MetaDescription"] = Model.ListingSubtitle;
+    }
+
+    if (query.Page > 1)
+    {
+        ViewData["Robots"] = "noindex, follow";
+        ViewData["PrevPageUrl"] = $"{Context.Request.Scheme}://{Context.Request.Host}{CatalogUrlBuilder.Page(query, query.Page - 1)}";
+    }
+    if (query.Page < results.TotalPages)
+    {
+        ViewData["NextPageUrl"] = $"{Context.Request.Scheme}://{Context.Request.Host}{CatalogUrlBuilder.Page(query, query.Page + 1)}";
+    }
+
+    var breadcrumbJson = System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, object?>
+    {
+        ["@context"] = "https://schema.org",
+        ["@type"] = "BreadcrumbList",
+        ["itemListElement"] = new object[]
+        {
+            new Dictionary<string, object?> { ["@type"] = "ListItem", ["position"] = 1, ["name"] = "Home", ["item"] = $"{Context.Request.Scheme}://{Context.Request.Host}/" },
+            new Dictionary<string, object?> { ["@type"] = "ListItem", ["position"] = 2, ["name"] = Model.ListingTitle ?? "Products", ["item"] = canonical }
+        }
+    });
+    ViewData["JsonLd"] = new[] { breadcrumbJson };
 }
 
 <!-- Page header -->

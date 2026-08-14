@@ -1,0 +1,56 @@
+@model FashionStore.Web.Models.SeoMetadataViewModel
+@{
+    var ogUrl = Model.CanonicalUrl ?? $"{Context.Request.Scheme}://{Context.Request.Host}{Context.Request.Path}";
+    var ogTitle = Model.FullTitle;
+}
+<title>@Model.FullTitle</title>
+@if (!string.IsNullOrEmpty(Model.MetaDescription))
+{
+    <meta name="description" content="@Model.MetaDescription" />
+}
+@if (!string.IsNullOrEmpty(Model.CanonicalUrl))
+{
+    <link rel="canonical" href="@Model.CanonicalUrl" />
+}
+@if (!string.IsNullOrEmpty(Model.Robots))
+{
+    <meta name="robots" content="@Model.Robots" />
+}
+@if (!string.IsNullOrEmpty(Model.PrevPageUrl))
+{
+    <link rel="prev" href="@Model.PrevPageUrl" />
+}
+@if (!string.IsNullOrEmpty(Model.NextPageUrl))
+{
+    <link rel="next" href="@Model.NextPageUrl" />
+}
+<meta property="og:type" content="@Model.OgType" />
+<meta property="og:title" content="@ogTitle" />
+@if (!string.IsNullOrEmpty(Model.MetaDescription))
+{
+    <meta property="og:description" content="@Model.MetaDescription" />
+}
+<meta property="og:url" content="@ogUrl" />
+@if (!string.IsNullOrEmpty(Model.OgImage))
+{
+    <meta property="og:image" content="@Model.OgImage" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="@ogTitle" />
+    @if (!string.IsNullOrEmpty(Model.MetaDescription))
+    {
+        <meta name="twitter:description" content="@Model.MetaDescription" />
+    }
+    <meta name="twitter:image" content="@Model.OgImage" />
+}
+else
+{
+    <meta name="twitter:card" content="summary" />
+}
+@if (!string.IsNullOrEmpty(Model.FaviconUrl))
+{
+    <link rel="icon" href="@Model.FaviconUrl" />
+}
+@foreach (var json in Model.JsonLd)
+{
+    <script type="application/ld+json">@Html.Raw(json)</script>
+}

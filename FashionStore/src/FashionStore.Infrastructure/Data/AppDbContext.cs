@@ -85,6 +85,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<BlogPost> BlogPosts => Set<BlogPost>();
     public DbSet<PolicyDocument> PolicyDocuments => Set<PolicyDocument>();
     public DbSet<SiteSetting> SiteSettings => Set<SiteSetting>();
+    public DbSet<SlugRedirect> SlugRedirects => Set<SlugRedirect>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -1084,6 +1085,16 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             entity.Property(e => e.Group).HasMaxLength(200);
             entity.Property(e => e.Description).HasMaxLength(500);
             entity.HasIndex(e => e.Key).IsUnique();
+        });
+
+        modelBuilder.Entity<SlugRedirect>(entity =>
+        {
+            entity.ToTable("SlugRedirects");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.OldSlug).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.NewSlug).IsRequired().HasMaxLength(200);
+            entity.HasIndex(e => new { e.EntityType, e.OldSlug }).IsUnique();
+            entity.HasIndex(e => e.CreatedAtUtc);
         });
 
         // Apply soft delete filter

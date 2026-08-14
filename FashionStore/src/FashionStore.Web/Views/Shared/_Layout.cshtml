@@ -4,11 +4,13 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#ffffff" />
-    <title>@ViewData["Title"] - FashionStore</title>
+    @await Component.InvokeAsync("SeoMetadata")
     <link rel="stylesheet" href="~/css/site.min.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="min-h-screen flex flex-col">
+
+    <a href="#main-content" class="skip-link">Skip to main content</a>
 
     <!-- Mobile Header -->
     @if (ViewData["HideMobileHeader"] is not true)
@@ -41,7 +43,7 @@
     }
 
     <!-- Main Content -->
-    <main role="main" class="flex-1 @(ViewData["HideBottomNav"] is true ? "pb-0" : "pb-20")">
+    <main id="main-content" role="main" class="flex-1 @(ViewData["HideBottomNav"] is true ? "pb-0" : "pb-20")">
         @RenderBody()
     </main>
 

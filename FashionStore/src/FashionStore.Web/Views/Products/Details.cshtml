@@ -10,53 +10,53 @@
     var hasVariations = Model.Variations.AvailableOptions.Count > 0;
     var mainImage = Model.Images.FirstOrDefault(i => i.IsMain) ?? Model.Images.FirstOrDefault();
     var metaDescription = Model.SeoDescription ?? Model.ShortDescription ?? string.Empty;
-    var structuredData = System.Text.Json.JsonSerializer.Serialize(new
+
+    string AbsoluteUrl(string? url) => string.IsNullOrWhiteSpace(url)
+        ? string.Empty
+        : url.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? url : $"{Context.Request.Scheme}://{Context.Request.Host}{url}";
+
+    var structuredData = System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, object?>
     {
-        context = "https://schema.org",
-        type = "Product",
-        name = Model.Name,
-        image = Model.Images.Select(i => i.ProductDetailUrl ?? i.Url).ToList(),
-        description = metaDescription,
-        sku = Model.BaseSku,
-        brand = string.IsNullOrEmpty(Model.BrandName) ? null : new { type = "Brand", name = Model.BrandName },
-        offers = new
+        ["@context"] = "https://schema.org",
+        ["@type"] = "Product",
+        ["name"] = Model.Name,
+        ["image"] = Model.Images.Select(i => AbsoluteUrl(i.ProductDetailUrl ?? i.Url)).ToList(),
+        ["description"] = metaDescription,
+        ["sku"] = Model.BaseSku,
+        ["brand"] = string.IsNullOrEmpty(Model.BrandName) ? null : new Dictionary<string, object?> { ["@type"] = "Brand", ["name"] = Model.BrandName },
+        ["offers"] = new Dictionary<string, object?>
         {
-            type = "Offer",
-            url = canonical,
-            priceCurrency = "USD",
-            price = Model.Price,
-            availability = Model.IsInStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+            ["@type"] = "Offer",
+            ["url"] = canonical,
+            ["priceCurrency"] = "USD",
+            ["price"] = Model.Price,
+            ["availability"] = Model.IsInStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
         }
     });
-    var breadcrumbData = System.Text.Json.JsonSerializer.Serialize(new
+
+    var breadcrumbItems = new List<object>
     {
-        context = "https://schema.org",
-        type = "BreadcrumbList",
-        itemListElement = new object[]
-        {
-            new { type = "ListItem", position = 1, name = "Home", item = $"{Context.Request.Scheme}://{Context.Request.Host}/" },
-            new { type = "ListItem", position = 2, name = Model.Name, item = canonical }
-        }
+        new Dictionary<string, object?> { ["@type"] = "ListItem", ["position"] = 1, ["name"] = "Home", ["item"] = $"{Context.Request.Scheme}://{Context.Request.Host}/" }
+    };
+    if (!string.IsNullOrEmpty(Model.CategorySlug))
+    {
+        breadcrumbItems.Add(new Dictionary<string, object?> { ["@type"] = "ListItem", ["position"] = 2, ["name"] = Model.CategoryName, ["item"] = $"{Context.Request.Scheme}://{Context.Request.Host}/categories/{Model.CategorySlug}" });
+    }
+    breadcrumbItems.Add(new Dictionary<string, object?> { ["@type"] = "ListItem", ["position"] = breadcrumbItems.Count + 1, ["name"] = Model.Name, ["item"] = canonical });
+
+    var breadcrumbData = System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, object?>
+    {
+        ["@context"] = "https://schema.org",
+        ["@type"] = "BreadcrumbList",
+        ["itemListElement"] = breadcrumbItems.ToArray()
     });
+
+    ViewData["MetaDescription"] = metaDescription;
+    ViewData["OgType"] = "product";
+    ViewData["SeoImage"] = AbsoluteUrl(mainImage?.ProductDetailUrl ?? mainImage?.Url);
+    ViewData["JsonLd"] = new[] { structuredData, breadcrumbData };
 
     string FormatPrice(decimal value) => currency + value.ToString("N2", CultureInfo.InvariantCulture);
-}
-
-@section Styles {
-    <link rel="canonical" href="@canonical" />
-    <meta name="description" content="@metaDescription" />
-    <meta property="og:type" content="product" />
-    <meta property="og:title" content="@(Model.SeoTitle ?? Model.Name)" />
-    <meta property="og:description" content="@metaDescription" />
-    <meta property="og:url" content="@canonical" />
-    @if (mainImage != null)
-    {
-        <meta property="og:image" content="@(mainImage.ProductDetailUrl ?? mainImage.Url)" />
-    }
-    <meta property="og:site_name" content="FashionStore" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <script type="application/ld+json">@Html.Raw(structuredData)</script>
-    <script type="application/ld+json">@Html.Raw(breadcrumbData)</script>
 }
 
 <!-- Mobile compact app bar -->

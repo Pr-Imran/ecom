@@ -201,6 +201,7 @@ public class BrandService : IBrandService
     {
         await _cache.RemoveAsync("brands:active", ct);
         await _cache.RemoveAsync(Application.Common.CacheKeys.HomePage, ct);
+        await _cache.RemoveAsync(Application.Common.CacheKeys.Sitemap, ct);
     }
     private DistributedCacheEntryOptions GetCacheOptions() => new() { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_cacheSettings.AbsoluteExpirationMinutes) };
 }
@@ -384,6 +385,7 @@ public class CollectionService : ICollectionService
     {
         await _cache.RemoveAsync("collections:active", ct);
         await _cache.RemoveAsync(Application.Common.CacheKeys.HomePage, ct);
+        await _cache.RemoveAsync(Application.Common.CacheKeys.Sitemap, ct);
     }
     private DistributedCacheEntryOptions GetCacheOptions() => new() { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_cacheSettings.AbsoluteExpirationMinutes) };
 }

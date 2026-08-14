@@ -582,6 +582,7 @@ public class ProductService : IProductService
     {
         await _cache.RemoveAsync("products:featured", cancellationToken);
         await _cache.RemoveAsync(Application.Common.CacheKeys.HomePage, cancellationToken);
+        await _cache.RemoveAsync(Application.Common.CacheKeys.Sitemap, cancellationToken);
     }
 
     private DistributedCacheEntryOptions GetCacheOptions() => new()

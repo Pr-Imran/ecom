@@ -180,6 +180,8 @@ public static class DependencyInjection
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();
         services.AddScoped<IAdminReportService, AdminReportService>();
         services.AddScoped<AdminReportService>();
+        services.AddScoped<ISitemapService, SitemapService>();
+        services.AddScoped<ISlugRedirectService, SlugRedirectService>();
         services.AddTransient<SendQueuedEmailsJob>();
         services.AddTransient<ReportExportJob>();
         services.AddTransient<ExpireUnpaidOrdersJob>();

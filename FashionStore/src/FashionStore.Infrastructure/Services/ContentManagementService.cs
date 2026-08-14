@@ -705,7 +705,8 @@ public sealed class ContentManagementService : IContentManagementService
             CacheKeys.HomepageSections,
             CacheKeys.FaqItems,
             CacheKeys.PolicyDocuments,
-            CacheKeys.HomePage
+            CacheKeys.HomePage,
+            CacheKeys.Sitemap
         };
 
         foreach (var key in keys)

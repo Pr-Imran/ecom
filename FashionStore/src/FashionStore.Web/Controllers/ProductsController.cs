@@ -3,6 +3,7 @@ using FashionStore.Application.DTOs.Catalog;
 using FashionStore.Application.DTOs.Products;
 using FashionStore.Application.DTOs.Reviews;
 using FashionStore.Application.Interfaces;
+using FashionStore.Domain.Enums;
 using FashionStore.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,6 +17,7 @@ public class ProductsController : Controller
     private readonly IAddToCartService _addToCartService;
     private readonly ICartService _cartService;
     private readonly IReviewService _reviewService;
+    private readonly ISlugRedirectService _slugRedirects;
     private readonly ILogger<ProductsController> _logger;
 
     public ProductsController(
@@ -24,6 +26,7 @@ public class ProductsController : Controller
         IAddToCartService addToCartService,
         ICartService cartService,
         IReviewService reviewService,
+        ISlugRedirectService slugRedirects,
         ILogger<ProductsController> logger)
     {
         _catalogService = catalogService;
@@ -31,6 +34,7 @@ public class ProductsController : Controller
         _addToCartService = addToCartService;
         _cartService = cartService;
         _reviewService = reviewService;
+        _slugRedirects = slugRedirects;
         _logger = logger;
     }
 
@@ -118,6 +122,12 @@ public class ProductsController : Controller
         var name = await _catalogService.ResolveEntityNameAsync(CatalogEntityKind.Category, slug, cancellationToken);
         if (name is null)
         {
+            var redirectTarget = await _slugRedirects.ResolveAsync(SlugEntityType.Category, slug, cancellationToken);
+            if (!string.IsNullOrEmpty(redirectTarget))
+            {
+                return RedirectPermanent($"/categories/{redirectTarget}");
+            }
+
             return NotFound();
         }
 
@@ -137,6 +147,12 @@ public class ProductsController : Controller
         var name = await _catalogService.ResolveEntityNameAsync(CatalogEntityKind.Brand, slug, cancellationToken);
         if (name is null)
         {
+            var redirectTarget = await _slugRedirects.ResolveAsync(SlugEntityType.Brand, slug, cancellationToken);
+            if (!string.IsNullOrEmpty(redirectTarget))
+            {
+                return RedirectPermanent($"/brands/{redirectTarget}");
+            }
+
             return NotFound();
         }
 
@@ -156,6 +172,12 @@ public class ProductsController : Controller
         var name = await _catalogService.ResolveEntityNameAsync(CatalogEntityKind.Collection, slug, cancellationToken);
         if (name is null)
         {
+            var redirectTarget = await _slugRedirects.ResolveAsync(SlugEntityType.Collection, slug, cancellationToken);
+            if (!string.IsNullOrEmpty(redirectTarget))
+            {
+                return RedirectPermanent($"/collections/{redirectTarget}");
+            }
+
             return NotFound();
         }
 
@@ -177,6 +199,12 @@ public class ProductsController : Controller
 
         if (data is null)
         {
+            var redirectTarget = await _slugRedirects.ResolveAsync(SlugEntityType.Product, slug, cancellationToken);
+            if (!string.IsNullOrEmpty(redirectTarget))
+            {
+                return RedirectPermanent($"/products/{redirectTarget}");
+            }
+
             return NotFound();
         }
 

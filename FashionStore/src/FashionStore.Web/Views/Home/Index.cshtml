@@ -2,6 +2,8 @@
 @{
     ViewData["Title"] = "FashionStore";
     ViewData["ShowNewsletter"] = Model.ShowNewsletter;
+    ViewData["IncludeOrganizationSchema"] = true;
+    ViewData["CanonicalUrl"] = $"{Context.Request.Scheme}://{Context.Request.Host}/";
 }
 
 @await Html.PartialAsync("~/Views/Shared/Partials/_AnnouncementBar.cshtml", Model.Announcements)

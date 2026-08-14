@@ -1,0 +1,109 @@
+@model IReadOnlyList<FashionStore.Application.DTOs.Seo.SlugRedirectDto>
+@using FashionStore.Domain.Enums
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "URL Redirects";
+    ViewData["PageTitle"] = "URL Redirects";
+
+    var notice = TempData["AdminNotice"] as string;
+    var error = ViewData["AdminError"] as string;
+    var entityTypes = (SlugEntityType[])Enum.GetValues(typeof(SlugEntityType));
+    var selectedType = (SlugEntityType)(Context.Request.Form.TryGetValue("EntityType", out var ft) && Enum.TryParse<SlugEntityType>(ft, out var parsed) ? parsed : SlugEntityType.Product);
+}
+
+<div class="space-y-6 pb-28 max-w-4xl">
+    @if (!string.IsNullOrEmpty(notice))
+    {
+        <div class="bg-green-50 border border-green-200 text-green-800 rounded-lg px-4 py-3 text-sm" role="status">@notice</div>
+    }
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <div class="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm" role="alert">@error</div>
+    }
+
+    @* Create / update form *@
+    <section class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-6">
+        <h2 class="text-base font-bold text-gray-900 mb-1">Add URL Redirect</h2>
+        <p class="text-sm text-gray-500 mb-4">Keep deep links working when a slug is renamed. Old slugs matching a redirect issue a permanent 301 to the new slug.</p>
+
+        <form method="post" action="/admin/redirects" class="space-y-4">
+            @Html.AntiForgeryToken()
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label for="EntityType" class="block text-sm font-medium text-gray-700 mb-1">Entity type</label>
+                    <select id="EntityType" name="EntityType" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary focus:border-transparent">
+                        @foreach (var type in entityTypes)
+                        {
+                            <option value="@((int)type)" selected="@(type == selectedType)">@type</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label for="OldSlug" class="block text-sm font-medium text-gray-700 mb-1">Old slug</label>
+                    <input id="OldSlug" name="OldSlug" type="text" required maxlength="200"
+                           placeholder="e.g. cashmere-sweater-old"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+                </div>
+                <div>
+                    <label for="NewSlug" class="block text-sm font-medium text-gray-700 mb-1">New slug</label>
+                    <input id="NewSlug" name="NewSlug" type="text" required maxlength="200"
+                           placeholder="e.g. cashmere-crew-neck-sweater"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+                </div>
+            </div>
+            <button type="submit" class="px-4 py-2.5 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium">
+                Save Redirect
+            </button>
+        </form>
+    </section>
+
+    @* Redirect list *@
+    <section class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-200">
+            <h2 class="text-base font-bold text-gray-900">Existing Redirects (@Model.Count)</h2>
+        </div>
+
+        @if (Model.Count == 0)
+        {
+            <p class="px-4 py-6 text-sm text-gray-500">No redirects yet. Add one above whenever you rename a product, category, brand, collection or page.</p>
+        }
+        else
+        {
+            <div class="divide-y divide-gray-200">
+                @foreach (var redirect in Model)
+                {
+                    <div class="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">@redirect.EntityType</span>
+                                <span class="text-sm font-medium text-gray-900 break-all">@redirect.OldSlug</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1 break-all">
+                                <span class="text-gray-400">redirects to</span>
+                                <span class="text-brand-primary">@redirect.NewSlug</span>
+                            </p>
+                        </div>
+                        <form method="post" action="/admin/redirects/@redirect.Id/delete" class="shrink-0" data-confirm="Delete this redirect?">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="px-3 py-1.5 text-xs font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50">
+                                Delete
+                            </button>
+                        </form>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+</div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('form[data-confirm]').forEach(function (form) {
+            form.addEventListener('submit', function (e) {
+                if (!window.confirm(form.getAttribute('data-confirm'))) {
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+}

@@ -87,6 +87,36 @@ public class ContentSeeder : IContentSeeder
                 MetaDescription = "Find the right fit with our size guide.",
                 CreatedAtUtc = now,
                 CreatedBy = "system"
+            },
+            new ContentPage
+            {
+                Title = "Cookie Policy",
+                Slug = "cookie-policy",
+                Summary = "How we use cookies and similar technologies.",
+                BodyHtml = "<p>Explain which cookies the store uses, what they do and how visitors can control them.</p>",
+                Template = ContentPageTemplate.Default,
+                Status = ContentStatus.Published,
+                IsSystem = true,
+                PublishedAtUtc = now,
+                MetaTitle = "Cookie Policy",
+                MetaDescription = "How our store uses cookies and how you can control them.",
+                CreatedAtUtc = now,
+                CreatedBy = "system"
+            },
+            new ContentPage
+            {
+                Title = "Accessibility",
+                Slug = "accessibility",
+                Summary = "Our commitment to an accessible store for everyone.",
+                BodyHtml = "<p>Describe your accessibility commitments, the WCAG 2.2 AA standard you target and how visitors can report an accessibility issue.</p>",
+                Template = ContentPageTemplate.Default,
+                Status = ContentStatus.Published,
+                IsSystem = true,
+                PublishedAtUtc = now,
+                MetaTitle = "Accessibility",
+                MetaDescription = "Our commitment to making the store accessible to everyone.",
+                CreatedAtUtc = now,
+                CreatedBy = "system"
             }
         };
 

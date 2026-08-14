@@ -293,5 +293,6 @@ public class CategoryService : ICategoryService
     {
         await _cache.RemoveAsync("categories:hierarchy", cancellationToken);
         await _cache.RemoveAsync(Application.Common.CacheKeys.HomePage, cancellationToken);
+        await _cache.RemoveAsync(Application.Common.CacheKeys.Sitemap, cancellationToken);
     }
 }

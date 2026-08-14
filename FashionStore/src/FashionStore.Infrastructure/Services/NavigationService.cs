@@ -179,7 +179,8 @@ public class NavigationService : INavigationService
                     new NavigationItem("content-homepage", "Homepage Sections", "/admin/content/homepage-sections", null),
                     new NavigationItem("content-navigation", "Navigation", "/admin/content/navigation", null),
                     new NavigationItem("content-faqs", "FAQs", "/admin/content/faqs", null),
-                    new NavigationItem("content-policies", "Policy Documents", "/admin/content/policy-documents", null)
+                    new NavigationItem("content-policies", "Policy Documents", "/admin/content/policy-documents", null),
+                    new NavigationItem("content-redirects", "URL Redirects", "/admin/redirects", null)
                 }
             });
         }

@@ -43,4 +43,10 @@ public static class CacheKeys
 
     /// <summary>Background report export job state, cached per job id.</summary>
     public const string AdminReportExport = "admin:report:export:{jobId}";
+
+    /// <summary>The generated XML sitemap payload.</summary>
+    public const string Sitemap = "seo:sitemap";
+
+    /// <summary>All permanent slug redirects, cached together.</summary>
+    public const string SlugRedirects = "seo:slug-redirects";
 }

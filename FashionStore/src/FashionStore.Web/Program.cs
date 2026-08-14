@@ -71,6 +71,15 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddControllersWithViews();
 
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+});
+
+builder.Services.AddOutputCache();
+
 builder.Services.Configure<RazorViewEngineOptions>(options =>
 {
     options.ViewLocationExpanders.Add(new AdminPagesViewLocationExpander());
@@ -140,14 +149,30 @@ else
 
 app.UseGlobalExceptionHandling();
 
+app.UseResponseCompression();
+
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseRateLimiter();
+app.UseOutputCache();
 app.UseAuthorization();
 
 app.UseMiddleware<MaintenanceModeMiddleware>();
 
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = static context =>
+    {
+        var path = context.Context.Request.Path.Value ?? string.Empty;
+        var hasVersionHash = context.Context.Request.QueryString.HasValue;
+        var cacheControl = hasVersionHash
+            ? "public, max-age=31536000, immutable"
+            : path.StartsWith("/uploads", StringComparison.OrdinalIgnoreCase)
+                ? "public, max-age=86400"
+                : "public, max-age=3600";
+        context.Context.Response.Headers.CacheControl = cacheControl;
+    }
+});
 
 var uploadsBasePath = Path.Combine(app.Environment.ContentRootPath, builder.Configuration["FileStorage:BasePath"] ?? "uploads");
 Directory.CreateDirectory(uploadsBasePath);
