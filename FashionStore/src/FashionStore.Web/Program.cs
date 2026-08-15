@@ -6,16 +6,66 @@ using FashionStore.Infrastructure.BackgroundJobs;
 using FashionStore.Web.Infrastructure;
 using FashionStore.Web.Middleware;
 using Hangfire;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using System.Net;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var rateLimitingEnabled = builder.Configuration.GetValue("RateLimiting:Enabled", true);
+var forwardedHeadersEnabled = builder.Configuration.GetValue("ForwardedHeaders:Enabled", false);
+
+// Trust the configured reverse proxies / load balancers so scheme, host and the
+// client IP are taken from the X-Forwarded-* headers (required behind IIS ARR,
+// Nginx, HAProxy or a cloud load balancer). Explicitly cleared by default so an
+// unconfigured header can never be trusted.
+if (forwardedHeadersEnabled)
+{
+    var forwardedOptions = new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    };
+    forwardedOptions.KnownProxies.Clear();
+    forwardedOptions.KnownNetworks.Clear();
+
+    foreach (var proxy in builder.Configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [])
+    {
+        if (IPAddress.TryParse(proxy, out var address))
+        {
+            forwardedOptions.KnownProxies.Add(address);
+        }
+    }
+
+    foreach (var network in builder.Configuration.GetSection("ForwardedHeaders:KnownNetworks").Get<string[]>() ?? [])
+    {
+        if (Program.NetworkHelperTryParse(network, out var ip, out var prefix))
+        {
+            forwardedOptions.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(ip, prefix));
+        }
+    }
+
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = forwardedOptions.ForwardedHeaders;
+        options.KnownProxies.Clear();
+        options.KnownNetworks.Clear();
+        foreach (var proxy in forwardedOptions.KnownProxies)
+        {
+            options.KnownProxies.Add(proxy);
+        }
+        foreach (var network in forwardedOptions.KnownNetworks)
+        {
+            options.KnownNetworks.Add(network);
+        }
+    });
+}
 
 builder.Host.UseSerilog((context, services, configuration) =>
 {
@@ -168,6 +218,9 @@ if (rateLimitingEnabled)
     });
 }
 
+var hangfireDashboardEnabled = builder.Configuration.GetValue("Hangfire:DashboardEnabled", true);
+var hangfireDashboardRole = builder.Configuration.GetValue("Hangfire:DashboardRole", "SuperAdmin");
+
 var app = builder.Build();
 
 // Fail fast on missing security configuration outside Development. Placeholder
@@ -218,6 +271,13 @@ if (!app.Environment.IsDevelopment())
             "Security configuration is incomplete. Fix the following before starting:\n" +
             string.Join("\n", securityIssues));
     }
+}
+
+if (forwardedHeadersEnabled)
+{
+    // Must run before any middleware that depends on scheme or client IP
+    // (HSTS, HTTPS redirection, rate limiting, logging, correlation).
+    app.UseForwardedHeaders();
 }
 
 app.UseRequestCorrelation();
@@ -277,11 +337,14 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = builder.Configuration["FileStorage:PublicUrlBase"] ?? "/uploads"
 });
 
-app.UseHangfireDashboard("/hangfire", new DashboardOptions
+if (hangfireDashboardEnabled)
 {
-    Authorization = new[] { new HangfireDashboardAuthorizationFilter() },
-    StatsPollingInterval = 5000
-});
+    app.UseHangfireDashboard("/hangfire", new DashboardOptions
+    {
+        Authorization = new[] { new HangfireDashboardAuthorizationFilter(hangfireDashboardRole) },
+        StatsPollingInterval = 5000
+    });
+}
 
 using (var scope = app.Services.CreateScope())
 {
@@ -338,7 +401,49 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.MapHealthChecks("/health");
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = _ => true
+});
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    // Liveness only reports process health (always healthy once the app is
+    // running) so orchestrators never kill the instance for a degraded
+    // dependency; use /health/ready for dependency readiness.
+    Predicate = _ => false
+});
 
 app.Run();
 
-public partial class Program { }
+public partial class Program
+{
+    /// <summary>
+    /// Parses a CIDR network such as "10.0.0.0/8" into an address and prefix.
+    /// Returns false for malformed or non-CIDR input.
+    /// </summary>
+    internal static bool NetworkHelperTryParse(string network, out IPAddress ip, out int prefix)
+    {
+        ip = IPAddress.None;
+        prefix = 0;
+
+        if (string.IsNullOrWhiteSpace(network))
+        {
+            return false;
+        }
+
+        var parts = network.Split('/');
+        if (parts.Length != 2 || !IPAddress.TryParse(parts[0], out var parsed))
+        {
+            return false;
+        }
+
+        var bits = parsed.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork ? 32 : 128;
+        if (!int.TryParse(parts[1], out prefix) || prefix < 0 || prefix > bits)
+        {
+            return false;
+        }
+
+        ip = parsed;
+        return true;
+    }
+}

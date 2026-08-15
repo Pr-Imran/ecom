@@ -1,0 +1,42 @@
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+
+# Visual Studio / Rider / VS Code
+.vs/
+.idea/
+.vscode/
+
+# Node
+**/node_modules/
+
+# Logs and runtime data
+Logs/
+**/Logs/
+*.log
+**/uploads/
+**/App_Data/
+
+# Tests
+TestResults/
+*.trx
+*.coverage
+.coverage/
+
+# Git
+.git/
+.gitignore
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Docker (avoid recursion)
+Dockerfile
+.dockerignore
+
+# Docs
+**/docs/

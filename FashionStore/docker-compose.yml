@@ -1,0 +1,77 @@
+# FashionStore development stack: application + SQL Server.
+#
+# Usage:
+#   docker compose up --build
+#
+# The application container publishes on http://localhost:8080 and connects to
+# the SQL Server container on the shared "fashionstore-net" network. Uploads,
+# Data Protection keys and logs are kept in named volumes so data survives
+# container recreation. This file is for LOCAL DEVELOPMENT only; see
+# docs/Phase32-DeploymentProduction.md for production deployment.
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: fashionstore-db
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "FashionStore_dev_2026!"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - fashionstore-net
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fashionstore-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_URLS: "http://+:8080"
+      Database__ConnectionString: "Server=db;Database=FashionStore_Dev;User Id=sa;Password=FashionStore_dev_2026!;TrustServerCertificate=True;"
+      Email__SmtpHost: "host.docker.internal"
+      Email__SmtpPort: "1025"
+      Email__UseSsl: "false"
+      Email__BaseUrl: "http://localhost:8080"
+      FileStorage__BasePath: "/app/uploads"
+      DataProtection__KeysDirectory: "/app/App_Data/DataProtection-Keys"
+      # Dev-only secrets; the app refuses to start in Production without them.
+      Order__GuestAccessTokenSecret: "dev-guest-order-access-secret"
+      Checkout__ContinuationTokenSecret: "dev-checkout-continuation-secret"
+    ports:
+      - "8080:8080"
+    volumes:
+      - app-uploads:/app/uploads
+      - app-dataprotection:/app/App_Data/DataProtection-Keys
+      - app-logs:/app/Logs
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - fashionstore-net
+
+networks:
+  fashionstore-net:
+    name: fashionstore-net
+
+volumes:
+  mssql-data:
+  app-uploads:
+  app-dataprotection:
+  app-logs:

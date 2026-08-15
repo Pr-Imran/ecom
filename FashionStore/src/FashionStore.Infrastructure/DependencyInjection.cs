@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace FashionStore.Infrastructure;
 
@@ -298,7 +299,8 @@ public static class DependencyInjection
                       .RequireClaim("permission", ApplicationPermissions.Reports.View));
         });
         services.AddHealthChecks()
-            .AddDbContextCheck<AppDbContext>("database");
+            .AddDbContextCheck<AppDbContext>("database")
+            .AddCheck<FashionStore.Infrastructure.Services.Storage.StorageHealthCheck>("storage");
 
         services.AddHangfire(config => config
             .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)

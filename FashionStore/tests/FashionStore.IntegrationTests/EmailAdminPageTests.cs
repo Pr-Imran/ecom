@@ -324,7 +324,7 @@ public class EmailAdminPageTests : IClassFixture<TestWebApplicationFactory>
 
     // ---- Hangfire dashboard authorization ----
 
-    private bool AuthorizeDashboard(ClaimsPrincipal? user)
+    private bool AuthorizeDashboard(ClaimsPrincipal? user, string requiredRole = "SuperAdmin")
     {
         var httpContext = new DefaultHttpContext
         {
@@ -333,7 +333,7 @@ public class EmailAdminPageTests : IClassFixture<TestWebApplicationFactory>
         };
         var storage = new SqlServerStorage("Server=localhost;Database=HangfireTest;Trusted_Connection=True;");
         var context = new AspNetCoreDashboardContext(storage, new DashboardOptions(), httpContext);
-        return new FashionStore.Web.Middleware.HangfireDashboardAuthorizationFilter().Authorize(context);
+        return new FashionStore.Web.Middleware.HangfireDashboardAuthorizationFilter(requiredRole).Authorize(context);
     }
 
     [Fact]
@@ -348,10 +348,17 @@ public class EmailAdminPageTests : IClassFixture<TestWebApplicationFactory>
     }
 
     [Fact]
-    public void HangfireDashboard_AdminRole_Authorized()
+    public void HangfireDashboard_AdminRole_NotAuthorizedForDefaultRole()
     {
         var user = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.Role, "Admin") }, "test"));
-        Assert.True(AuthorizeDashboard(user));
+        Assert.False(AuthorizeDashboard(user));
+    }
+
+    [Fact]
+    public void HangfireDashboard_AdminRole_AuthorizedWhenConfigured()
+    {
+        var user = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.Role, "Admin") }, "test"));
+        Assert.True(AuthorizeDashboard(user, "Admin"));
     }
 
     [Fact]
