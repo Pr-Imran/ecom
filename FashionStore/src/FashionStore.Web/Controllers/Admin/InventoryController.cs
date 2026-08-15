@@ -12,11 +12,13 @@ namespace FashionStore.Web.Controllers.Admin;
 public class InventoryController : ControllerBase
 {
     private readonly IInventoryService _inventoryService;
+    private readonly IAuditService _auditService;
     private readonly ILogger<InventoryController> _logger;
 
-    public InventoryController(IInventoryService inventoryService, ILogger<InventoryController> logger)
+    public InventoryController(IInventoryService inventoryService, IAuditService auditService, ILogger<InventoryController> logger)
     {
         _inventoryService = inventoryService;
+        _auditService = auditService;
         _logger = logger;
     }
 

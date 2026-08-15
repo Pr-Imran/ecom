@@ -208,43 +208,71 @@ public sealed class DiscountService : IDiscountService
         string? orderId,
         CancellationToken cancellationToken = default)
     {
+        // Process-local gate: cheap serialization for a single-instance deployment.
         var gate = UsageLocks.GetOrAdd(couponId.ToString(), _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(cancellationToken);
         try
         {
-            var coupon = await _context.Coupons.AsNoTracking().FirstOrDefaultAsync(c => c.Id == couponId, cancellationToken);
-            if (coupon is null)
+            // Cross-instance gate: the count-then-insert below is only atomic when
+            // serialized, and the in-process semaphore does not span app instances.
+            // A SQL Server application lock keyed by the coupon serializes usage
+            // recording across every replica touching the same database. In-memory
+            // test providers cannot execute sp_getapplock, so the app lock is only
+            // acquired on a real SQL Server database.
+            var useAppLock = _context.Database.IsSqlServer();
+            var resource = $"CouponUsage:{couponId:N}";
+            if (useAppLock)
             {
-                return false;
+                await _context.Database.ExecuteSqlInterpolatedAsync(
+                    $"EXEC sp_getapplock @Resource = {resource}, @LockMode = 'Exclusive', @LockOwner = 'Session', @LockTimeout = 10000",
+                    cancellationToken);
             }
 
-            var totalUsed = await _context.CouponUsages.CountAsync(
-                u => u.CouponId == couponId && u.VoidedAtUtc == null,
-                cancellationToken);
-            if (coupon.TotalUsageLimit.HasValue && totalUsed >= coupon.TotalUsageLimit.Value)
+            try
             {
-                return false;
+                var coupon = await _context.Coupons.AsNoTracking().FirstOrDefaultAsync(c => c.Id == couponId, cancellationToken);
+                if (coupon is null)
+                {
+                    return false;
+                }
+
+                var totalUsed = await _context.CouponUsages.CountAsync(
+                    u => u.CouponId == couponId && u.VoidedAtUtc == null,
+                    cancellationToken);
+                if (coupon.TotalUsageLimit.HasValue && totalUsed >= coupon.TotalUsageLimit.Value)
+                {
+                    return false;
+                }
+
+                var usedByCustomer = await _context.CouponUsages.CountAsync(
+                    u => u.CouponId == couponId && u.UserId == userId && u.VoidedAtUtc == null,
+                    cancellationToken);
+                if (usedByCustomer >= coupon.PerCustomerLimit)
+                {
+                    return false;
+                }
+
+                _context.CouponUsages.Add(new CouponUsage
+                {
+                    CouponId = couponId,
+                    UserId = userId,
+                    OrderId = orderId,
+                    AmountDiscounted = Round(Math.Max(0m, amountDiscounted)),
+                    UsedAtUtc = DateTime.UtcNow
+                });
+
+                await _context.SaveChangesAsync(cancellationToken);
+                return true;
             }
-
-            var usedByCustomer = await _context.CouponUsages.CountAsync(
-                u => u.CouponId == couponId && u.UserId == userId && u.VoidedAtUtc == null,
-                cancellationToken);
-            if (usedByCustomer >= coupon.PerCustomerLimit)
+            finally
             {
-                return false;
+                if (useAppLock)
+                {
+                    await _context.Database.ExecuteSqlInterpolatedAsync(
+                        $"EXEC sp_releaseapplock @Resource = {resource}, @LockOwner = 'Session'",
+                        cancellationToken);
+                }
             }
-
-            _context.CouponUsages.Add(new CouponUsage
-            {
-                CouponId = couponId,
-                UserId = userId,
-                OrderId = orderId,
-                AmountDiscounted = Round(Math.Max(0m, amountDiscounted)),
-                UsedAtUtc = DateTime.UtcNow
-            });
-
-            await _context.SaveChangesAsync(cancellationToken);
-            return true;
         }
         finally
         {

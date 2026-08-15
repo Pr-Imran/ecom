@@ -44,6 +44,7 @@ public class AdminReturnServiceTests
         public Mock<IInventoryService> Inventory { get; } = new();
         public Mock<IPaymentService> Payment { get; } = new();
         public Mock<IEmailNotificationService> EmailService { get; } = new();
+        public Mock<IAuditService> AuditService { get; } = new();
 
         public Fixture()
         {
@@ -85,6 +86,7 @@ public class AdminReturnServiceTests
                 Payment.Object,
                 Options.Create(settings ?? Settings),
                 EmailService.Object,
+                AuditService.Object,
                 NullLogger<AdminReturnService>.Instance);
     }
 

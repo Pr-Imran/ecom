@@ -11,11 +11,13 @@ namespace FashionStore.Web.Controllers.Admin;
 public class ProductsController : ControllerBase
 {
     private readonly IProductService _productService;
+    private readonly IAuditService _auditService;
     private readonly ILogger<ProductsController> _logger;
 
-    public ProductsController(IProductService productService, ILogger<ProductsController> logger)
+    public ProductsController(IProductService productService, IAuditService auditService, ILogger<ProductsController> logger)
     {
         _productService = productService;
+        _auditService = auditService;
         _logger = logger;
     }
 
@@ -82,6 +84,15 @@ public class ProductsController : ControllerBase
             var product = await _productService.UpdateAsync(request, cancellationToken);
             if (product == null) return NotFound();
             _logger.LogInformation("Updated product {ProductId}", id);
+
+            await _auditService.RecordAsync(
+                "Product.Updated",
+                "Product",
+                id.ToString(),
+                oldValue: $"price:{request.BasePrice:0.00}",
+                newValue: $"price:{product.BasePrice:0.00}",
+                cancellationToken: cancellationToken);
+
             return Ok(product);
         }
         catch (InvalidOperationException ex)
@@ -98,6 +109,15 @@ public class ProductsController : ControllerBase
             var result = await _productService.DeleteAsync(id, cancellationToken);
             if (!result) return NotFound();
             _logger.LogInformation("Deleted product {ProductId}", id);
+
+            await _auditService.RecordAsync(
+                "Product.Deleted",
+                "Product",
+                id.ToString(),
+                oldValue: "true",
+                newValue: "false",
+                cancellationToken: cancellationToken);
+
             return NoContent();
         }
         catch (Exception ex)
@@ -146,6 +166,15 @@ public class ProductsController : ControllerBase
             var result = await _productService.ArchiveAsync(id, cancellationToken);
             if (!result) return NotFound();
             _logger.LogInformation("Archived product {ProductId}", id);
+
+            await _auditService.RecordAsync(
+                "Product.Archived",
+                "Product",
+                id.ToString(),
+                oldValue: "true",
+                newValue: "false",
+                cancellationToken: cancellationToken);
+
             return NoContent();
         }
         catch (Exception ex)

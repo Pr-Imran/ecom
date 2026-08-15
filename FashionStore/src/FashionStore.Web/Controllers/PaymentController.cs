@@ -14,22 +14,33 @@ namespace FashionStore.Web.Controllers;
 /// has no browser session; security comes from the shared-secret HMAC signature
 /// that the payment service verifies before applying any transition. The mock
 /// hosted-checkout page simulates a gateway so the whole hosted flow (redirect,
-/// pay/cancel, signed webhook) is exercisable without a live provider.
+/// pay/cancel, signed webhook) is exercisable without a live provider. The mock
+/// endpoints are development-only: they compute a real signed webhook from the
+/// configured secret, so they are disabled outside Development.
 /// </summary>
 [Route("payments")]
 public class PaymentController : Controller
 {
     private readonly IPaymentService _paymentService;
     private readonly IOptions<PaymentSettings> _paymentOptions;
+    private readonly ICustomerOrderService _customerOrderService;
+    private readonly IOrderService _orderService;
+    private readonly IWebHostEnvironment _environment;
     private readonly ILogger<PaymentController> _logger;
 
     public PaymentController(
         IPaymentService paymentService,
         IOptions<PaymentSettings> paymentOptions,
+        ICustomerOrderService customerOrderService,
+        IOrderService orderService,
+        IWebHostEnvironment environment,
         ILogger<PaymentController> logger)
     {
         _paymentService = paymentService;
         _paymentOptions = paymentOptions;
+        _customerOrderService = customerOrderService;
+        _orderService = orderService;
+        _environment = environment;
         _logger = logger;
     }
 
@@ -68,12 +79,17 @@ public class PaymentController : Controller
     /// Placeholder gateway checkout page. The page simulates a hosted provider that
     /// the storefront redirects the customer to; choosing pay or cancel delivers a
     /// signed webhook back into the storefront webhook endpoint and then redirects
-    /// the browser to the provider's return/cancel URL.
+    /// the browser to the provider's return/cancel URL. Development-only.
     /// </summary>
     [HttpGet("mock-hosted-checkout")]
     [AllowAnonymous]
     public IActionResult MockHostedCheckout(MockHostedCheckoutViewModel? model)
     {
+        if (!_environment.IsDevelopment())
+        {
+            return NotFound();
+        }
+
         if (model is null ||
             string.IsNullOrWhiteSpace(model.ProviderCode) ||
             string.IsNullOrWhiteSpace(model.OrderNumber) ||
@@ -82,16 +98,22 @@ public class PaymentController : Controller
             return RedirectToAction("Index", "Home");
         }
 
-        return View(model);
+        // When the order belongs to a guest the return URL carries the signed
+        // access ticket; surface it so the process step can re-verify ownership.
+        var ticket = ExtractQueryParam(model.ReturnUrl, "t");
+        return View(model with { Ticket = ticket });
     }
 
     /// <summary>
     /// Handles the customer's decision on the mock gateway page. Delivering the
     /// webhook is done server-side with the shared secret so the signature never
-    /// reaches the browser.
+    /// reaches the browser. Development-only, CSRF-protected and ownership-checked:
+    /// a signed-in caller may only settle their own orders and a guest must present
+    /// the access ticket for the order number.
     /// </summary>
     [HttpPost("mock-hosted-checkout/process")]
     [AllowAnonymous]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> MockProcess(
         [FromForm] string providerCode,
         [FromForm] string orderNumber,
@@ -99,10 +121,21 @@ public class PaymentController : Controller
         [FromForm] string currency,
         [FromForm] string returnUrl,
         [FromForm] string cancelUrl,
+        [FromForm] string? ticket,
         [FromForm] string decision,
         CancellationToken cancellationToken)
     {
+        if (!_environment.IsDevelopment())
+        {
+            return NotFound();
+        }
+
         var isPay = string.Equals(decision, "pay", StringComparison.OrdinalIgnoreCase);
+
+        if (!await IsOrderOwnerAsync(orderNumber, ticket, cancellationToken))
+        {
+            return NotFound();
+        }
 
         var settings = _paymentOptions.Value.GetProvider(providerCode);
         if (settings is not null && !string.IsNullOrWhiteSpace(settings.WebhookSecret))
@@ -145,6 +178,49 @@ public class PaymentController : Controller
         var body = await reader.ReadToEndAsync(cancellationToken);
         Request.Body.Position = 0;
         return body;
+    }
+
+    /// <summary>
+    /// Verifies that the caller is allowed to act on the order before the mock
+    /// gateway delivers a signed webhook: a signed-in customer must own the order
+    /// and a guest must present the valid access ticket bound to the order number.
+    /// Returns false for unknown orders so their existence is not disclosed.
+    /// </summary>
+    private async Task<bool> IsOrderOwnerAsync(
+        string orderNumber,
+        string? ticket,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(orderNumber))
+        {
+            return false;
+        }
+
+        var order = await _orderService.GetByPublicOrderNumberAsync(orderNumber, cancellationToken);
+        if (order is null)
+        {
+            return false;
+        }
+
+        var userId = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!string.IsNullOrEmpty(userId))
+        {
+            return string.Equals(order.UserId, userId, StringComparison.Ordinal);
+        }
+
+        return !string.IsNullOrWhiteSpace(ticket) &&
+               _customerOrderService.ValidateGuestToken(ticket, orderNumber) is not null;
+    }
+
+    private static string? ExtractQueryParam(string? url, string name)
+    {
+        if (string.IsNullOrWhiteSpace(url) || !Uri.TryCreate(url, UriKind.Absolute, out var parsed))
+        {
+            return null;
+        }
+
+        var query = System.Web.HttpUtility.ParseQueryString(parsed.Query);
+        return query.Get(name);
     }
 
     /// <summary>

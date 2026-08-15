@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -97,39 +98,122 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddRateLimiter(options =>
 {
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // A real global limiter (not a dead named policy): every request shares a
+    // generous per-connection budget so a single runaway client cannot saturate
+    // the server, while normal browsing is unaffected.
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 200,
+                Window = TimeSpan.FromMinutes(1),
+                AutoReplenishment = true,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+
     options.AddFixedWindowLimiter("global", options =>
     {
         options.PermitLimit = 100;
         options.Window = TimeSpan.FromMinutes(1);
-        options.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
-        options.QueueLimit = 10;
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = 0;
     });
 
     options.AddFixedWindowLimiter("login", options =>
     {
         options.PermitLimit = 5;
         options.Window = TimeSpan.FromMinutes(1);
-        options.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
-        options.QueueLimit = 10;
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = 0;
+    });
+
+    options.AddFixedWindowLimiter("register", options =>
+    {
+        options.PermitLimit = 5;
+        options.Window = TimeSpan.FromMinutes(1);
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = 0;
     });
 
     options.AddFixedWindowLimiter("passwordreset", options =>
     {
         options.PermitLimit = 3;
         options.Window = TimeSpan.FromMinutes(5);
-        options.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
-        options.QueueLimit = 5;
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = 0;
     });
 
     options.OnRejected = async (context, token) =>
     {
-        context.HttpContext.Response.StatusCode = 429;
-        context.HttpContext.Response.Headers.RetryAfter = "60";
-        await context.HttpContext.Response.WriteAsJsonAsync(new { error = "Too many requests. Please try again later.", retryAfterSeconds = 60 }, token);
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+
+        // Honour the limiter's actual retry-after window instead of a hardcoded 60s.
+        int retryAfterSeconds = 60;
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            retryAfterSeconds = (int)Math.Ceiling(retryAfter.TotalSeconds);
+        }
+
+        context.HttpContext.Response.Headers.RetryAfter = retryAfterSeconds.ToString();
+        await context.HttpContext.Response.WriteAsJsonAsync(new { error = "Too many requests. Please try again later.", retryAfterSeconds }, token);
     };
 });
 
 var app = builder.Build();
+
+// Fail fast on missing security configuration outside Development. Placeholder
+// secrets are stripped from the checked-in configuration, so any secret left
+// unset here means webhook forgery or guest-ticket forgery is possible; the app
+// must not start until the operator provides real values.
+if (!app.Environment.IsDevelopment())
+{
+    var securityIssues = new List<string>();
+
+    var paymentSettings = app.Configuration.GetSection(PaymentSettings.SectionName).Get<PaymentSettings>();
+    if (paymentSettings is not null)
+    {
+        foreach (var provider in paymentSettings.Providers.Where(p => p.IsEnabled))
+        {
+            if (string.IsNullOrWhiteSpace(provider.WebhookSecret) ||
+                provider.WebhookSecret.StartsWith("dev-", StringComparison.OrdinalIgnoreCase))
+            {
+                securityIssues.Add($"Payments provider '{provider.ProviderCode}' is enabled but has no webhook secret configured (set Payments:Providers:{provider.ProviderCode}:WebhookSecret).");
+            }
+        }
+    }
+
+    var guestSecret = app.Configuration["Order:GuestAccessTokenSecret"];
+    if (string.IsNullOrWhiteSpace(guestSecret) || guestSecret.StartsWith("dev-", StringComparison.OrdinalIgnoreCase))
+    {
+        securityIssues.Add("Order:GuestAccessTokenSecret is not configured (set it to a strong random value).");
+    }
+
+    var continuationSecret = app.Configuration["Checkout:ContinuationTokenSecret"];
+    if (string.IsNullOrWhiteSpace(continuationSecret) || continuationSecret.StartsWith("dev-", StringComparison.OrdinalIgnoreCase))
+    {
+        securityIssues.Add("Checkout:ContinuationTokenSecret is not configured (set it to a strong random value).");
+    }
+
+    var emailBaseUrl = app.Configuration["Email:BaseUrl"];
+    if (string.IsNullOrWhiteSpace(emailBaseUrl) ||
+        emailBaseUrl.StartsWith("https://localhost", StringComparison.OrdinalIgnoreCase))
+    {
+        securityIssues.Add("Email:BaseUrl is not configured (set it to the production site origin so account links are correct).");
+    }
+
+    if (securityIssues.Count > 0)
+    {
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        logger.LogCritical("Security configuration is incomplete; refusing to start. {Issues}", string.Join(Environment.NewLine, securityIssues));
+        throw new InvalidOperationException(
+            "Security configuration is incomplete. Fix the following before starting:\n" +
+            string.Join("\n", securityIssues));
+    }
+}
 
 app.UseRequestCorrelation();
 

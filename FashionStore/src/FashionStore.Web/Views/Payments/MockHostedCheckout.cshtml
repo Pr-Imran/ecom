@@ -47,22 +47,26 @@
 
         <div class="actions">
             <form method="post" asp-action="MockProcess">
+                @Html.AntiForgeryToken()
                 <input name="providerCode" value="@Model.ProviderCode" />
                 <input name="orderNumber" value="@Model.OrderNumber" />
                 <input name="amount" value="@Model.Amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" />
                 <input name="currency" value="@Model.Currency" />
                 <input name="returnUrl" value="@Model.ReturnUrl" />
                 <input name="cancelUrl" value="@Model.CancelUrl" />
+                <input name="ticket" value="@(Model.Ticket ?? string.Empty)" />
                 <input name="decision" value="pay" />
                 <button type="submit" class="btn btn-pay">Pay now</button>
             </form>
             <form method="post" asp-action="MockProcess">
+                @Html.AntiForgeryToken()
                 <input name="providerCode" value="@Model.ProviderCode" />
                 <input name="orderNumber" value="@Model.OrderNumber" />
                 <input name="amount" value="@Model.Amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" />
                 <input name="currency" value="@Model.Currency" />
                 <input name="returnUrl" value="@Model.ReturnUrl" />
                 <input name="cancelUrl" value="@Model.CancelUrl" />
+                <input name="ticket" value="@(Model.Ticket ?? string.Empty)" />
                 <input name="decision" value="cancel" />
                 <button type="submit" class="btn btn-cancel">Cancel</button>
             </form>

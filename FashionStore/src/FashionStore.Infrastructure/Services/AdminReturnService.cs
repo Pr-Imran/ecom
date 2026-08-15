@@ -29,6 +29,7 @@ public sealed class AdminReturnService : IAdminReturnService
     private readonly IPaymentService _paymentService;
     private readonly IOptions<ReturnSettings> _returnOptions;
     private readonly IEmailNotificationService _emailService;
+    private readonly IAuditService _auditService;
     private readonly ILogger<AdminReturnService> _logger;
 
     public AdminReturnService(
@@ -37,6 +38,7 @@ public sealed class AdminReturnService : IAdminReturnService
         IPaymentService paymentService,
         IOptions<ReturnSettings> returnOptions,
         IEmailNotificationService emailService,
+        IAuditService auditService,
         ILogger<AdminReturnService> logger)
     {
         _context = context;
@@ -44,6 +46,7 @@ public sealed class AdminReturnService : IAdminReturnService
         _paymentService = paymentService;
         _returnOptions = returnOptions;
         _emailService = emailService;
+        _auditService = auditService;
         _logger = logger;
     }
 
@@ -492,11 +495,6 @@ public sealed class AdminReturnService : IAdminReturnService
                 }
 
                 var settings = _returnOptions.Value;
-                var alreadyRefunded = returnRequest.Refunds
-                    .Where(rf => rf.Status == RefundStatus.Succeeded)
-                    .Sum(rf => rf.Amount);
-                var remaining = Math.Max(0m, returnRequest.RefundableAmount - alreadyRefunded);
-
                 var order = await _context.Orders
                     .Include(o => o.Items)
                     .FirstOrDefaultAsync(o => o.Id == returnRequest.OrderId, cancellationToken);
@@ -504,6 +502,26 @@ public sealed class AdminReturnService : IAdminReturnService
                 {
                     return new ReturnTransitionResult(false, null, null, "The order for this return no longer exists.");
                 }
+
+                // The refund cap is the item refundable total plus the shipping
+                // charge exactly once, then everything already refunded is
+                // subtracted. Adding the shipping charge to the remaining total
+                // on every shipping refund would let a refunded shipping charge
+                // be refunded repeatedly.
+                var shippingReason = await _context.ReturnReasons
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(r => r.Code == returnRequest.ReasonCode.ToString(), cancellationToken);
+                var shippingEligible = settings.AllowShippingRefund &&
+                                       (shippingReason?.AllowShippingRefund ?? true) &&
+                                       CoversEntireOrder(returnRequest, order);
+                var refundCap = Math.Round(
+                    returnRequest.RefundableAmount + (shippingEligible ? order.ShippingCharge : 0m),
+                    2);
+
+                var alreadyRefunded = returnRequest.Refunds
+                    .Where(rf => rf.Status == RefundStatus.Succeeded)
+                    .Sum(rf => rf.Amount);
+                var remaining = Math.Max(0m, refundCap - alreadyRefunded);
 
                 var (amount, reason) = await ComputeRefundAsync(
                     returnRequest,
@@ -518,7 +536,7 @@ public sealed class AdminReturnService : IAdminReturnService
                     return new ReturnTransitionResult(false, null, null, "The refund amount must be positive.");
                 }
 
-                if (amount > remaining + (refundType == RefundType.Shipping ? order.ShippingCharge : 0m))
+                if (amount > remaining)
                 {
                     return new ReturnTransitionResult(false, null, null, $"The refund amount exceeds the amount still refundable ({remaining:0.00} {returnRequest.Currency}).");
                 }
@@ -658,6 +676,15 @@ public sealed class AdminReturnService : IAdminReturnService
                     returnRequest.ReturnNumber,
                     actorId,
                     request.Manual);
+
+                await _auditService.RecordAsync(
+                    "Refund.Issued",
+                    "ReturnRequest",
+                    returnRequest.Id.ToString(),
+                    oldValue: null,
+                    newValue: $"{amount:0.00} {returnRequest.Currency} ({refund.ReferenceNumber}, manual: {request.Manual})",
+                    actorId: actorId,
+                    cancellationToken: cancellationToken);
 
                 return new ReturnTransitionResult(true, returnRequest.ReturnNumber, returnRequest.Status.ToString(), null);
             });
@@ -1082,7 +1109,14 @@ public sealed class AdminReturnService : IAdminReturnService
             return $"{returnRequest.ReturnNumber}:{request.IdempotencyKey.Trim()}";
         }
 
-        return $"{returnRequest.ReturnNumber}:{Guid.NewGuid():N}";
+        // Deterministic default: the same refund request replayed produces the same
+        // key so a retried/duplicated submission cannot double-refund. The amount,
+        // selected items and type fully describe the refund intent.
+        var itemIds = request.ReturnItemIds is null || request.ReturnItemIds.Count == 0
+            ? string.Empty
+            : string.Join(",", request.ReturnItemIds.OrderBy(id => id).Select(id => id.ToString("N")));
+
+        return $"{returnRequest.ReturnNumber}:{request.RefundType}:{itemIds}:{request.Amount?.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty}";
     }
 
     private async Task<string> GenerateUniqueRefundNumberAsync(CancellationToken cancellationToken)

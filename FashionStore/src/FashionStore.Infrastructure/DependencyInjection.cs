@@ -76,6 +76,7 @@ public static class DependencyInjection
         services.AddSingleton(emailSettings);
         services.AddSingleton(storeSettings);
         services.AddDistributedMemoryCache();
+        services.AddHttpContextAccessor();
 
         services.AddDbContext<AppDbContext>(options =>
         {
@@ -109,22 +110,59 @@ public static class DependencyInjection
         .AddDefaultTokenProviders()
         .AddClaimsPrincipalFactory<ApplicationClaimsPrincipalFactory>();
 
+        // Apply the configured token expiry to both password-reset and
+        // email-confirmation tokens (the default DataProtectorTokenProvider).
+        services.Configure<Microsoft.AspNetCore.Identity.DataProtectionTokenProviderOptions>(options =>
+        {
+            options.TokenLifespan = TimeSpan.FromHours(securitySettings.TokenExpiryHours);
+        });
+
         services.ConfigureApplicationCookie(options =>
         {
             options.Cookie.Name = ".FashionStore.Auth";
             options.Cookie.HttpOnly = true;
-            options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
             options.Cookie.SameSite = SameSiteMode.Lax;
             options.SlidingExpiration = true;
             options.ExpireTimeSpan = TimeSpan.FromDays(1);
             options.LoginPath = "/Account/Login";
             options.LogoutPath = "/Account/Logout";
             options.AccessDeniedPath = "/Account/AccessDenied";
+
+            // Enforce account suspension on every request: a cookie whose isActive
+            // claim is false (or missing after a suspension) is rejected regardless
+            // of the identity security-stamp validation interval. The security stamp
+            // is also rotated on suspension so any already-issued cookie becomes
+            // invalid; this handler makes the enforcement immediate.
+            options.Events.OnValidatePrincipal = context =>
+            {
+                var principal = context.Principal;
+                if (principal?.Identity?.IsAuthenticated == true)
+                {
+                    var isActiveClaim = principal.FindFirst("isActive")?.Value;
+                    if (!string.Equals(isActiveClaim, "true", StringComparison.OrdinalIgnoreCase))
+                    {
+                        context.RejectPrincipal();
+                        context.Response.Redirect(options.LoginPath);
+                    }
+                }
+
+                return Task.CompletedTask;
+            };
+        });
+
+        services.Configure<Microsoft.AspNetCore.Identity.SecurityStampValidatorOptions>(options =>
+        {
+            // Re-validate the identity security stamp frequently so a rotated
+            // stamp (e.g. after suspension, reactivation or a password change)
+            // invalidates existing sessions promptly.
+            options.ValidationInterval = TimeSpan.FromMinutes(1);
         });
 
         services.AddScoped<IRoleSeeder, RoleSeeder>();
         services.AddScoped<IContentSeeder, ContentSeeder>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IAuditService, AuditService>();
         services.AddScoped<FashionStore.Application.Services.INavigationService, NavigationService>();
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IBrandService, BrandService>();

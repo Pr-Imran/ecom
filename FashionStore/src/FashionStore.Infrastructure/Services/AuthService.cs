@@ -76,6 +76,15 @@ public class AuthService : IAuthService
         }
 
         var errors = result.Errors.Select(e => e.Description).ToList();
+        // Do not disclose whether an email is already registered: surface a single
+        // generic message so an attacker cannot use registration to enumerate users.
+        if (result.Errors.Any(e =>
+                string.Equals(e.Code, "DuplicateUserName", StringComparison.Ordinal) ||
+                string.Equals(e.Code, "DuplicateEmail", StringComparison.Ordinal)))
+        {
+            throw new IdentityException(new[] { "We could not create your account. Please try again or contact support." });
+        }
+
         throw new IdentityException(errors);
     }
 
@@ -86,21 +95,27 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
+            // Uniform response and a small timing delay so unknown emails cannot be
+            // distinguished from a wrong password by response speed.
             _logger.LogWarning("Login attempt with non-existent email/username: {Email}", request.EmailOrUserName);
+            await Task.Delay(LoginDelayMilliseconds(), cancellationToken);
             throw new SecurityException("Invalid email or password.");
         }
 
         if (!user.IsActive)
         {
             _logger.LogWarning("Login attempt for inactive user: {Email}", user.Email);
-
-            throw new SecurityException("Account deactivated. Please contact support.");
+            // Rotate the security stamp so any existing session for a suspended
+            // account is invalidated immediately, and return the generic message so
+            // account state is not disclosed.
+            await _userManager.UpdateSecurityStampAsync(user);
+            throw new SecurityException("Invalid email or password.");
         }
 
         if (user.LockoutEnd > DateTime.UtcNow)
         {
             _logger.LogWarning("Login attempt for locked out user: {Email}", user.Email);
-            throw new SecurityException("Account temporarily locked. Please try again later.");
+            throw new SecurityException("Too many failed attempts. Please try again later.");
         }
 
         var result = await _signInManager.PasswordSignInAsync(
@@ -112,6 +127,21 @@ public class AuthService : IAuthService
         if (result.RequiresTwoFactor)
         {
             return new LoginResponse(user.Id, user.Email!, user.DisplayName, new[] { "Customer" }, true, false);
+        }
+
+        if (result.IsLockedOut)
+        {
+            _logger.LogWarning("Login attempt locked out for user: {Email}", user.Email);
+            throw new SecurityException("Too many failed attempts. Please try again later.");
+        }
+
+        if (result.IsNotAllowed)
+        {
+            // An unconfirmed email is not a failed attempt: counting it would allow
+            // a third party to lock a legitimate unconfirmed account by repeated
+            // login attempts (lockout DoS).
+            _logger.LogWarning("Login attempt for user with unconfirmed email: {Email}", user.Email);
+            throw new SecurityException("Invalid email or password.");
         }
 
         if (result.Succeeded)
@@ -127,6 +157,8 @@ public class AuthService : IAuthService
             return new LoginResponse(user.Id, user.Email!, user.DisplayName, roles.ToArray(), false, false);
         }
 
+        // Password check failed: this is the only branch that counts a failed
+        // attempt towards the manual counter.
         user.FailedLoginAttempts++;
         await _userManager.UpdateAsync(user);
 
@@ -146,7 +178,15 @@ public class AuthService : IAuthService
         if (user == null) return false;
 
         var result = await _userManager.ConfirmEmailAsync(user, request.Token);
-        return result.Succeeded;
+        if (!result.Succeeded)
+        {
+            return false;
+        }
+
+        // Rotate the security stamp after the first successful confirmation so the
+        // confirmation token cannot be replayed on a later visit.
+        await _userManager.UpdateSecurityStampAsync(user);
+        return true;
     }
 
     public async Task<bool> ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken = default)
@@ -255,6 +295,17 @@ public class AuthService : IAuthService
 
         _context.AuditLogs.Add(auditLog);
         await _context.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Randomized login delay for the unknown-user branch, matching the password
+    /// reset delay so response timing cannot be used to enumerate accounts.
+    /// </summary>
+    private static int LoginDelayMilliseconds()
+    {
+        // Same band as the password-reset branch (which waits a fixed 100 ms) plus
+        // a small random jitter so a constant latency does not become a signal.
+        return 100 + Random.Shared.Next(0, 50);
     }
 }
 

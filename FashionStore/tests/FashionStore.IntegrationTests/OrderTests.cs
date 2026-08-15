@@ -372,10 +372,56 @@ public class OrderTests : IClassFixture<TestWebApplicationFactory>
         var orderNumber = GetString(result, "orderNumber");
         Assert.NotNull(orderNumber);
 
-        var page = await client.GetStringAsync($"/checkout/confirmation/{orderNumber}");
+        // Guest orders are ticket-gated: the confirmation screen requires the
+        // signed access ticket issued at placement, never the order number alone.
+        var page = await client.GetStringAsync($"/checkout/confirmation/{orderNumber}?t={GetString(result, "guestAccessToken")}");
         Assert.Contains(orderNumber, page);
         Assert.Contains("Cashmere Crew Neck Sweater", page);
         Assert.Contains("Jane Doe", page);
+    }
+
+    [Fact]
+    public async Task Confirmation_GuestOrder_WithoutTicket_ReturnsNotFound()
+    {
+        await ResetSweaterStockAsync();
+        var client = CreateClient();
+        var email = UniqueEmail();
+        await AddSweaterToCartAsync(client);
+
+        var methodId = await GetStandardShippingMethodIdAsync(_factory);
+        var (calculation, _) = await CalculateAsync(client, methodId, email: email);
+        Assert.True(GetBoolean(calculation, "isValid"));
+
+        var result = await PlaceOrderAsync(client, methodId, $"confirm-noticket-{Guid.NewGuid():N}", email: email);
+        var orderNumber = GetString(result, "orderNumber");
+        Assert.NotNull(orderNumber);
+
+        // An anonymous caller with only the order number must not see the order.
+        var response = await client.GetAsync($"/checkout/confirmation/{orderNumber}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Confirmation_GuestOrder_WithWrongTicket_ReturnsNotFound()
+    {
+        await ResetSweaterStockAsync();
+        var client = CreateClient();
+        var email = UniqueEmail();
+        await AddSweaterToCartAsync(client);
+
+        var methodId = await GetStandardShippingMethodIdAsync(_factory);
+        var (calculation, _) = await CalculateAsync(client, methodId, email: email);
+        Assert.True(GetBoolean(calculation, "isValid"));
+
+        var result = await PlaceOrderAsync(client, methodId, $"confirm-wrong-{Guid.NewGuid():N}", email: email);
+        var orderNumber = GetString(result, "orderNumber");
+        Assert.NotNull(orderNumber);
+
+        // A ticket bound to a different order number must not authorize access.
+        var other = await PlaceOrderAsync(client, methodId, $"confirm-other-{Guid.NewGuid():N}", email: UniqueEmail());
+        var wrongTicket = GetString(other, "guestAccessToken");
+        var response = await client.GetAsync($"/checkout/confirmation/{orderNumber}?t={wrongTicket}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]

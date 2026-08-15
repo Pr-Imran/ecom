@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using FashionStore.Application.Interfaces;
 using FashionStore.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -16,6 +17,8 @@ public class AdminController : ControllerBase
     private readonly RoleManager<ApplicationRole> _roleManager;
     private readonly IRoleSeeder _roleSeeder;
     private readonly IContentSeeder _contentSeeder;
+    private readonly IAuditService _auditService;
+    private readonly IWebHostEnvironment _environment;
     private readonly ILogger<AdminController> _logger;
 
     public AdminController(
@@ -23,12 +26,16 @@ public class AdminController : ControllerBase
         RoleManager<ApplicationRole> roleManager,
         IRoleSeeder roleSeeder,
         IContentSeeder contentSeeder,
+        IAuditService auditService,
+        IWebHostEnvironment environment,
         ILogger<AdminController> logger)
     {
         _userManager = userManager;
         _roleManager = roleManager;
         _roleSeeder = roleSeeder;
         _contentSeeder = contentSeeder;
+        _auditService = auditService;
+        _environment = environment;
         _logger = logger;
     }
 
@@ -36,6 +43,11 @@ public class AdminController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> SeedRoles(CancellationToken cancellationToken = default)
     {
+        if (!_environment.IsDevelopment())
+        {
+            return NotFound();
+        }
+
         try
         {
                 await _roleSeeder.SeedAsync(cancellationToken);
@@ -52,6 +64,11 @@ public class AdminController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> SeedContent(CancellationToken cancellationToken = default)
     {
+        if (!_environment.IsDevelopment())
+        {
+            return NotFound();
+        }
+
         try
         {
             await _contentSeeder.SeedAsync(cancellationToken);
@@ -68,6 +85,11 @@ public class AdminController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> SeedSuperAdmin([FromBody] SeedSuperAdminRequest request, CancellationToken cancellationToken = default)
     {
+        if (!_environment.IsDevelopment())
+        {
+            return NotFound();
+        }
+
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
@@ -139,6 +161,81 @@ public class AdminController : ControllerBase
             .ToListAsync(cancellationToken);
 
         return Ok(users);
+    }
+
+    [HttpPost("users/{userId}/deactivate")]
+    public async Task<IActionResult> DeactivateUser(string userId, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null)
+        {
+            return NotFound(new { error = "User not found." });
+        }
+
+        if (!user.IsActive)
+        {
+            return Ok(new { message = "User is already deactivated." });
+        }
+
+        user.IsActive = false;
+        var result = await _userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
+        }
+
+        // Rotate the security stamp so every existing session for the account is
+        // invalidated immediately.
+        await _userManager.UpdateSecurityStampAsync(user);
+
+        await _auditService.RecordAsync(
+            "User.Suspended",
+            "ApplicationUser",
+            user.Id,
+            oldValue: "true",
+            newValue: "false",
+            cancellationToken: cancellationToken);
+
+        _logger.LogInformation("User {UserId} suspended by {Actor}", user.Id, User.Identity?.Name);
+
+        return Ok(new { message = "User deactivated and all existing sessions invalidated." });
+    }
+
+    [HttpPost("users/{userId}/activate")]
+    public async Task<IActionResult> ActivateUser(string userId, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null)
+        {
+            return NotFound(new { error = "User not found." });
+        }
+
+        if (user.IsActive)
+        {
+            return Ok(new { message = "User is already active." });
+        }
+
+        user.IsActive = true;
+        var result = await _userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
+        }
+
+        // Rotate the security stamp so the reactivated user signs in afresh.
+        await _userManager.UpdateSecurityStampAsync(user);
+
+        await _auditService.RecordAsync(
+            "User.Activated",
+            "ApplicationUser",
+            user.Id,
+            oldValue: "false",
+            newValue: "true",
+            cancellationToken: cancellationToken);
+
+        _logger.LogInformation("User {UserId} activated by {Actor}", user.Id, User.Identity?.Name);
+
+        return Ok(new { message = "User activated." });
     }
 }
 

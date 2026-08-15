@@ -46,6 +46,7 @@
 
 <main class="px-4 py-6 max-w-2xl mx-auto">
     <input type="hidden" id="checkout-order-number" value="@order.PublicOrderNumber" />
+    <input type="hidden" id="checkout-guest-token" value="@(Model.GuestAccessToken ?? string.Empty)" />
     <form id="checkout-form" class="hidden">@Html.AntiForgeryToken()</form>
 
     <!-- Hero + payment state (re-rendered client-side when the status changes) -->
@@ -229,6 +230,7 @@
             if (!container) return;
 
             var orderNumber = document.getElementById('checkout-order-number').value;
+            var guestToken = document.getElementById('checkout-guest-token').value;
             var formEl = document.getElementById('checkout-form');
             var tokenInput = formEl ? formEl.querySelector('input[name="__RequestVerificationToken"]') : null;
             var retryButton = document.querySelector('[data-pay-retry-button]');
@@ -244,6 +246,10 @@
 
             function getToken() {
                 return tokenInput ? tokenInput.value : '';
+            }
+
+            function guestQuery() {
+                return guestToken ? '?t=' + encodeURIComponent(guestToken) : '';
             }
 
             function post(url) {
@@ -346,7 +352,7 @@
                 fetch('/checkout/pay', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': getToken() },
-                    body: JSON.stringify({ orderNumber: orderNumber })
+                    body: JSON.stringify({ orderNumber: orderNumber, guestAccessToken: guestToken })
                 }).then(function (res) {
                     if (!res.ok) throw new Error('bad-request');
                     return res.json();
@@ -356,7 +362,7 @@
                             window.location.href = result.payment.redirectUrl;
                             return;
                         }
-                        window.location.href = '/checkout/confirmation/' + encodeURIComponent(orderNumber);
+                        window.location.href = '/checkout/confirmation/' + encodeURIComponent(orderNumber) + guestQuery();
                         return;
                     }
                     btn.disabled = false;
@@ -370,7 +376,7 @@
             }
 
             function poll() {
-                fetch('/checkout/confirmation/' + encodeURIComponent(orderNumber) + '/payment-status')
+                fetch('/checkout/confirmation/' + encodeURIComponent(orderNumber) + '/payment-status' + guestQuery())
                     .then(function (res) { return res.json(); })
                     .then(function (result) {
                         if (!result || !result.success || !result.payment) return;
@@ -392,7 +398,7 @@
 
             var start = function () {
                 if (needsCallback) {
-                    post('/checkout/confirmation/' + encodeURIComponent(orderNumber) + '/callback')
+                    post('/checkout/confirmation/' + encodeURIComponent(orderNumber) + '/callback' + guestQuery())
                         .then(function (result) {
                             if (result && result.success && result.payment) {
                                 var state = apply(result.payment);

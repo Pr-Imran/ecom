@@ -103,6 +103,7 @@ public class AccountController : Controller
     [HttpPost]
     [AllowAnonymous]
     [ValidateAntiForgeryToken]
+    [EnableRateLimiting("register")]
     public async Task<IActionResult> Register(RegisterRequest model, CancellationToken cancellationToken = default)
     {
         if (!ModelState.IsValid)
@@ -210,6 +211,7 @@ public class AccountController : Controller
     [HttpPost]
     [AllowAnonymous]
     [ValidateAntiForgeryToken]
+    [EnableRateLimiting("passwordreset")]
     public async Task<IActionResult> ResetPassword(ResetPasswordRequest model, CancellationToken cancellationToken = default)
     {
         if (!ModelState.IsValid)

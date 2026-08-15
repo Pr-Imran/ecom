@@ -28,17 +28,20 @@ public sealed class OrderAdministrationService : IOrderAdministrationService
     private readonly AppDbContext _context;
     private readonly IInventoryService _inventoryService;
     private readonly IEmailNotificationService _emailService;
+    private readonly IAuditService _auditService;
     private readonly ILogger<OrderAdministrationService> _logger;
 
     public OrderAdministrationService(
         AppDbContext context,
         IInventoryService inventoryService,
         IEmailNotificationService emailService,
+        IAuditService auditService,
         ILogger<OrderAdministrationService> logger)
     {
         _context = context;
         _inventoryService = inventoryService;
         _emailService = emailService;
+        _auditService = auditService;
         _logger = logger;
     }
 
@@ -284,6 +287,22 @@ public sealed class OrderAdministrationService : IOrderAdministrationService
         });
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Order {OrderNumber} fulfilment changed from {From} to {To} by {Actor}",
+            order.PublicOrderNumber,
+            from,
+            toStatus,
+            actorId);
+
+        await _auditService.RecordAsync(
+            "Order.FulfilmentChanged",
+            "Order",
+            order.Id.ToString(),
+            oldValue: from.ToString(),
+            newValue: toStatus.ToString(),
+            actorId: actorId,
+            cancellationToken: cancellationToken);
 
         return new AdminOrderTransitionResult(
             true,
@@ -735,6 +754,15 @@ public sealed class OrderAdministrationService : IOrderAdministrationService
             from,
             toStatus,
             actorId);
+
+        await _auditService.RecordAsync(
+            "Order.StatusChanged",
+            "Order",
+            order.Id.ToString(),
+            oldValue: from.ToString(),
+            newValue: toStatus.ToString(),
+            actorId: actorId,
+            cancellationToken: cancellationToken);
 
         switch (toStatus)
         {

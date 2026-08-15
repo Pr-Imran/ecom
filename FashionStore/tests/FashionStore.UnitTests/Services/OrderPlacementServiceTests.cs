@@ -98,6 +98,7 @@ public class OrderPlacementServiceTests
         public Mock<ICheckoutCalculationService> Checkout { get; } = new();
         public Mock<IDiscountService> Discount { get; } = new();
         public Mock<IInventoryService> Inventory { get; } = new();
+        public Mock<ICustomerOrderService> CustomerOrders { get; } = new();
         public Mock<IEmailNotificationService> EmailService { get; } = new();
 
         public Fixture()
@@ -132,6 +133,7 @@ public class OrderPlacementServiceTests
                 Checkout.Object,
                 Discount.Object,
                 Inventory.Object,
+                CustomerOrders.Object,
                 EmailService.Object,
                 Options.Create(new OrderSettings { CodReservationMinutes = 4320, OnlineReservationMinutes = 30 }),
                 NullLogger<OrderPlacementService>.Instance);

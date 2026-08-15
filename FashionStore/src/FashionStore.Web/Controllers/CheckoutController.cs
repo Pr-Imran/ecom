@@ -329,10 +329,11 @@ public class CheckoutController : Controller
             return NotFound(new { success = false, message = "Order not found." });
         }
 
+        var isGuest = string.IsNullOrEmpty(userId);
         var returnUrl = Url.Action(
             "Confirmation",
             "Checkout",
-            new { publicOrderNumber = request.OrderNumber },
+            new { publicOrderNumber = request.OrderNumber, t = isGuest ? request.GuestAccessToken : null },
             Request.Scheme);
 
         try
@@ -396,8 +397,27 @@ public class CheckoutController : Controller
     /// </summary>
     [HttpPost("confirmation/{publicOrderNumber}/callback")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> BrowserCallback(string publicOrderNumber, CancellationToken cancellationToken)
+    public async Task<IActionResult> BrowserCallback(
+        string publicOrderNumber,
+        [FromQuery] string? t,
+        CancellationToken cancellationToken)
     {
+        var order = await _orderService.GetByPublicOrderNumberAsync(publicOrderNumber, cancellationToken);
+        if (order is null)
+        {
+            return NotFound(new { success = false, message = "Payment not found." });
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var authorized = !string.IsNullOrEmpty(userId)
+            ? string.Equals(order.UserId, userId, StringComparison.Ordinal)
+            : !string.IsNullOrWhiteSpace(t) && _customerOrderService.ValidateGuestToken(t, publicOrderNumber) is not null;
+
+        if (!authorized)
+        {
+            return NotFound(new { success = false, message = "Payment not found." });
+        }
+
         var status = await _paymentService.HandleBrowserCallbackAsync(publicOrderNumber, cancellationToken);
         if (status is null)
         {
