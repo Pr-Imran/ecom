@@ -25,6 +25,7 @@ public class OrderAdministrationServiceTests
         public AppDbContext Context { get; }
         public Mock<IInventoryService> Inventory { get; } = new();
         public Mock<IEmailNotificationService> EmailService { get; } = new();
+        public Mock<IAuditService> AuditService { get; } = new();
 
         public Fixture()
         {
@@ -39,7 +40,7 @@ public class OrderAdministrationServiceTests
         }
 
         public OrderAdministrationService CreateService() =>
-            new(Context, Inventory.Object, EmailService.Object, NullLogger<OrderAdministrationService>.Instance);
+            new(Context, Inventory.Object, EmailService.Object, AuditService.Object, NullLogger<OrderAdministrationService>.Instance);
     }
 
     private static Order SeedOrder(

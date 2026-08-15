@@ -54,8 +54,8 @@ public static class ReportDateRangeHelper
         var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
         var todayLocal = DateOnly.FromDateTime(nowLocal);
 
-        var fromLocal = fromDate ?? todayLocal.AddDays(-(lookBackDays - 1));
         var toLocal = toDate ?? todayLocal;
+        var fromLocal = fromDate ?? toLocal.AddDays(-(lookBackDays - 1));
 
         if (fromLocal > toLocal)
         {

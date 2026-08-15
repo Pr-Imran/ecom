@@ -15,6 +15,8 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var rateLimitingEnabled = builder.Configuration.GetValue("RateLimiting:Enabled", true);
+
 builder.Host.UseSerilog((context, services, configuration) =>
 {
     configuration
@@ -96,72 +98,75 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-builder.Services.AddRateLimiter(options =>
+if (rateLimitingEnabled)
 {
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-
-    // A real global limiter (not a dead named policy): every request shares a
-    // generous per-connection budget so a single runaway client cannot saturate
-    // the server, while normal browsing is unaffected.
-    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            factory: _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 200,
-                Window = TimeSpan.FromMinutes(1),
-                AutoReplenishment = true,
-                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                QueueLimit = 0
-            }));
-
-    options.AddFixedWindowLimiter("global", options =>
+    builder.Services.AddRateLimiter(options =>
     {
-        options.PermitLimit = 100;
-        options.Window = TimeSpan.FromMinutes(1);
-        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        options.QueueLimit = 0;
-    });
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-    options.AddFixedWindowLimiter("login", options =>
-    {
-        options.PermitLimit = 5;
-        options.Window = TimeSpan.FromMinutes(1);
-        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        options.QueueLimit = 0;
-    });
+        // A real global limiter (not a dead named policy): every request shares a
+        // generous per-connection budget so a single runaway client cannot saturate
+        // the server, while normal browsing is unaffected.
+        options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 200,
+                    Window = TimeSpan.FromMinutes(1),
+                    AutoReplenishment = true,
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    QueueLimit = 0
+                }));
 
-    options.AddFixedWindowLimiter("register", options =>
-    {
-        options.PermitLimit = 5;
-        options.Window = TimeSpan.FromMinutes(1);
-        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        options.QueueLimit = 0;
-    });
-
-    options.AddFixedWindowLimiter("passwordreset", options =>
-    {
-        options.PermitLimit = 3;
-        options.Window = TimeSpan.FromMinutes(5);
-        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        options.QueueLimit = 0;
-    });
-
-    options.OnRejected = async (context, token) =>
-    {
-        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-
-        // Honour the limiter's actual retry-after window instead of a hardcoded 60s.
-        int retryAfterSeconds = 60;
-        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        options.AddFixedWindowLimiter("global", options =>
         {
-            retryAfterSeconds = (int)Math.Ceiling(retryAfter.TotalSeconds);
-        }
+            options.PermitLimit = 100;
+            options.Window = TimeSpan.FromMinutes(1);
+            options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+            options.QueueLimit = 0;
+        });
 
-        context.HttpContext.Response.Headers.RetryAfter = retryAfterSeconds.ToString();
-        await context.HttpContext.Response.WriteAsJsonAsync(new { error = "Too many requests. Please try again later.", retryAfterSeconds }, token);
-    };
-});
+        options.AddFixedWindowLimiter("login", options =>
+        {
+            options.PermitLimit = 5;
+            options.Window = TimeSpan.FromMinutes(1);
+            options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+            options.QueueLimit = 0;
+        });
+
+        options.AddFixedWindowLimiter("register", options =>
+        {
+            options.PermitLimit = 5;
+            options.Window = TimeSpan.FromMinutes(1);
+            options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+            options.QueueLimit = 0;
+        });
+
+        options.AddFixedWindowLimiter("passwordreset", options =>
+        {
+            options.PermitLimit = 3;
+            options.Window = TimeSpan.FromMinutes(5);
+            options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+            options.QueueLimit = 0;
+        });
+
+        options.OnRejected = async (context, token) =>
+        {
+            context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+
+            // Honour the limiter's actual retry-after window instead of a hardcoded 60s.
+            int retryAfterSeconds = 60;
+            if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+            {
+                retryAfterSeconds = (int)Math.Ceiling(retryAfter.TotalSeconds);
+            }
+
+            context.HttpContext.Response.Headers.RetryAfter = retryAfterSeconds.ToString();
+            await context.HttpContext.Response.WriteAsJsonAsync(new { error = "Too many requests. Please try again later.", retryAfterSeconds }, token);
+        };
+    });
+}
 
 var app = builder.Build();
 
@@ -216,6 +221,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseRequestCorrelation();
+app.UseSecurityHeaders();
 
 if (!app.Environment.IsDevelopment())
 {
@@ -237,7 +243,12 @@ app.UseResponseCompression();
 
 app.UseHttpsRedirection();
 app.UseRouting();
-app.UseRateLimiter();
+
+if (rateLimitingEnabled)
+{
+    app.UseRateLimiter();
+}
+
 app.UseOutputCache();
 app.UseAuthorization();
 

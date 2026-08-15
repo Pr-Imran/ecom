@@ -1,7 +1,10 @@
 using FashionStore.Domain.Entities;
 using FashionStore.Domain.Enums;
 using FashionStore.Infrastructure.Data;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -21,8 +24,22 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // The full integration suite performs far more than the production
+        // login rate-limit budget from a single client address, so rate limiting
+        // is disabled for the test host and exercised by dedicated unit tests
+        // against the configured policies.
+        builder.UseSetting("RateLimiting:Enabled", "false");
+
         builder.ConfigureServices(services =>
         {
+            // The test server runs over HTTP, so the production
+            // CookieSecurePolicy.Always auth cookie would never be sent back and
+            // every authenticated request would bounce to the login page. Relax
+            // the secure policy for the test host only.
+            services.PostConfigure<CookieAuthenticationOptions>(
+                IdentityConstants.ApplicationScheme,
+                options => options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest);
+
             var descriptors = services
                 .Where(d =>
                     d.ServiceType == typeof(DbContextOptions<AppDbContext>) ||

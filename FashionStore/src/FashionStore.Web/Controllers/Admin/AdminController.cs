@@ -50,7 +50,15 @@ public class AdminController : ControllerBase
 
         try
         {
-                await _roleSeeder.SeedAsync(cancellationToken);
+            await _roleSeeder.SeedAsync(cancellationToken);
+
+            await _auditService.RecordAsync(
+                "Role.Seeding",
+                "ApplicationRole",
+                entityId: null,
+                newValue: "Roles and permissions seeded",
+                cancellationToken: cancellationToken);
+
             return Ok(new { message = "Roles and permissions seeded successfully" });
         }
         catch (Exception ex)
@@ -126,6 +134,13 @@ public class AdminController : ControllerBase
             }
 
             await _userManager.AddToRoleAsync(superAdmin, "SuperAdmin");
+
+            await _auditService.RecordAsync(
+                "User.SuperAdminCreated",
+                "ApplicationUser",
+                superAdmin.Id,
+                newValue: request.Email,
+                cancellationToken: cancellationToken);
 
             _logger.LogInformation("SuperAdmin account created for {Email}", request.Email);
 

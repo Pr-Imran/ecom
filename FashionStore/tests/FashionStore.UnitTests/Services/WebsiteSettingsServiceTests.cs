@@ -1,6 +1,7 @@
 using FashionStore.Application.Common;
 using FashionStore.Application.Configuration;
 using FashionStore.Application.DTOs.Settings;
+using FashionStore.Application.Interfaces;
 using FashionStore.Domain.Entities;
 using FashionStore.Infrastructure.Data;
 using FashionStore.Infrastructure.Services;
@@ -9,6 +10,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Moq;
 using Xunit;
 
 namespace FashionStore.UnitTests.Services;
@@ -23,12 +25,16 @@ public class WebsiteSettingsServiceTests
         return new AppDbContext(options);
     }
 
-    private static WebsiteSettingsService CreateService(AppDbContext context, IDistributedCache cache)
+    private static WebsiteSettingsService CreateService(
+        AppDbContext context,
+        IDistributedCache cache,
+        IAuditService? auditService = null)
         => new(
             context,
             cache,
             new CacheSettings { AbsoluteExpirationMinutes = 10 },
             new StoreSettings(),
+            auditService ?? new Mock<IAuditService>().Object,
             NullLogger<WebsiteSettingsService>.Instance);
 
     private static MemoryDistributedCache CreateCache()
@@ -162,7 +168,8 @@ public class WebsiteSettingsServiceTests
     public async Task UpdateSettingsAsync_WritesAuditEntry()
     {
         var context = CreateContext();
-        var service = CreateService(context, CreateCache());
+        var auditService = new Mock<IAuditService>();
+        var service = CreateService(context, CreateCache(), auditService.Object);
 
         var request = new UpdateWebsiteSettingsRequest(
             Store: null,
@@ -179,12 +186,14 @@ public class WebsiteSettingsServiceTests
 
         Assert.True(result.Success);
 
-        var audit = await context.AuditLogs.SingleOrDefaultAsync();
-        Assert.NotNull(audit);
-        Assert.Equal("Settings.Update", audit.Action);
-        Assert.Equal("SiteSetting", audit.EntityType);
-        Assert.Equal("admin-user-1", audit.UserId);
-        Assert.Contains("branding.logo_url", audit.NewValue);
+        auditService.Verify(a => a.RecordAsync(
+            "Settings.Update",
+            "SiteSetting",
+            It.Is<string?>(v => v == null),
+            It.Is<string?>(v => v == null),
+            It.Is<string>(v => v.Contains("branding.logo_url")),
+            "admin-user-1",
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

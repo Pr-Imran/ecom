@@ -1,6 +1,9 @@
 using FashionStore.Domain.Entities;
 using FashionStore.Infrastructure.Data;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -30,8 +33,21 @@ public class SqliteReportTestFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // The report suite performs far more logins than the production rate-limit
+        // budget from a single client address, so rate limiting is disabled for
+        // the test host.
+        builder.UseSetting("RateLimiting:Enabled", "false");
+
         builder.ConfigureServices(services =>
         {
+            // The test server runs over HTTP, so the production
+            // CookieSecurePolicy.Always auth cookie would never be sent back and
+            // every authenticated request would bounce to the login page. Relax
+            // the secure policy for the test host only.
+            services.PostConfigure<CookieAuthenticationOptions>(
+                IdentityConstants.ApplicationScheme,
+                options => options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest);
+
             var descriptors = services
                 .Where(d =>
                     d.ServiceType == typeof(AppDbContext) ||

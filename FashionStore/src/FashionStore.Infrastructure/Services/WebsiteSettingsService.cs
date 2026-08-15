@@ -24,6 +24,7 @@ public sealed class WebsiteSettingsService : IWebsiteSettingsService
     private readonly IDistributedCache _cache;
     private readonly CacheSettings _cacheSettings;
     private readonly StoreSettings _storeSettings;
+    private readonly IAuditService _auditService;
     private readonly ILogger<WebsiteSettingsService> _logger;
 
     public WebsiteSettingsService(
@@ -31,12 +32,14 @@ public sealed class WebsiteSettingsService : IWebsiteSettingsService
         IDistributedCache cache,
         CacheSettings cacheSettings,
         StoreSettings storeSettings,
+        IAuditService auditService,
         ILogger<WebsiteSettingsService> logger)
     {
         _context = context;
         _cache = cache;
         _cacheSettings = cacheSettings;
         _storeSettings = storeSettings;
+        _auditService = auditService;
         _logger = logger;
     }
 
@@ -257,21 +260,14 @@ public sealed class WebsiteSettingsService : IWebsiteSettingsService
     {
         try
         {
-            var user = await _context.Users.AsNoTracking()
-                .FirstOrDefaultAsync(u => u.Id == actorId, cancellationToken);
-
-            _context.AuditLogs.Add(new AuditLog
-            {
-                Id = Guid.NewGuid(),
-                UserId = user?.Id ?? actorId,
-                Action = "Settings.Update",
-                EntityType = "SiteSetting",
-                NewValue = JsonSerializer.Serialize(changedKeys.OrderBy(k => k)),
-                IpAddress = string.Empty,
-                UserAgent = string.Empty,
-                CreatedAtUtc = DateTime.UtcNow
-            });
-            await _context.SaveChangesAsync(cancellationToken);
+            await _auditService.RecordAsync(
+                "Settings.Update",
+                "SiteSetting",
+                entityId: null,
+                oldValue: null,
+                newValue: JsonSerializer.Serialize(changedKeys.OrderBy(k => k)),
+                actorId: actorId,
+                cancellationToken: cancellationToken);
         }
         catch (Exception ex)
         {

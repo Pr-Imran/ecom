@@ -13,6 +13,7 @@ using FashionStore.Infrastructure.Services.Storage;
 using Hangfire;
 using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -67,6 +68,10 @@ public static class DependencyInjection
             .GetSection(StoreSettings.SectionName)
             .Get<StoreSettings>() ?? new StoreSettings();
 
+        var dataProtectionSettings = configuration
+            .GetSection(DataProtectionSettings.SectionName)
+            .Get<DataProtectionSettings>() ?? new DataProtectionSettings();
+
         services.AddSingleton(cacheSettings);
         services.AddSingleton(fileStorageSettings);
         services.AddSingleton(imageSettings);
@@ -75,8 +80,11 @@ public static class DependencyInjection
         services.AddSingleton(homePageSettings);
         services.AddSingleton(emailSettings);
         services.AddSingleton(storeSettings);
+        services.AddSingleton(dataProtectionSettings);
         services.AddDistributedMemoryCache();
         services.AddHttpContextAccessor();
+
+        ConfigureDataProtection(services, dataProtectionSettings);
 
         services.AddDbContext<AppDbContext>(options =>
         {
@@ -316,5 +324,20 @@ public static class DependencyInjection
         }
 
         return services;
+    }
+
+    private static void ConfigureDataProtection(
+        IServiceCollection services,
+        DataProtectionSettings settings)
+    {
+        var builder = services.AddDataProtection()
+            .SetApplicationName(settings.ApplicationName);
+
+        if (!string.IsNullOrWhiteSpace(settings.KeysDirectory))
+        {
+            var keysDirectory = new DirectoryInfo(settings.KeysDirectory);
+            keysDirectory.Create();
+            builder.PersistKeysToFileSystem(keysDirectory);
+        }
     }
 }
