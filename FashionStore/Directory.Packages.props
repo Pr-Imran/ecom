@@ -12,6 +12,7 @@
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
     <!-- Entity Framework Core -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.11" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.11" />
     <!-- Serilog -->
@@ -26,6 +27,7 @@
     <!-- Background jobs -->
     <PackageVersion Include="Hangfire.AspNetCore" Version="1.8.24" />
     <PackageVersion Include="Hangfire.SqlServer" Version="1.8.24" />
+    <PackageVersion Include="Hangfire.PostgreSql" Version="1.21.1" />
     <!-- Transitive vulnerability overrides (Hangfire.Core, ASP.NET Data Protection, SQLitePCLRaw) -->
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="8.0.4" />

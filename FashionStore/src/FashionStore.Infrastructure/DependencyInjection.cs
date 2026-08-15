@@ -11,6 +11,7 @@ using FashionStore.Infrastructure.Services;
 using FashionStore.Infrastructure.Services.Images;
 using FashionStore.Infrastructure.Services.Storage;
 using Hangfire;
+using Hangfire.PostgreSql;
 using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
@@ -32,6 +33,9 @@ public static class DependencyInjection
         var dbSettings = configuration
             .GetSection(DatabaseSettings.SectionName)
             .Get<DatabaseSettings>() ?? new DatabaseSettings();
+
+        var isPostgreSql = string.Equals(
+            dbSettings.Provider, "PostgreSql", StringComparison.OrdinalIgnoreCase);
 
         var securitySettings = configuration
             .GetSection(SecuritySettings.SectionName)
@@ -87,19 +91,38 @@ public static class DependencyInjection
 
         ConfigureDataProtection(services, dataProtectionSettings);
 
-        services.AddDbContext<AppDbContext>(options =>
+        if (isPostgreSql)
         {
-            options.UseSqlServer(
-                dbSettings.ConnectionString,
-                sqlOptions =>
-                {
-                    sqlOptions.CommandTimeout(dbSettings.CommandTimeoutSeconds);
-                    sqlOptions.EnableRetryOnFailure(
-                        maxRetryCount: dbSettings.MaxRetryCount,
-                        maxRetryDelay: TimeSpan.FromSeconds(dbSettings.MaxRetryDelaySeconds),
-                        errorNumbersToAdd: null);
-                });
-        });
+            services.AddDbContext<AppDbContext>(options =>
+            {
+                options.UseNpgsql(
+                    dbSettings.ConnectionString,
+                    npgsqlOptions =>
+                    {
+                        npgsqlOptions.CommandTimeout(dbSettings.CommandTimeoutSeconds);
+                        npgsqlOptions.EnableRetryOnFailure(
+                            maxRetryCount: dbSettings.MaxRetryCount,
+                            maxRetryDelay: TimeSpan.FromSeconds(dbSettings.MaxRetryDelaySeconds),
+                            errorCodesToAdd: null);
+                    });
+            });
+        }
+        else
+        {
+            services.AddDbContext<AppDbContext>(options =>
+            {
+                options.UseSqlServer(
+                    dbSettings.ConnectionString,
+                    sqlOptions =>
+                    {
+                        sqlOptions.CommandTimeout(dbSettings.CommandTimeoutSeconds);
+                        sqlOptions.EnableRetryOnFailure(
+                            maxRetryCount: dbSettings.MaxRetryCount,
+                            maxRetryDelay: TimeSpan.FromSeconds(dbSettings.MaxRetryDelaySeconds),
+                            errorNumbersToAdd: null);
+                    });
+            });
+        }
 
         services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
         {
@@ -302,18 +325,34 @@ public static class DependencyInjection
             .AddDbContextCheck<AppDbContext>("database")
             .AddCheck<FashionStore.Infrastructure.Services.Storage.StorageHealthCheck>("storage");
 
-        services.AddHangfire(config => config
-            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-            .UseSimpleAssemblyNameTypeSerializer()
-            .UseRecommendedSerializerSettings()
-            .UseSqlServerStorage(dbSettings.ConnectionString, new SqlServerStorageOptions
+        services.AddHangfire(config =>
+        {
+            config
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings();
+
+            if (isPostgreSql)
             {
-                CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
-                SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
-                QueuePollInterval = TimeSpan.FromSeconds(15),
-                UseRecommendedIsolationLevel = true,
-                DisableGlobalLocks = true
-            }));
+                config.UsePostgreSqlStorage(dbSettings.ConnectionString, new PostgreSqlStorageOptions
+                {
+                    CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+                    QueuePollInterval = TimeSpan.FromSeconds(15),
+                    PrepareSchemaIfNecessary = true
+                });
+            }
+            else
+            {
+                config.UseSqlServerStorage(dbSettings.ConnectionString, new SqlServerStorageOptions
+                {
+                    CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+                    SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+                    QueuePollInterval = TimeSpan.FromSeconds(15),
+                    UseRecommendedIsolationLevel = true,
+                    DisableGlobalLocks = true
+                });
+            }
+        });
 
         if (backgroundJobSettings.Enabled)
         {
