@@ -210,6 +210,7 @@ public class RoleSeeder : IRoleSeeder
             {
                 Dashboard.View,
                 Products.View, Products.Create, Products.Update, Products.Delete, Products.ManageInventory,
+                ApplicationPermissions.Inventory.Manage,
                 Categories.Manage, Brands.Manage,
                 Orders.View, Orders.UpdateStatus, Orders.Cancel, Orders.Refund, Orders.PrintInvoice, Orders.AddNote,
                 Returns.View, Returns.Review, Returns.Inspect, Returns.Restock, Returns.Refund, Returns.Exchange, Returns.Complete,
@@ -225,6 +226,7 @@ public class RoleSeeder : IRoleSeeder
             {
                 Dashboard.View,
                 Products.View, Products.Create, Products.Update, Products.Delete, Products.ManageInventory,
+                ApplicationPermissions.Inventory.Manage,
                 Categories.Manage, Brands.Manage,
                 Reports.View
             },
@@ -241,6 +243,7 @@ public class RoleSeeder : IRoleSeeder
             {
                 Dashboard.View,
                 Products.View, Products.ManageInventory,
+                ApplicationPermissions.Inventory.Manage,
                 Returns.View, Returns.Restock,
                 Reports.View
             },

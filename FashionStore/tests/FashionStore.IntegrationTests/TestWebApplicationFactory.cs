@@ -2,9 +2,10 @@ using FashionStore.Domain.Entities;
 using FashionStore.Domain.Enums;
 using FashionStore.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -61,6 +62,13 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 db.Database.EnsureCreated();
                 SeedData(db);
+
+                // The real application seeds its roles through IRoleSeeder at
+                // startup; the test host does not run that path, so roles must be
+                // seeded here for flows that depend on them (registration assigns
+                // every new user the Customer role).
+                var roleSeeder = scope.ServiceProvider.GetRequiredService<IRoleSeeder>();
+                roleSeeder.SeedAsync().GetAwaiter().GetResult();
             }
         });
     }

@@ -16,6 +16,11 @@ public static class ApplicationPermissions
         public const string ManageInventory = "Products.ManageInventory";
     }
 
+    public static class Inventory
+    {
+        public const string Manage = "Inventory.Manage";
+    }
+
     public static class Categories
     {
         public const string Manage = "Categories.Manage";
@@ -112,6 +117,7 @@ public static class ApplicationPermissions
     {
         Dashboard.View,
         Products.View, Products.Create, Products.Update, Products.Delete, Products.ManageInventory,
+        Inventory.Manage,
         Categories.Manage,
         Brands.Manage,
         Orders.View, Orders.UpdateStatus, Orders.Cancel, Orders.Refund, Orders.PrintInvoice, Orders.AddNote,

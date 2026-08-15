@@ -238,7 +238,7 @@ public static class DependencyInjection
         {
             options.AddPolicy(InventoryPolicies.InventoryManage, policy =>
                 policy.RequireAuthenticatedUser()
-                      .RequireClaim("permission", ApplicationPermissions.Products.ManageInventory));
+                      .RequireClaim("permission", ApplicationPermissions.Inventory.Manage));
             options.AddPolicy(ShippingPolicies.ShippingManage, policy =>
                 policy.RequireAuthenticatedUser()
                       .RequireClaim("permission", ApplicationPermissions.Shipping.Manage));
