@@ -1009,64 +1009,64 @@ public sealed class AdminReturnService : IAdminReturnService
         switch (refundType)
         {
             case RefundType.Full:
-            {
-                var amount = returnRequest.Items.Sum(i => i.RefundableAmount);
-                return (Math.Round(amount, 2), $"Full refund for {returnRequest.ReturnNumber}.");
-            }
+                {
+                    var amount = returnRequest.Items.Sum(i => i.RefundableAmount);
+                    return (Math.Round(amount, 2), $"Full refund for {returnRequest.ReturnNumber}.");
+                }
 
             case RefundType.Item:
-            {
-                if (request.ReturnItemIds is null || request.ReturnItemIds.Count == 0)
                 {
-                    return (0m, string.Empty);
+                    if (request.ReturnItemIds is null || request.ReturnItemIds.Count == 0)
+                    {
+                        return (0m, string.Empty);
+                    }
+
+                    var items = returnRequest.Items
+                        .Where(i => request.ReturnItemIds.Contains(i.Id))
+                        .ToList();
+
+                    if (items.Count != request.ReturnItemIds.Count)
+                    {
+                        return (0m, string.Empty);
+                    }
+
+                    var amount = items.Sum(i => i.RefundableAmount);
+                    return (Math.Round(amount, 2), $"Item refund for {returnRequest.ReturnNumber} ({items.Count} line(s)).");
                 }
-
-                var items = returnRequest.Items
-                    .Where(i => request.ReturnItemIds.Contains(i.Id))
-                    .ToList();
-
-                if (items.Count != request.ReturnItemIds.Count)
-                {
-                    return (0m, string.Empty);
-                }
-
-                var amount = items.Sum(i => i.RefundableAmount);
-                return (Math.Round(amount, 2), $"Item refund for {returnRequest.ReturnNumber} ({items.Count} line(s)).");
-            }
 
             case RefundType.Shipping:
-            {
-                var reason = await _context.ReturnReasons
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(r => r.Code == returnRequest.ReasonCode.ToString(), cancellationToken);
-
-                var shippingAllowed = settings.AllowShippingRefund &&
-                                      (reason?.AllowShippingRefund ?? true);
-
-                if (!shippingAllowed)
                 {
-                    return (0m, string.Empty);
-                }
+                    var reason = await _context.ReturnReasons
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(r => r.Code == returnRequest.ReasonCode.ToString(), cancellationToken);
 
-                if (!CoversEntireOrder(returnRequest, order))
-                {
-                    return (0m, string.Empty);
-                }
+                    var shippingAllowed = settings.AllowShippingRefund &&
+                                          (reason?.AllowShippingRefund ?? true);
 
-                return (Math.Round(order.ShippingCharge, 2), $"Shipping charge refund for {returnRequest.ReturnNumber}.");
-            }
+                    if (!shippingAllowed)
+                    {
+                        return (0m, string.Empty);
+                    }
+
+                    if (!CoversEntireOrder(returnRequest, order))
+                    {
+                        return (0m, string.Empty);
+                    }
+
+                    return (Math.Round(order.ShippingCharge, 2), $"Shipping charge refund for {returnRequest.ReturnNumber}.");
+                }
 
             case RefundType.Partial:
             case RefundType.Manual:
             default:
-            {
-                if (!request.Amount.HasValue || request.Amount.Value <= 0m)
                 {
-                    return (0m, string.Empty);
-                }
+                    if (!request.Amount.HasValue || request.Amount.Value <= 0m)
+                    {
+                        return (0m, string.Empty);
+                    }
 
-                return (Math.Round(request.Amount.Value, 2), $"{(refundType == RefundType.Manual ? "Manual" : "Partial")} refund for {returnRequest.ReturnNumber}.");
-            }
+                    return (Math.Round(request.Amount.Value, 2), $"{(refundType == RefundType.Manual ? "Manual" : "Partial")} refund for {returnRequest.ReturnNumber}.");
+                }
         }
     }
 

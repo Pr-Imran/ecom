@@ -17,11 +17,12 @@ public class AuthServiceTests
         var request = new RegisterRequest("test@example.com", "Password123!", "John", "Doe");
         var userStoreMock = new Mock<IUserStore<ApplicationUser>>();
         var userManager = new UserManager<ApplicationUser>(userStoreMock.Object, null!, null!, null!, null!, null!, null!, null!, null!);
-        
+
         var createdUser = new ApplicationUser { Email = request.Email, UserName = request.Email };
         userStoreMock.Setup(s => s.CreateAsync(It.IsAny<ApplicationUser>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(IdentityResult.Success)
-            .Callback<ApplicationUser, CancellationToken>((u, _) => {
+            .Callback<ApplicationUser, CancellationToken>((u, _) =>
+            {
                 u.GetType().GetProperty("Id")?.SetValue(u, "generated-id");
             });
 

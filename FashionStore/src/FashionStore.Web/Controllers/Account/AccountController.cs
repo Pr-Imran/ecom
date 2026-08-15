@@ -166,12 +166,12 @@ public class AccountController : Controller
         }
 
         var result = await _authService.ConfirmEmailAsync(new ConfirmEmailRequest(userId, token), cancellationToken);
-        
+
         ViewData["Success"] = result;
-        ViewData["Message"] = result 
-            ? "Your email has been confirmed. You can now sign in." 
+        ViewData["Message"] = result
+            ? "Your email has been confirmed. You can now sign in."
             : "Confirmation failed. The link may have expired. Please request a new confirmation email.";
-        
+
         return View("EmailConfirmationResult");
     }
 

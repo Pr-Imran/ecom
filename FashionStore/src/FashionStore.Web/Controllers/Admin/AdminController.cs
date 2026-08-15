@@ -108,7 +108,7 @@ public class AdminController : ControllerBase
             var superAdminExists = await _roleManager.RoleExistsAsync("SuperAdmin");
             if (!superAdminExists)
             {
-            await _roleSeeder.SeedAsync(cancellationToken);
+                await _roleSeeder.SeedAsync(cancellationToken);
             }
 
             var existingUser = await _userManager.FindByEmailAsync(request.Email);

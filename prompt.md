@@ -3865,6 +3865,16 @@ Provide:
 
 Stop after Phase 31 and commit with phase details.
 
+> **Phase 31 status: COMPLETE (2026-08-15).** Automated tests and quality
+> verification delivered: 610 unit tests and 313 integration tests pass;
+> Release build clean under warnings-as-errors; formatting clean repo-wide; no
+> pending EF model changes; NuGet vulnerability audit clean (transitive High
+> advisories in Newtonsoft.Json, System.Security.Cryptography.Xml and
+> SQLitePCLRaw.lib.e_sqlite3 remediated); nullability and logging reviews
+> completed with no findings; Playwright UI-level preparation added under
+> `tests/Playwright` (desktop 1280x800 + mobile 390x844). Details in
+> `docs/Phase31-AutomatedTests.md`.
+
 
 Continue the FashionStore project.
 

@@ -62,7 +62,7 @@ public class ProductService : IProductService
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
         {
             var term = request.SearchTerm.ToLowerInvariant();
-            query = query.Where(p => 
+            query = query.Where(p =>
                 p.Name.ToLowerInvariant().Contains(term) ||
                 (p.ShortDescription != null && p.ShortDescription.ToLowerInvariant().Contains(term)) ||
                 (p.BaseSku != null && p.BaseSku.ToLowerInvariant().Contains(term)) ||
@@ -376,7 +376,7 @@ public class ProductService : IProductService
             throw new InvalidOperationException($"Product with ID {request.SourceProductId} not found");
 
         var newSku = !string.IsNullOrWhiteSpace(request.NewSku) ? request.NewSku : $"{sourceProduct.BaseSku}-COPY";
-        
+
         if (!await IsSkuUniqueAsync(newSku, null, cancellationToken))
             throw new InvalidOperationException($"Product with SKU '{newSku}' already exists");
 

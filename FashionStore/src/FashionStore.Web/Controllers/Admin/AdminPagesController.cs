@@ -310,7 +310,8 @@ public class AdminPagesController : Controller
     }
 
     [HttpGet("/admin/orders/{id:guid}/invoice")]
-    public async Task<IActionResult> OrderInvoice(Guid id, CancellationToken cancellationToken = default)    {
+    public async Task<IActionResult> OrderInvoice(Guid id, CancellationToken cancellationToken = default)
+    {
         var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
         var invoice = await _invoiceService.EnsureForOrderAsync(id, cancellationToken);
         var history = await _invoiceService.GetSendHistoryAsync(id, cancellationToken);

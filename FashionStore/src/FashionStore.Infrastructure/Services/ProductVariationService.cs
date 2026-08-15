@@ -213,7 +213,7 @@ public class ProductVariationService : IProductVariationService
     {
         var variant = await _context.ProductVariants.FindAsync(new object[] { id }, cancellationToken);
         if (variant == null) return null;
-        
+
         return await ToDtoAsync(variant, cancellationToken);
     }
 
@@ -366,7 +366,7 @@ public class ProductVariationService : IProductVariationService
 
             var existingVariant = await _context.ProductVariants
                 .Include(v => v.VariantAttributeValues)
-                .FirstOrDefaultAsync(v => 
+                .FirstOrDefaultAsync(v =>
                     v.ProductId == request.ProductId &&
                     v.VariantAttributeValues.All(vav => request.AttributeValueIds.Contains(vav.ProductAttributeValueId)) &&
                     v.VariantAttributeValues.Count == combination.Count(),
@@ -462,7 +462,7 @@ public class ProductVariationService : IProductVariationService
             .ToListAsync(cancellationToken);
 
         var variantIds = variants.Select(v => v.Id).ToList();
-        
+
         var variantAttributeValueMap = await _context.ProductVariantAttributeValues
             .Include(vav => vav.AttributeValue)
             .Where(vav => variantIds.Contains(vav.ProductVariantId))

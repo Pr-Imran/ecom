@@ -44,7 +44,7 @@ public class CategoryService : ICategoryService
         if (category == null) return null;
 
         var dto = ToDto(category, await _context.Categories.CountAsync(c => c.ParentCategoryId == id, cancellationToken));
-        
+
         await _cache.SetStringAsync(key, JsonSerializer.Serialize(dto), new DistributedCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_cacheSettings.AbsoluteExpirationMinutes)

@@ -43,5 +43,11 @@ Thumbs.db
 ## Node
 node_modules/
 
+## Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
 ## Runtime uploads
 FashionStore/src/FashionStore.Web/uploads/
