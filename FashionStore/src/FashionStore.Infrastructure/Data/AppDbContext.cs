@@ -13,6 +13,13 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     {
     }
 
+    // Enables provider-specific derived contexts (e.g. the PostgreSqlAppDbContext
+    // used as the design-time migration host for PostgreSQL) to reuse the shared
+    // model while carrying their own DbContextOptions type.
+    protected AppDbContext(DbContextOptions options) : base(options)
+    {
+    }
+
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Brand> Brands => Set<Brand>();
@@ -1107,6 +1114,25 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
         }
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+
+        // PostgreSQL does not understand SQL Server's "datetime2" column type.
+        // The SQL Server mapping stays untouched (DateTime maps to datetime2 by
+        // default there), but when the model targets Npgsql every explicitly
+        // configured datetime2 column is remapped to Postgres "timestamp with
+        // time zone" so the generated Postgres schema is valid.
+        if (Database.IsNpgsql())
+        {
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                foreach (var property in entityType.GetProperties())
+                {
+                    if (property.GetColumnType() == "datetime2")
+                    {
+                        property.SetColumnType("timestamp with time zone");
+                    }
+                }
+            }
+        }
     }
 
     public override int SaveChanges()

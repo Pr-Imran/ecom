@@ -334,12 +334,12 @@ public static class DependencyInjection
 
             if (isPostgreSql)
             {
-                config.UsePostgreSqlStorage(dbSettings.ConnectionString, new PostgreSqlStorageOptions
-                {
-                    CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
-                    QueuePollInterval = TimeSpan.FromSeconds(15),
-                    PrepareSchemaIfNecessary = true
-                });
+                config.UsePostgreSqlStorage(
+                    bootstrapper => bootstrapper.UseNpgsqlConnection(dbSettings.ConnectionString),
+                    new PostgreSqlStorageOptions
+                    {
+                        PrepareSchemaIfNecessary = true
+                    });
             }
             else
             {

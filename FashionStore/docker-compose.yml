@@ -1,13 +1,14 @@
-# FashionStore development stack: application + SQL Server.
+# FashionStore development stack: application + SQL Server (default) or PostgreSQL.
 #
 # Usage:
-#   docker compose up --build
+#   docker compose up --build                    # SQL Server stack (default)
+#   docker compose --profile postgres up --build # PostgreSQL stack
 #
-# The application container publishes on http://localhost:8080 and connects to
-# the SQL Server container on the shared "fashionstore-net" network. Uploads,
-# Data Protection keys and logs are kept in named volumes so data survives
-# container recreation. This file is for LOCAL DEVELOPMENT only; see
-# docs/Phase32-DeploymentProduction.md for production deployment.
+# The application container publishes on http://localhost:8080 (SQL Server) or
+# http://localhost:8081 (PostgreSQL) and connects to its database container on the
+# shared "fashionstore-net" network. Uploads, Data Protection keys and logs are
+# kept in named volumes so data survives container recreation. This file is for
+# LOCAL DEVELOPMENT only; see docs/Phase32-DeploymentProduction.md for production.
 
 services:
   db:
@@ -41,6 +42,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:8080"
+      Database__Provider: "SqlServer"
       Database__ConnectionString: "Server=db;Database=FashionStore_Dev;User Id=sa;Password=FashionStore_dev_2026!;TrustServerCertificate=True;"
       Email__SmtpHost: "host.docker.internal"
       Email__SmtpPort: "1025"
@@ -66,12 +68,76 @@ services:
     networks:
       - fashionstore-net
 
+  # PostgreSQL variant. Enabled with: docker compose --profile postgres up --build
+  db-postgres:
+    image: postgres:16-alpine
+    container_name: fashionstore-db-postgres
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "FashionStore_dev_2026!"
+      POSTGRES_DB: "fashionstore_dev"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fashionstore_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - fashionstore-net
+    profiles:
+      - postgres
+
+  app-postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fashionstore-app-postgres
+    depends_on:
+      db-postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_URLS: "http://+:8081"
+      Database__Provider: "PostgreSql"
+      Database__ConnectionString: "Host=db-postgres;Port=5432;Database=fashionstore_dev;Username=postgres;Password=FashionStore_dev_2026!;"
+      Email__SmtpHost: "host.docker.internal"
+      Email__SmtpPort: "1025"
+      Email__UseSsl: "false"
+      Email__BaseUrl: "http://localhost:8081"
+      FileStorage__BasePath: "/app/uploads"
+      DataProtection__KeysDirectory: "/app/App_Data/DataProtection-Keys"
+      # Dev-only secrets; the app refuses to start in Production without them.
+      Order__GuestAccessTokenSecret: "dev-guest-order-access-secret"
+      Checkout__ContinuationTokenSecret: "dev-checkout-continuation-secret"
+    ports:
+      - "8081:8081"
+    volumes:
+      - app-uploads:/app/uploads
+      - app-dataprotection:/app/App_Data/DataProtection-Keys
+      - app-logs:/app/Logs
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8081/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - fashionstore-net
+    profiles:
+      - postgres
+
 networks:
   fashionstore-net:
     name: fashionstore-net
 
 volumes:
   mssql-data:
+  postgres-data:
   app-uploads:
   app-dataprotection:
   app-logs:
+

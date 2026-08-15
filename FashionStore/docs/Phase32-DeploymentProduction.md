@@ -130,13 +130,80 @@ openssl rand -hex 32
 * The committed `appsettings.Production.json` intentionally carries empty
   values so a fresh clone can never start production with a default secret.
 
-### 2.4 SQL Server connection
+### 2.4 Database provider (SQL Server or PostgreSQL)
 
-`Database__ConnectionString` must be a **SQL Server** connection string
-(EF Core provider `SqlServer`). The dev `Trusted_Connection` default is
-replaced in production by a SQL login / managed identity. `TrustServerCertificate`
-should be set per the server's certificate configuration. Command timeout is
-raised to 60s and EF retry to 5 attempts in the production file.
+The store supports **SQL Server** (default) and **PostgreSQL**. The active
+provider is chosen with `Database:Provider` (`"SqlServer"` or `"PostgreSql"`);
+it configures both EF Core and the Hangfire job-storage backend.
+
+`Database__ConnectionString` must match the chosen provider:
+
+```text
+# SQL Server
+Database__Provider=SqlServer
+Database__ConnectionString=Server=...;Database=FashionStore;User Id=...;Password=...;TrustServerCertificate=True;
+
+# PostgreSQL
+Database__Provider=PostgreSql
+Database__ConnectionString=Host=...;Port=5432;Database=FashionStore;Username=...;Password=...
+```
+
+The dev `Trusted_Connection` SQL Server default is replaced in production by a
+SQL login / managed identity; PostgreSQL uses the standard `Host=...;Database=...`
+form. Command timeout and EF retry are raised in the production file (60s / 5
+attempts).
+
+#### 2.4.1 Migrations
+
+Each provider owns its own migration history:
+
+* SQL Server - the existing chain in `Data/Migrations` (apply with
+  `dotnet ef database update --context AppDbContext`).
+* PostgreSQL - a separate chain in `Data/Migrations/PostgreSql` rooted at the
+  `InitialPostgres` migration, generated through the `PostgreSqlAppDbContext`
+  design-time host. The shared model automatically remaps SQL Server `datetime2`
+  columns to Postgres `timestamp with time zone`, so the Postgres schema is valid
+  while SQL Server migrations stay untouched.
+
+```bash
+# Add a new PostgreSQL migration (after a model change)
+dotnet ef migrations add <Name> \
+  --project src/FashionStore.Infrastructure \
+  --startup-project src/FashionStore.Web \
+  --context PostgreSqlAppDbContext \
+  --output-dir Data/Migrations/PostgreSql
+
+# Apply PostgreSQL migrations to a target database
+dotnet ef database update --context PostgreSqlAppDbContext \
+  --connection "<postgres-connection-string>"
+```
+
+Verify a model change is captured for the provider you touched:
+
+```bash
+dotnet ef migrations has-pending-model-changes --context AppDbContext
+dotnet ef migrations has-pending-model-changes --context PostgreSqlAppDbContext
+```
+
+Note: there is no runtime auto-migrate; schema is applied as part of the deploy
+step. Do not point both providers at the same database.
+
+#### 2.4.2 Hangfire storage
+
+Hangfire uses the same provider: `SqlServerStorage` for SQL Server and
+`PostgreSqlStorage` for PostgreSQL. The PostgreSQL storage is configured through
+the `UsePostgreSqlStorage(Action<PostgreSqlBootstrapperOptions>,
+PostgreSqlStorageOptions)` overload with schema preparation enabled; the legacy
+string-based overload is obsolete and must not be used.
+
+#### 2.4.3 Local development (Docker Compose)
+
+`docker-compose.yml` provides both stacks:
+
+```bash
+docker compose up --build                     # SQL Server on :1433, app on :8080
+docker compose --profile postgres up --build  # Postgres on :5432, app on :8081
+```
 
 ### 2.5 Data Protection key storage
 
