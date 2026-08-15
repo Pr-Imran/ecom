@@ -275,7 +275,7 @@ public class ProductService : IProductService
         }
 
         await _context.SaveChangesAsync(cancellationToken);
-        await InvalidateCacheAsync(cancellationToken);
+        await InvalidateCacheAsync(product.Id, cancellationToken);
 
         _logger.LogInformation("Created product {ProductId} - {Name}", product.Id, product.Name);
         return ToDto(product);
@@ -347,7 +347,7 @@ public class ProductService : IProductService
         }
 
         await _context.SaveChangesAsync(cancellationToken);
-        await InvalidateCacheAsync(cancellationToken);
+        await InvalidateCacheAsync(request.Id, cancellationToken);
 
         _logger.LogInformation("Updated product {ProductId}", request.Id);
         return ToDto(product);
@@ -360,7 +360,7 @@ public class ProductService : IProductService
 
         _context.Products.Remove(product);
         await _context.SaveChangesAsync(cancellationToken);
-        await InvalidateCacheAsync(cancellationToken);
+        await InvalidateCacheAsync(id, cancellationToken);
 
         _logger.LogInformation("Deleted product {ProductId}", id);
         return true;
@@ -437,7 +437,7 @@ public class ProductService : IProductService
         product.PublishedAtUtc = DateTime.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);
-        await InvalidateCacheAsync(cancellationToken);
+        await InvalidateCacheAsync(id, cancellationToken);
 
         _logger.LogInformation("Published product {ProductId}", id);
         return true;
@@ -454,7 +454,7 @@ public class ProductService : IProductService
         product.IsBestSeller = false;
 
         await _context.SaveChangesAsync(cancellationToken);
-        await InvalidateCacheAsync(cancellationToken);
+        await InvalidateCacheAsync(id, cancellationToken);
 
         _logger.LogInformation("Archived product {ProductId}", id);
         return true;
@@ -578,8 +578,13 @@ public class ProductService : IProductService
         return sanitized;
     }
 
-    private async Task InvalidateCacheAsync(CancellationToken cancellationToken = default)
+    private async Task InvalidateCacheAsync(Guid? productId = null, CancellationToken cancellationToken = default)
     {
+        if (productId.HasValue)
+        {
+            await _cache.RemoveAsync($"product:{productId}", cancellationToken);
+        }
+
         await _cache.RemoveAsync("products:featured", cancellationToken);
         await _cache.RemoveAsync(Application.Common.CacheKeys.HomePage, cancellationToken);
         await _cache.RemoveAsync(Application.Common.CacheKeys.Sitemap, cancellationToken);

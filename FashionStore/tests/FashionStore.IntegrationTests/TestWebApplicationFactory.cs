@@ -3,12 +3,10 @@ using FashionStore.Domain.Enums;
 using FashionStore.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FashionStore.IntegrationTests;
@@ -20,8 +18,8 @@ namespace FashionStore.IntegrationTests;
 /// </summary>
 public class TestWebApplicationFactory : WebApplicationFactory<Program>
 {
-    private static readonly InMemoryDatabaseRoot SharedRoot = new();
     private static readonly object SeedLock = new();
+    private readonly string _databaseName = $"fashionstore-integration-{Guid.NewGuid():N}";
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -53,7 +51,7 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             }
 
             services.AddDbContext<AppDbContext>(options =>
-                options.UseInMemoryDatabase("fashionstore-integration", SharedRoot));
+                options.UseInMemoryDatabase(_databaseName));
 
             var serviceProvider = services.BuildServiceProvider();
             lock (SeedLock)
@@ -63,14 +61,35 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
                 db.Database.EnsureCreated();
                 SeedData(db);
 
-                // The real application seeds its roles through IRoleSeeder at
-                // startup; the test host does not run that path, so roles must be
-                // seeded here for flows that depend on them (registration assigns
-                // every new user the Customer role).
-                var roleSeeder = scope.ServiceProvider.GetRequiredService<IRoleSeeder>();
-                roleSeeder.SeedAsync().GetAwaiter().GetResult();
+                // Registration assigns every new user the Customer role, so that
+                // role must exist in the test host. Other roles are deliberately
+                // NOT seeded here: several integration tests create a bare Admin
+                // role themselves to assert that a role alone grants nothing and
+                // that only explicit permission claims grant access.
+                EnsureCustomerRole(scope.ServiceProvider);
             }
         });
+    }
+
+    private static void EnsureCustomerRole(IServiceProvider serviceProvider)
+    {
+        var roleManager = serviceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
+        if (roleManager.FindByNameAsync("Customer").GetAwaiter().GetResult() is null)
+        {
+            var created = roleManager.CreateAsync(new ApplicationRole
+            {
+                Name = "Customer",
+                NormalizedName = "CUSTOMER",
+                Description = "Standard customer access",
+                IsSystemRole = true,
+                CreatedAtUtc = DateTime.UtcNow
+            }).GetAwaiter().GetResult();
+            if (!created.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to seed Customer role: {string.Join("; ", created.Errors.Select(e => e.Description))}");
+            }
+        }
     }
 
     private static void SeedData(AppDbContext db)

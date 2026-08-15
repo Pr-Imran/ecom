@@ -19,6 +19,8 @@ public sealed class InventoryService : IInventoryService
     private readonly ILogger<InventoryService> _logger;
     private readonly InventorySettings _inventorySettings;
 
+    private static readonly SemaphoreSlim _stockMutationLock = new(1, 1);
+
     public InventoryService(
         AppDbContext context,
         IDistributedCache cache,
@@ -418,6 +420,10 @@ public sealed class InventoryService : IInventoryService
         if (request.ReorderLevel.HasValue && request.ReorderLevel.Value < 0)
             throw new InvalidOperationException("Reorder level cannot be negative");
 
+        var variant = await _context.ProductVariants.FindAsync(new object[] { request.VariantId }, cancellationToken);
+        if (variant == null)
+            throw new InvalidOperationException($"Variant {request.VariantId} not found");
+
         var warehouseId = await ResolveWarehouseIdAsync(request.WarehouseId, cancellationToken);
 
         var stock = await GetOrCreateStockAsync(request.VariantId, warehouseId, cancellationToken);
@@ -681,6 +687,39 @@ public sealed class InventoryService : IInventoryService
     }
 
     private async Task<WarehouseStock> ApplyStockChangeAsync(
+        Guid variantId,
+        Guid warehouseId,
+        int onHandDelta,
+        int reservedDelta,
+        StockAdjustmentReason reason,
+        InventoryReferenceType referenceType,
+        string? referenceId,
+        string? notes,
+        string? administratorId,
+        CancellationToken cancellationToken)
+    {
+        await _stockMutationLock.WaitAsync(cancellationToken);
+        try
+        {
+            return await ApplyStockChangeCoreAsync(
+                variantId,
+                warehouseId,
+                onHandDelta,
+                reservedDelta,
+                reason,
+                referenceType,
+                referenceId,
+                notes,
+                administratorId,
+                cancellationToken);
+        }
+        finally
+        {
+            _stockMutationLock.Release();
+        }
+    }
+
+    private async Task<WarehouseStock> ApplyStockChangeCoreAsync(
         Guid variantId,
         Guid warehouseId,
         int onHandDelta,
