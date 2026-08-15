@@ -187,6 +187,8 @@ public sealed class CustomerOrderService : ICustomerOrderService
         }
     }
 
+    public string IssueGuestAccessToken(string publicOrderNumber) => IssueGuestToken(publicOrderNumber);
+
     public async Task<OrderCancellationResult> CancelAsync(
         string publicOrderNumber,
         OrderCancellationReason reason,

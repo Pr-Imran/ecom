@@ -29,6 +29,7 @@ public sealed class OrderPlacementService : IOrderService
     private readonly ICheckoutCalculationService _checkoutCalculationService;
     private readonly IDiscountService _discountService;
     private readonly IInventoryService _inventoryService;
+    private readonly ICustomerOrderService _customerOrderService;
     private readonly IEmailNotificationService _emailService;
     private readonly IOptions<OrderSettings> _orderOptions;
     private readonly ILogger<OrderPlacementService> _logger;
@@ -38,6 +39,7 @@ public sealed class OrderPlacementService : IOrderService
         ICheckoutCalculationService checkoutCalculationService,
         IDiscountService discountService,
         IInventoryService inventoryService,
+        ICustomerOrderService customerOrderService,
         IEmailNotificationService emailService,
         IOptions<OrderSettings> orderOptions,
         ILogger<OrderPlacementService> logger)
@@ -46,6 +48,7 @@ public sealed class OrderPlacementService : IOrderService
         _checkoutCalculationService = checkoutCalculationService;
         _discountService = discountService;
         _inventoryService = inventoryService;
+        _customerOrderService = customerOrderService;
         _emailService = emailService;
         _orderOptions = orderOptions;
         _logger = logger;
@@ -226,13 +229,18 @@ public sealed class OrderPlacementService : IOrderService
                     order.Items.Count,
                     order.GrandTotal);
 
+                var guestAccessToken = string.IsNullOrEmpty(input.UserId)
+                    ? _customerOrderService.IssueGuestAccessToken(order.PublicOrderNumber)
+                    : null;
+
                 return new PlaceOrderResult(
                     true,
                     false,
                     order.Id,
                     order.PublicOrderNumber,
                     order.GrandTotal,
-                    Array.Empty<CheckoutValidationError>());
+                    Array.Empty<CheckoutValidationError>(),
+                    guestAccessToken);
             });
         }
         catch (StockInsufficientException ex)

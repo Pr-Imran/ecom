@@ -30,6 +30,7 @@ public class CheckoutController : Controller
     private readonly IAddressService _addressService;
     private readonly IProfileService _profileService;
     private readonly IOrderService _orderService;
+    private readonly ICustomerOrderService _customerOrderService;
     private readonly IPaymentService _paymentService;
     private readonly ILogger<CheckoutController> _logger;
 
@@ -39,6 +40,7 @@ public class CheckoutController : Controller
         IAddressService addressService,
         IProfileService profileService,
         IOrderService orderService,
+        ICustomerOrderService customerOrderService,
         IPaymentService paymentService,
         ILogger<CheckoutController> logger)
     {
@@ -47,6 +49,7 @@ public class CheckoutController : Controller
         _addressService = addressService;
         _profileService = profileService;
         _orderService = orderService;
+        _customerOrderService = customerOrderService;
         _paymentService = paymentService;
         _logger = logger;
     }
@@ -252,7 +255,10 @@ public class CheckoutController : Controller
     /// payment states.
     /// </summary>
     [HttpGet("confirmation/{publicOrderNumber}")]
-    public async Task<IActionResult> Confirmation(string publicOrderNumber, CancellationToken cancellationToken)
+    public async Task<IActionResult> Confirmation(
+        string publicOrderNumber,
+        [FromQuery] string? t,
+        CancellationToken cancellationToken)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var order = await _orderService.GetByPublicOrderNumberAsync(publicOrderNumber, cancellationToken);
@@ -262,18 +268,30 @@ public class CheckoutController : Controller
             return NotFound();
         }
 
-        // Guests have no server-side identity, so the confirmation screen is
-        // keyed by the order number alone (the number is the only credential the
-        // customer holds). Signed-in customers can only view their own orders.
-        if (!string.IsNullOrEmpty(userId) &&
-            !string.Equals(order.UserId, userId, StringComparison.Ordinal))
+        // Signed-in customers can only view their own orders. Guests have no
+        // server-side identity, so they must present the signed ticket issued for
+        // this order number at placement; the number alone is never sufficient.
+        string? guestToken = null;
+        if (!string.IsNullOrEmpty(userId))
+        {
+            if (!string.Equals(order.UserId, userId, StringComparison.Ordinal))
+            {
+                return NotFound();
+            }
+        }
+        else if (string.IsNullOrWhiteSpace(t) ||
+                 _customerOrderService.ValidateGuestToken(t, publicOrderNumber) is null)
         {
             return NotFound();
+        }
+        else
+        {
+            guestToken = t;
         }
 
         var payment = await _paymentService.GetStatusByOrderNumberAsync(publicOrderNumber, cancellationToken);
 
-        return View(new ConfirmationViewData(order, payment));
+        return View(new ConfirmationViewData(order, payment, guestToken));
     }
 
     /// <summary>
@@ -298,8 +316,15 @@ public class CheckoutController : Controller
         }
 
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!string.IsNullOrEmpty(userId) &&
-            !string.Equals(order.UserId, userId, StringComparison.Ordinal))
+        if (!string.IsNullOrEmpty(userId))
+        {
+            if (!string.Equals(order.UserId, userId, StringComparison.Ordinal))
+            {
+                return NotFound(new { success = false, message = "Order not found." });
+            }
+        }
+        else if (string.IsNullOrWhiteSpace(request.GuestAccessToken) ||
+                 _customerOrderService.ValidateGuestToken(request.GuestAccessToken, request.OrderNumber) is null)
         {
             return NotFound(new { success = false, message = "Order not found." });
         }
@@ -329,11 +354,31 @@ public class CheckoutController : Controller
 
     /// <summary>
     /// Public payment status polled by the confirmation screen. This is a read-only
-    /// status view; it never settles a payment by itself.
+    /// status view; it never settles a payment by itself. Guests must present the
+    /// signed ticket for the order number, matching the confirmation screen.
     /// </summary>
     [HttpGet("confirmation/{publicOrderNumber}/payment-status")]
-    public async Task<IActionResult> PaymentStatus(string publicOrderNumber, CancellationToken cancellationToken)
+    public async Task<IActionResult> PaymentStatus(
+        string publicOrderNumber,
+        [FromQuery] string? t,
+        CancellationToken cancellationToken)
     {
+        var order = await _orderService.GetByPublicOrderNumberAsync(publicOrderNumber, cancellationToken);
+        if (order is null)
+        {
+            return NotFound(new { success = false, message = "Payment not found." });
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var authorized = !string.IsNullOrEmpty(userId)
+            ? string.Equals(order.UserId, userId, StringComparison.Ordinal)
+            : !string.IsNullOrWhiteSpace(t) && _customerOrderService.ValidateGuestToken(t, publicOrderNumber) is not null;
+
+        if (!authorized)
+        {
+            return NotFound(new { success = false, message = "Payment not found." });
+        }
+
         var status = await _paymentService.GetStatusByOrderNumberAsync(publicOrderNumber, cancellationToken);
         if (status is null)
         {
@@ -429,7 +474,8 @@ public sealed record CheckoutCalculateRequest(
     string? ContinuationToken);
 
 /// <summary>
-/// Body for initiating a payment for a placed order. The public order number is the
-/// only credential a guest holds, so it is used to resolve the order server-side.
+/// Body for initiating a payment for a placed order. Signed-in customers resolve
+/// the order by their identity; guests must also present the signed ticket issued
+/// for the order number.
 /// </summary>
-public sealed record InitiatePaymentRequest(string OrderNumber);
+public sealed record InitiatePaymentRequest(string OrderNumber, string? GuestAccessToken = null);

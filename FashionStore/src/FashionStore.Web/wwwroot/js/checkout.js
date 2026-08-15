@@ -398,7 +398,7 @@
                 .then(function (result) {
                     if (result && result.success && result.orderNumber) {
                         try { sessionStorage.removeItem('fs.checkout.idempotency'); } catch (e) { }
-                        return initiatePayment(result.orderNumber);
+                        return initiatePayment(result.orderNumber, result.guestAccessToken);
                     }
 
                     clearErrors();
@@ -424,8 +424,14 @@
         });
     }
 
-    function initiatePayment(orderNumber) {
-        return post('/checkout/pay', { orderNumber: orderNumber })
+    function confirmationUrl(orderNumber, guestToken) {
+        var base = '/checkout/confirmation/' + encodeURIComponent(orderNumber);
+        return guestToken ? base + '?t=' + encodeURIComponent(guestToken) : base;
+    }
+
+    function initiatePayment(orderNumber, guestToken) {
+        var payload = guestToken ? { orderNumber: orderNumber, guestAccessToken: guestToken } : { orderNumber: orderNumber };
+        return post('/checkout/pay', payload)
             .then(function (result) {
                 if (result && result.success && result.payment) {
                     if (result.payment.redirectUrl) {
@@ -435,12 +441,12 @@
                 }
                 // Reference-based methods (COD, mobile wallet, bank transfer) and
                 // hosted methods that return without a redirect land here.
-                window.location.href = '/checkout/confirmation/' + encodeURIComponent(orderNumber);
+                window.location.href = confirmationUrl(orderNumber, guestToken);
             })
             .catch(function () {
                 // Initiation failed but the order is placed; the confirmation screen
                 // offers a retry.
-                window.location.href = '/checkout/confirmation/' + encodeURIComponent(orderNumber);
+                window.location.href = confirmationUrl(orderNumber, guestToken);
             });
     }
 

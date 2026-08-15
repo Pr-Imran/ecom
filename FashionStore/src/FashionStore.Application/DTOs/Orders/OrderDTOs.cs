@@ -34,7 +34,8 @@ public sealed record PlaceOrderResult(
     Guid? OrderId,
     string? OrderNumber,
     decimal GrandTotal,
-    IReadOnlyList<CheckoutValidationError> Errors);
+    IReadOnlyList<CheckoutValidationError> Errors,
+    string? GuestAccessToken = null);
 
 /// <summary>
 /// Immutable order summary used on the mobile result screen. Financial fields are

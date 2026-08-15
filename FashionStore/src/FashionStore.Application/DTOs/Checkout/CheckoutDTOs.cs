@@ -182,4 +182,5 @@ public sealed record CheckoutViewData(
 /// </summary>
 public sealed record ConfirmationViewData(
     OrderSummaryDto Order,
-    PaymentStatusDto? Payment);
+    PaymentStatusDto? Payment,
+    string? GuestAccessToken);

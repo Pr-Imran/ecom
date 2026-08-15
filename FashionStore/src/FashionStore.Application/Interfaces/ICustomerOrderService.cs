@@ -59,6 +59,13 @@ public interface ICustomerOrderService
     string? ValidateGuestToken(string token, string publicOrderNumber);
 
     /// <summary>
+    /// Issues a fresh signed, short-lived guest access token bound to the given
+    /// public order number. Used at placement time so an order number alone is never
+    /// sufficient to view or act on a guest order.
+    /// </summary>
+    string IssueGuestAccessToken(string publicOrderNumber);
+
+    /// <summary>
     /// Cancels an order. Allowed only from the placed/confirmed states for an order
     /// that has not been paid. Records who, the reason, the previous and new status
     /// and the timestamp; releases the order's stock reservations and voids any
