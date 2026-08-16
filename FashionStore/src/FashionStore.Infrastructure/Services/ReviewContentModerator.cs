@@ -93,7 +93,7 @@ public static partial class ReviewContentModerator
             return true;
         }
 
-        var urls = UrlRegex.Matches(text).Count;
+        var urls = UrlRegex.Count(text);
         if (urls > 1)
         {
             return true;

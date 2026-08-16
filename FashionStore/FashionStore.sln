@@ -1,9 +1,12 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31903.59
+# Visual Studio Version 18
+VisualStudioVersion = 18.6.11822.322 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
+	ProjectSection(SolutionItems) = preProject
+		migration.md = migration.md
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FashionStore.Domain", "src\FashionStore.Domain\FashionStore.Domain.csproj", "{8D84E53F-0A20-4F93-BDB5-82CDA40CCC21}"
 EndProject
@@ -112,5 +115,8 @@ Global
 		{68683BF1-1C3C-429C-BED8-3DBB633B2152} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{1BDEAF8C-2A78-437D-A29B-6B87CA5CF880} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{1AF7474A-B347-4CD5-B9BC-8FC6CBA57BE4} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {DD1C9B12-B254-4820-9129-187C837A0A30}
 	EndGlobalSection
 EndGlobal

@@ -674,7 +674,7 @@ public sealed class DiscountService : IDiscountService
     }
 
     private async Task<IReadOnlyDictionary<Guid, ProductScope>> LoadProductScopesAsync(
-        IReadOnlyList<CartItemDto> available,
+        List<CartItemDto> available,
         CancellationToken cancellationToken)
     {
         if (available.Count == 0)

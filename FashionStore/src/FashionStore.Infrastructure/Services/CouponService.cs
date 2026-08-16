@@ -356,7 +356,7 @@ public sealed class CouponService : ICouponService
     }
 
     private async Task<Dictionary<string, string?>> LoadUserEmailsAsync(
-        IReadOnlyList<string> userIds,
+        List<string> userIds,
         CancellationToken cancellationToken)
     {
         if (userIds.Count == 0)

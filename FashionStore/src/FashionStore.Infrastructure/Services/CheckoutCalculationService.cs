@@ -469,8 +469,8 @@ public sealed class CheckoutCalculationService : ICheckoutCalculationService
     }
 
     private CheckoutCalculationResult BuildResult(
-        IReadOnlyList<CheckoutValidationError> errors,
-        IReadOnlyList<string> warnings,
+        List<CheckoutValidationError> errors,
+        List<string> warnings,
         IReadOnlyList<CheckoutLineItemDto> lines,
         IReadOnlyList<ShippingQuoteDto> shippingOptions,
         CheckoutSelectedShippingDto? selectedShipping,

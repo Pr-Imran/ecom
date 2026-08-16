@@ -1545,7 +1545,7 @@ public sealed class AdminReportService : IAdminReportService
         return (page, pageSize);
     }
 
-    private async Task<Dictionary<Guid, string>> LoadVariantNamesAsync(IReadOnlyList<Guid> variantIds, CancellationToken cancellationToken)
+    private async Task<Dictionary<Guid, string>> LoadVariantNamesAsync(List<Guid> variantIds, CancellationToken cancellationToken)
     {
         if (variantIds.Count == 0)
         {

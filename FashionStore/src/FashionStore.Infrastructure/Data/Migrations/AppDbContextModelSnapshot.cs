@@ -4,7 +4,6 @@ using FashionStore.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -12,11 +11,9 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FashionStore.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260814120453_AddSeoSlugRedirectsAndIndexes")]
-    partial class AddSeoSlugRedirectsAndIndexes
+    partial class AppDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -4595,12 +4592,12 @@ namespace FashionStore.Infrastructure.Data.Migrations
                     b.HasOne("FashionStore.Domain.Entities.OrderAddress", "BillingAddress")
                         .WithMany()
                         .HasForeignKey("BillingAddressId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("FashionStore.Domain.Entities.OrderAddress", "ShippingAddress")
                         .WithMany()
                         .HasForeignKey("ShippingAddressId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("BillingAddress");
 

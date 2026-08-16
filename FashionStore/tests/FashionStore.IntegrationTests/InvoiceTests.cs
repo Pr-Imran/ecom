@@ -592,7 +592,7 @@ public class InvoiceTests : IClassFixture<TestWebApplicationFactory>
         // A 60-line-item invoice should span more than a single A4 page. QuestPDF
         // writes one "/Type /Page" object per page.
         var pdfText = Encoding.ASCII.GetString(pdf);
-        var pageCount = System.Text.RegularExpressions.Regex.Matches(pdfText, @"/Type\s*/Page[^s]").Count;
+        var pageCount = System.Text.RegularExpressions.Regex.Count(pdfText, @"/Type\s*/Page[^s]");
         Assert.True(pageCount > 1, $"Expected a multi-page PDF but generated {pageCount} page(s).");
     }
 
