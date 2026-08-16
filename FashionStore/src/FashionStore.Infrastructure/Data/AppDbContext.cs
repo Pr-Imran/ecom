@@ -265,17 +265,17 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
 			entity.HasOne(e => e.ProductAttribute).WithMany(a => a.Values).HasForeignKey(e => e.ProductAttributeId).OnDelete(DeleteBehavior.Cascade);
 		});
 
-		modelBuilder.Entity<ProductVariant>(entity =>
-		{
-			entity.ToTable("ProductVariants");
-			entity.HasKey(e => e.Id);
-			entity.Property(e => e.Sku).IsRequired().HasMaxLength(100);
-			entity.HasIndex(e => e.ProductId);
-			entity.HasIndex(e => e.Sku).IsUnique();
-			entity.HasIndex(e => e.IsActive);
-			entity.HasIndex(e => e.IsDefault);
-			entity.HasOne(e => e.Product).WithMany(p => p.Variants).HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
-		});
+        modelBuilder.Entity<ProductVariant>(entity =>
+        {
+            entity.ToTable("ProductVariants");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Sku).IsRequired().HasMaxLength(100);
+            entity.HasIndex(e => e.ProductId);
+            entity.HasIndex(e => e.Sku).IsUnique();
+            entity.HasIndex(e => e.IsActive);
+            entity.HasIndex(e => e.IsDefault);
+            entity.HasOne(e => e.Product).WithMany(p => p.Variants).HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Restrict);
+        });
 
 		modelBuilder.Entity<ProductReview>(entity =>
 		{
@@ -626,30 +626,30 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
 			entity.HasOne(e => e.ShippingMethod).WithMany(m => m.Blackouts).HasForeignKey(e => e.ShippingMethodId).OnDelete(DeleteBehavior.Cascade);
 		});
 
-		modelBuilder.Entity<Order>(entity =>
-		{
-			entity.ToTable("Orders");
-			entity.HasKey(e => e.Id);
-			entity.Property(e => e.PublicOrderNumber).IsRequired().HasMaxLength(50);
-			entity.Property(e => e.InvoiceNumber).HasMaxLength(50);
-			entity.Property(e => e.UserId).HasMaxLength(450);
-			entity.Property(e => e.GuestEmail).HasMaxLength(254);
-			entity.Property(e => e.GuestPhone).HasMaxLength(30);
-			entity.Property(e => e.CustomerName).HasMaxLength(200);
-			entity.Property(e => e.Currency).IsRequired().HasMaxLength(3);
-			entity.Property(e => e.PaymentMethodCode).HasMaxLength(50);
-			entity.Property(e => e.ShippingMethodCode).HasMaxLength(50);
-			entity.Property(e => e.ShippingMethodName).HasMaxLength(200);
-			entity.HasIndex(e => e.PublicOrderNumber).IsUnique();
-			entity.HasIndex(e => e.UserId);
-			entity.HasIndex(e => e.GuestEmail);
-			entity.HasIndex(e => e.OrderStatus);
-			entity.HasIndex(e => e.PaymentStatus);
-			entity.HasIndex(e => e.FulfilmentStatus);
-			entity.HasIndex(e => e.CreatedAtUtc);
-			entity.HasOne(e => e.ShippingAddress).WithMany().HasForeignKey(e => e.ShippingAddressId).OnDelete(DeleteBehavior.Restrict);
-			entity.HasOne(e => e.BillingAddress).WithMany().HasForeignKey(e => e.BillingAddressId).OnDelete(DeleteBehavior.Restrict);
-		});
+        modelBuilder.Entity<Order>(entity =>
+        {
+            entity.ToTable("Orders");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PublicOrderNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.InvoiceNumber).HasMaxLength(50);
+            entity.Property(e => e.UserId).HasMaxLength(450);
+            entity.Property(e => e.GuestEmail).HasMaxLength(254);
+            entity.Property(e => e.GuestPhone).HasMaxLength(30);
+            entity.Property(e => e.CustomerName).HasMaxLength(200);
+            entity.Property(e => e.Currency).IsRequired().HasMaxLength(3);
+            entity.Property(e => e.PaymentMethodCode).HasMaxLength(50);
+            entity.Property(e => e.ShippingMethodCode).HasMaxLength(50);
+            entity.Property(e => e.ShippingMethodName).HasMaxLength(200);
+            entity.HasIndex(e => e.PublicOrderNumber).IsUnique();
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.GuestEmail);
+            entity.HasIndex(e => e.OrderStatus);
+            entity.HasIndex(e => e.PaymentStatus);
+            entity.HasIndex(e => e.FulfilmentStatus);
+            entity.HasIndex(e => e.CreatedAtUtc);
+            entity.HasOne(e => e.ShippingAddress).WithMany().HasForeignKey(e => e.ShippingAddressId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.BillingAddress).WithMany().HasForeignKey(e => e.BillingAddressId).OnDelete(DeleteBehavior.Restrict);
+        });
 
 		modelBuilder.Entity<OrderItem>(entity =>
 		{
