@@ -355,9 +355,12 @@ public class ProductService : IProductService
 
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var product = await _context.Products.FindAsync(new object[] { id }, cancellationToken);
+        var product = await _context.Products
+            .Include(p => p.Variants)
+            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
         if (product == null) return false;
 
+        _context.ProductVariants.RemoveRange(product.Variants);
         _context.Products.Remove(product);
         await _context.SaveChangesAsync(cancellationToken);
         await InvalidateCacheAsync(id, cancellationToken);
