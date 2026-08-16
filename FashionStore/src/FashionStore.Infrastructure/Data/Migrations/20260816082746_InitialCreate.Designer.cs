@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FashionStore.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260816081219_InitialCreate")]
+    [Migration("20260816082746_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -4805,7 +4805,7 @@ namespace FashionStore.Infrastructure.Data.Migrations
                     b.HasOne("FashionStore.Domain.Entities.Product", "Product")
                         .WithMany("Variants")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Product");

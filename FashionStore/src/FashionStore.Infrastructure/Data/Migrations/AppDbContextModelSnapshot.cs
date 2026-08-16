@@ -4802,7 +4802,7 @@ namespace FashionStore.Infrastructure.Data.Migrations
                     b.HasOne("FashionStore.Domain.Entities.Product", "Product")
                         .WithMany("Variants")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Product");
