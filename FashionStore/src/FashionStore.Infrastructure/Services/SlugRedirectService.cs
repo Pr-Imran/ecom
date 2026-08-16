@@ -83,7 +83,9 @@ public sealed class SlugRedirectService : ISlugRedirectService
 
         var existing = await _context.SlugRedirects
             .FirstOrDefaultAsync(r => r.EntityType == entityType &&
-                string.Equals(r.OldSlug, oldSlug, StringComparison.OrdinalIgnoreCase), cancellationToken);
+#pragma warning disable CA1862
+                r.OldSlug.ToLower() == oldSlug.ToLower(), cancellationToken);
+#pragma warning restore CA1862
 
         var now = DateTime.UtcNow;
         if (existing is not null)

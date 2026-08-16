@@ -74,6 +74,6 @@ public class LayoutsDemoController : Controller
     [HttpGet]
     public IActionResult StatesDemo()
     {
-        return View();
+        return View("States");
     }
 }

@@ -194,7 +194,9 @@ public sealed class CatalogService : ICatalogService
         if (!string.IsNullOrWhiteSpace(q.Gender))
         {
             var gender = q.Gender.Trim().ToLowerInvariant();
-            query = query.Where(p => p.Gender != null && string.Equals(p.Gender, gender, StringComparison.OrdinalIgnoreCase));
+#pragma warning disable CA1862
+            query = query.Where(p => p.Gender != null && p.Gender.ToLower() == gender);
+#pragma warning restore CA1862
         }
 
         var minPrice = q.MinPrice.HasValue ? Math.Max(0m, q.MinPrice.Value) : (decimal?)null;
@@ -512,6 +514,7 @@ public sealed class CatalogService : ICatalogService
         CancellationToken cancellationToken)
     {
         var name = attributeName.ToLowerInvariant();
+#pragma warning disable CA1862
         var rows = await filtered
             .SelectMany(p => p.Variants)
             .Where(v => v.IsActive)
@@ -519,7 +522,8 @@ public sealed class CatalogService : ICatalogService
             .Where(vav =>
                 vav.AttributeValue != null &&
                 vav.AttributeValue.ProductAttribute != null &&
-                string.Equals(vav.AttributeValue.ProductAttribute.Name, name, StringComparison.OrdinalIgnoreCase))
+                vav.AttributeValue.ProductAttribute.Name.ToLower() == name)
+#pragma warning restore CA1862
             .GroupBy(vav => vav.AttributeValue!.Id)
             .Select(g => new
             {

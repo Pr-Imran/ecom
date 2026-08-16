@@ -453,7 +453,9 @@ public sealed class OrderPlacementService : IOrderService
         var coupon = await _context.Coupons
             .AsNoTracking()
             .FirstOrDefaultAsync(
-                c => string.Equals(c.NormalizedCode, code.Trim(), StringComparison.OrdinalIgnoreCase),
+#pragma warning disable CA1862
+                c => c.NormalizedCode != null && c.NormalizedCode.ToLower() == code.Trim().ToLower(),
+#pragma warning restore CA1862
                 cancellationToken);
 
         if (coupon is null)

@@ -136,6 +136,7 @@ builder.Services.AddOutputCache();
 builder.Services.Configure<RazorViewEngineOptions>(options =>
 {
     options.ViewLocationExpanders.Add(new AdminPagesViewLocationExpander());
+    options.ViewLocationExpanders.Add(new LayoutsDemoViewLocationExpander());
 });
 
 builder.Services.AddSwaggerGen(options =>

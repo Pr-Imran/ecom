@@ -1,16 +1,20 @@
+using System.Security.Claims;
 using FashionStore.Application.Interfaces;
 using FashionStore.Infrastructure.Data;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace FashionStore.Infrastructure.Services;
 
 /// <summary>
 /// Writes immutable audit records for sensitive administrative actions. The actor
-/// is resolved from the current request (authenticated user, IP address, user
+/// is resolved from the current request (authenticated user ID, IP address, user
 /// agent) when an HTTP context is available, otherwise from the supplied actor id.
 /// Values are truncated to the column limits so an oversized change can never fail
-/// the audit write.
+/// the audit write. System-initiated actions that run without an authenticated
+/// user (e.g. seeding) are logged as warnings rather than persisted, because the
+/// audit trail always references a real user.
 /// </summary>
 public sealed class AuditService : IAuditService
 {
@@ -21,13 +25,16 @@ public sealed class AuditService : IAuditService
 
     private readonly AppDbContext _context;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ILogger<AuditService> _logger;
 
     public AuditService(
         AppDbContext context,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        ILogger<AuditService> logger)
     {
         _context = context;
         _httpContextAccessor = httpContextAccessor;
+        _logger = logger;
     }
 
     public async Task RecordAsync(
@@ -40,7 +47,17 @@ public sealed class AuditService : IAuditService
         CancellationToken cancellationToken = default)
     {
         var httpContext = _httpContextAccessor.HttpContext;
-        var resolvedActor = actorId ?? httpContext?.User.Identity?.Name ?? "system";
+        var resolvedActor = actorId ?? httpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(resolvedActor))
+        {
+            _logger.LogWarning(
+                "Skipped audit record for {Action} on {EntityType} {EntityId}: no authenticated user",
+                action,
+                entityType,
+                entityId);
+            return;
+        }
 
         var auditLog = new AuditLog
         {
