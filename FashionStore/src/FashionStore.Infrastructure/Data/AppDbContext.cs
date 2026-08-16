@@ -976,9 +976,21 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             entity.HasIndex(e => e.CreatedAtUtc);
             entity.HasIndex(e => e.ToEmail);
             // Duplicate prevention backstop: at most one queued email per stable key.
-            entity.HasIndex(e => e.DeduplicationKey)
-                .IsUnique()
-                .HasFilter("[DeduplicationKey] IS NOT NULL");
+            // The filter is provider-specific: SQL Server quotes identifiers with
+            // square brackets, PostgreSQL with double quotes. Without this the
+            // generated filtered index is invalid SQL on PostgreSQL.
+            if (Database.IsNpgsql())
+            {
+                entity.HasIndex(e => e.DeduplicationKey)
+                    .IsUnique()
+                    .HasFilter("\"DeduplicationKey\" IS NOT NULL");
+            }
+            else
+            {
+                entity.HasIndex(e => e.DeduplicationKey)
+                    .IsUnique()
+                    .HasFilter("[DeduplicationKey] IS NOT NULL");
+            }
         });
 
         modelBuilder.Entity<ContentPage>(entity =>
@@ -1120,6 +1132,15 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
         // default there), but when the model targets Npgsql every explicitly
         // configured datetime2 column is remapped to Postgres "timestamp with
         // time zone" so the generated Postgres schema is valid.
+        //
+        // SQL Server rowversion tokens ([Timestamp] on a uint[] property) have no
+        // Npgsql equivalent: Npgsql would otherwise emit a bigint[] array column
+        // that is database-generated on add/update, but Postgres has no value
+        // generator for it, so every INSERT fails with a NOT NULL violation
+        // (EF omits database-generated columns). The application never reads or
+        // writes these tokens, so on Postgres they are treated as plain client-set
+        // concurrency columns: EF sends the empty-array default on INSERT and uses
+        // the stored value for optimistic-concurrency WHERE clauses on UPDATE.
         if (Database.IsNpgsql())
         {
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
@@ -1129,6 +1150,10 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
                     if (property.GetColumnType() == "datetime2")
                     {
                         property.SetColumnType("timestamp with time zone");
+                    }
+                    else if (property.ClrType == typeof(uint[]) && property.IsConcurrencyToken)
+                    {
+                        property.ValueGenerated = Microsoft.EntityFrameworkCore.Metadata.ValueGenerated.Never;
                     }
                 }
             }

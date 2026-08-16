@@ -710,7 +710,7 @@ namespace FashionStore.Infrastructure.Data.Migrations.PostgreSql
                     SeoTitle = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
                     SeoDescription = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
                     SearchKeywords = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    RowVersion = table.Column<long[]>(type: "bigint[]", rowVersion: true, nullable: false),
+                    RowVersion = table.Column<long[]>(type: "bigint[]", nullable: false),
                     CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedBy = table.Column<string>(type: "text", nullable: true),
                     UpdatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
@@ -937,7 +937,7 @@ namespace FashionStore.Infrastructure.Data.Migrations.PostgreSql
                     ImageUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     DisplayOrder = table.Column<int>(type: "integer", nullable: false),
-                    RowVersion = table.Column<long[]>(type: "bigint[]", rowVersion: true, nullable: false),
+                    RowVersion = table.Column<long[]>(type: "bigint[]", nullable: false),
                     CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedBy = table.Column<string>(type: "text", nullable: true),
                     UpdatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
@@ -1361,7 +1361,7 @@ namespace FashionStore.Infrastructure.Data.Migrations.PostgreSql
                     LowStockThreshold = table.Column<int>(type: "integer", nullable: true),
                     ImageUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     Notes = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
-                    RowVersion = table.Column<long[]>(type: "bigint[]", rowVersion: true, nullable: false),
+                    RowVersion = table.Column<long[]>(type: "bigint[]", nullable: false),
                     CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedBy = table.Column<string>(type: "text", nullable: true),
                     UpdatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
@@ -1803,7 +1803,7 @@ namespace FashionStore.Infrastructure.Data.Migrations.PostgreSql
                     Width = table.Column<int>(type: "integer", nullable: false),
                     Height = table.Column<int>(type: "integer", nullable: false),
                     ProcessingStatus = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    RowVersion = table.Column<long[]>(type: "bigint[]", rowVersion: true, nullable: false),
+                    RowVersion = table.Column<long[]>(type: "bigint[]", nullable: false),
                     CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedBy = table.Column<string>(type: "text", nullable: true),
                     UpdatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
@@ -1897,7 +1897,7 @@ namespace FashionStore.Infrastructure.Data.Migrations.PostgreSql
                     LowStockThreshold = table.Column<int>(type: "integer", nullable: true),
                     ReorderLevel = table.Column<int>(type: "integer", nullable: true),
                     AllowBackorder = table.Column<bool>(type: "boolean", nullable: false),
-                    RowVersion = table.Column<long[]>(type: "bigint[]", rowVersion: true, nullable: false),
+                    RowVersion = table.Column<long[]>(type: "bigint[]", nullable: false),
                     CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedBy = table.Column<string>(type: "text", nullable: true),
                     UpdatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
@@ -2492,7 +2492,7 @@ namespace FashionStore.Infrastructure.Data.Migrations.PostgreSql
                 table: "EmailMessages",
                 column: "DeduplicationKey",
                 unique: true,
-                filter: "[DeduplicationKey] IS NOT NULL");
+                filter: "\"DeduplicationKey\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_EmailMessages_Status",

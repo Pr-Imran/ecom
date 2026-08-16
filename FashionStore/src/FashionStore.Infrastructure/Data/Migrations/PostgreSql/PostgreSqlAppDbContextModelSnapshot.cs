@@ -899,7 +899,7 @@ namespace FashionStore.Infrastructure.Data.Migrations.PostgreSql
 
                     b.HasIndex("DeduplicationKey")
                         .IsUnique()
-                        .HasFilter("[DeduplicationKey] IS NOT NULL");
+                        .HasFilter("\"DeduplicationKey\" IS NOT NULL");
 
                     b.HasIndex("Status");
 
@@ -2259,7 +2259,6 @@ namespace FashionStore.Infrastructure.Data.Migrations.PostgreSql
                     b.Property<long[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("bigint[]");
 
                     b.Property<string>("SearchKeywords")
@@ -2417,7 +2416,6 @@ namespace FashionStore.Infrastructure.Data.Migrations.PostgreSql
                     b.Property<long[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("bigint[]");
 
                     b.Property<string>("Slug")
@@ -2503,7 +2501,6 @@ namespace FashionStore.Infrastructure.Data.Migrations.PostgreSql
                     b.Property<long[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("bigint[]");
 
                     b.Property<long>("SizeBytes")
@@ -2770,7 +2767,6 @@ namespace FashionStore.Infrastructure.Data.Migrations.PostgreSql
                     b.Property<long[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("bigint[]");
 
                     b.Property<string>("Sku")
@@ -3988,7 +3984,6 @@ namespace FashionStore.Infrastructure.Data.Migrations.PostgreSql
                     b.Property<long[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("bigint[]");
 
                     b.Property<DateTime?>("UpdatedAtUtc")
